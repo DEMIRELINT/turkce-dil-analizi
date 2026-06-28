@@ -1,0 +1,22 @@
+# Gizli: API anahtarları / ortam dosyası — ASLA commit'lenmez
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# LLM önbelleği ve eval çıktıları (yerel/üretilen)
+.cache/
+eval/last_predictions.json
+
+# İndirilen sözlük (büyük; README'deki komutla indirilir — repoda tutulmaz)
+dicts/
+
+# OS / editör
+.DS_Store

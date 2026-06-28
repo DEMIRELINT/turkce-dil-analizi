@@ -1,0 +1,14 @@
+{"id": "imla-de-da-1", "text": "Ben de bu toplantıya katılmak istiyorum.", "expected": []}
+{"id": "imla-de-da-2", "text": "Sende mi geldin yoksa yalnız mı?", "expected": [{"type": "imla", "excerpt": "Sende"}]}
+{"id": "imla-yalniz-1", "text": "Bu raporu yanlız ben hazırladım.", "expected": [{"type": "imla", "excerpt": "yanlız"}]}
+{"id": "imla-ki-1", "text": "Biliyorum ki yarınki toplantı önemli.", "expected": []}
+{"id": "imla-ki-2", "text": "Senin ki benimkinden daha güzel olmuş.", "expected": [{"type": "imla", "excerpt": "Senin ki"}]}
+{"id": "imla-herkes-1", "text": "Toplantıya herkez vaktinde gelsin.", "expected": [{"type": "imla", "excerpt": "herkez"}]}
+{"id": "imla-karakter-1", "text": "Yarin sabah dosyalari gonderecegim.", "expected": [{"type": "imla", "excerpt": "Yarin"}, {"type": "imla", "excerpt": "dosyalari"}, {"type": "imla", "excerpt": "gonderecegim"}]}
+{"id": "imla-hersey-1", "text": "Bu konuda herşey açık ve nettir.", "expected": [{"type": "imla", "excerpt": "herşey"}]}
+{"id": "gramer-ozne-yuklem-1", "text": "Masalar odaya yeni geldiler.", "expected": [{"type": "dil_bilgisi", "excerpt": "geldiler"}]}
+{"id": "gramer-anlatim-1", "text": "Yaklaşık olarak tam on kişi katıldı.", "expected": [{"type": "dil_bilgisi", "excerpt": "Yaklaşık olarak tam"}]}
+{"id": "ton-resmi-1", "text": "Slm hocam, raporu gönderdim bi bakar mısın tşk.", "expected": [{"type": "ton", "excerpt": "Slm"}, {"type": "ton", "excerpt": "hocam"}, {"type": "imla", "excerpt": "bi"}, {"type": "ton", "excerpt": "bakar mısın"}, {"type": "ton", "excerpt": "tşk"}]}
+{"id": "ton-emir-1", "text": "Bu dosyayı hemen düzeltin ve bana yollayın.", "expected": [{"type": "ton", "excerpt": "düzeltin"}]}
+{"id": "temiz-1", "text": "Sayın yetkili, ilgili belgeyi ekte bilginize sunuyoruz. Saygılarımızla.", "expected": []}
+{"id": "temiz-2", "text": "Toplantı notları hazırlanmış olup onayınıza sunulmuştur.", "expected": []}
