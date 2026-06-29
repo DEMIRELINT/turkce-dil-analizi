@@ -108,6 +108,8 @@ class Handler(BaseHTTPRequestHandler):
         route = urlparse(self.path)
         if route.path == "/":
             self._serve_index()
+        elif route.path == "/logo.png":
+            self._serve_logo()
         elif route.path == "/stream":
             self._serve_stream(parse_qs(route.query))
         else:
@@ -128,6 +130,16 @@ class Handler(BaseHTTPRequestHandler):
             self._send(500, b"index.html bulunamadi", "text/plain; charset=utf-8")
             return
         self._send(200, body, "text/html; charset=utf-8")
+
+    def _serve_logo(self) -> None:
+        # Yalnız web/logo.png — sabit yol (path traversal yok).
+        logo = INDEX_HTML.parent / "logo.png"
+        try:
+            body = logo.read_bytes()
+        except OSError:
+            self._send(404, b"logo yok", "text/plain; charset=utf-8")
+            return
+        self._send(200, body, "image/png")
 
     def _serve_upload(self, query: dict) -> None:
         kind = (query.get("kind") or ["text"])[0]
