@@ -18,9 +18,14 @@ def _read_input(argv: list[str]) -> str:
     if len(argv) > 1:
         arg = argv[1]
         if arg.lower().endswith(".docx"):
-            from dilanaliz.extract import extract_docx
+            from dilanaliz.extract import extract_docx_with_report
 
-            return extract_docx(arg)
+            text, report = extract_docx_with_report(arg)
+            # Kapsam özeti + okunamayan içerik uyarıları stderr'e (stdout JSON saf kalsın).
+            print(f"  … {report.describe()}", file=sys.stderr)
+            for warning in report.warnings:
+                print(f"  ⚠ {warning}", file=sys.stderr)
+            return text
         return " ".join(argv[1:])
     data = sys.stdin.read()
     if not data.strip():

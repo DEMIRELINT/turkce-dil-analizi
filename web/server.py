@@ -32,7 +32,7 @@ from urllib.parse import parse_qs, urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from dilanaliz.analyzer import build_default_analyzer  # noqa: E402
-from dilanaliz.extract import extract_docx  # noqa: E402
+from dilanaliz.extract import extract_docx_with_report  # noqa: E402
 from dilanaliz.progress import ProgressEvent  # noqa: E402
 
 HOST = "127.0.0.1"
@@ -192,7 +192,12 @@ class Handler(BaseHTTPRequestHandler):
         if job["kind"] == "docx":
             self._sse("progress", json.dumps(
                 {"stage": "extract", "message": "Belge metni çıkarılıyor", "current": 0, "total": 0}))
-            text = extract_docx(job["path"])
+            text, report = extract_docx_with_report(job["path"])
+            # Kapsam özeti + okunamayan içerik uyarıları (ör. görsel içi yazı).
+            self._sse("extract", json.dumps({
+                "summary": report.describe(),
+                "warnings": report.warnings,
+            }))
         else:
             text = job["text"] or ""
 

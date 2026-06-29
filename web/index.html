@@ -49,6 +49,15 @@
   button:disabled { opacity: .5; cursor: default; }
   .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
 
+  /* Belge okuma notu (kapsam özeti + okunamayan içerik uyarısı) */
+  #extractNote { display: none; margin-bottom: 16px; font-size: 13px; }
+  #extractNote .ex-summary { color: var(--muted); }
+  #extractNote .ex-warn {
+    margin-top: 8px; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--warn, #d8a657); color: var(--warn, #d8a657);
+    background: rgba(216, 166, 87, .08);
+  }
+
   /* İlerleme akışı */
   #progressCard { display: none; }
   .bar { height: 6px; background: var(--panel2); border-radius: 99px; overflow: hidden; margin: 6px 0 16px; }
@@ -129,6 +138,8 @@
     <div class="hint">Belge ve metin sunucuda işlenir; analiz adımları aşağıda canlı akar. (Yalnız 127.0.0.1)</div>
   </div>
 
+  <div id="extractNote"></div>
+
   <div class="card" id="progressCard">
     <div class="bar"><i id="barFill"></i></div>
     <div class="steps" id="steps"></div>
@@ -156,6 +167,15 @@ function resetProgress() {
   $("steps").innerHTML = ""; stepEls = {}; $("barFill").style.width = "0";
   $("progressCard").style.display = "block";
   $("resultCard").style.display = "none";
+  $("extractNote").style.display = "none"; $("extractNote").innerHTML = "";
+}
+
+// Belge okuma özeti + okunamayan içerik uyarıları (ör. görsel içi yazı).
+function onExtract(ev) {
+  let html = `<div class="ex-summary">${esc(ev.summary || "")}</div>`;
+  (ev.warnings || []).forEach((w) => { html += `<div class="ex-warn">⚠ ${esc(w)}</div>`; });
+  $("extractNote").innerHTML = html;
+  $("extractNote").style.display = "block";
 }
 function onProgress(ev) {
   // Önceki aktif adımı "bitti" yap.
@@ -249,6 +269,7 @@ async function start() {
     }
     const es = new EventSource("/stream?job=" + job);
     es.addEventListener("progress", (e) => onProgress(JSON.parse(e.data)));
+    es.addEventListener("extract", (e) => onExtract(JSON.parse(e.data)));
     es.addEventListener("result", (e) => renderResult(JSON.parse(e.data)));
     es.addEventListener("error", (e) => {
       const msg = e.data ? JSON.parse(e.data).message : "Bağlantı hatası.";

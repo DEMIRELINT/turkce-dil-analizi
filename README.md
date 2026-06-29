@@ -242,10 +242,14 @@ güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
 - ✅ **Faz 1 / 1.5** — Prompt-first çekirdek + kalibrasyon.
 - ✅ **Faz 4 / 4.5** — Hibrit motor (Hunspell tespiti + Gemini düzeltme/yargı).
 - ⏭️ **Faz 3 — Uzun belge işleme (sıradaki):**
-  - **Girdi:** `.docx` / PDF → temiz metin çıkarma. Kaynak Word tercih edilir;
-    PDF'te çok sütunlu düzen, araya giren görsel ve satır kırılmaları metni
-    bozar → "çıkarma + temizlik" katmanı şart. *Yalnız temiz metin elde etmek
-    için; biçim/şablon kontrolü değil.*
+  - **Girdi:** `.docx` → eksiksiz temiz metin çıkarma (`docx2python`). Gövde
+    paragraflarının yanı sıra **tablo hücreleri, metin kutuları/şekiller,
+    üst/altbilgiler ve dipnot/sonnotlar** belge sırasını koruyarak okunur;
+    böylece atlanan metin minimuma iner. Görsel içindeki yazı (OCR) kapsam
+    dışıdır ama `ExtractionReport` ile kaç görselin okunamadığı kullanıcıya
+    bildirilir (sessiz veri kaybı yok). PDF sonraki bir faza bırakıldı: çok
+    sütunlu düzen + araya giren görsel metni bozar, güvenilir yol Word kaynaktır.
+    *Yalnız temiz metin elde etmek için; biçim/şablon kontrolü değil.*
   - **Hiyerarşik parçalama:** bölüm/başlık (örn. `1.4`, `3.2`) → paragraf →
     cümle. Anlamlı sınırdan bölünür, cümle asla ortadan kesilmez. Bölme
     deterministik kod yapar (AI değil).
