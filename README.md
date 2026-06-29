@@ -213,8 +213,29 @@ güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
 
 - ✅ **Faz 1 / 1.5** — Prompt-first çekirdek + kalibrasyon.
 - ✅ **Faz 4 / 4.5** — Hibrit motor (Hunspell tespiti + Gemini düzeltme/yargı).
-- ⏭️ **Faz 3 — Uzun metin:** hiyerarşik parçalama (paragraf→cümle) + paralel
-  analiz + tekilleştirme. (Sıradaki.)
+- ⏭️ **Faz 3 — Uzun belge işleme (sıradaki):**
+  - **Girdi:** `.docx` / PDF → temiz metin çıkarma. Kaynak Word tercih edilir;
+    PDF'te çok sütunlu düzen, araya giren görsel ve satır kırılmaları metni
+    bozar → "çıkarma + temizlik" katmanı şart. *Yalnız temiz metin elde etmek
+    için; biçim/şablon kontrolü değil.*
+  - **Hiyerarşik parçalama:** bölüm/başlık (örn. `1.4`, `3.2`) → paragraf →
+    cümle. Anlamlı sınırdan bölünür, cümle asla ortadan kesilmez. Bölme
+    deterministik kod yapar (AI değil).
+  - **Kademeli analiz — kontrol bazları:** her kontrol kendi en küçük yeterli
+    biriminde değerlendirilir:
+    - Yazım / Türkçe karakter → **kelime** (Hunspell, tek geçiş).
+    - Noktalama / anlatım bozukluğu / dil bilgisi / bağlamsal imla → **cümle**
+      (paragraf bağlamıyla beslenir).
+    - Ton / üslup → **paragraf**.
+    - Terim/birim tutarlılığı → **bütün belge**.
+    Yani analiz tek seferde değil, bu bazlara göre **kademeli geçişlerle** yürür;
+    her geçişin bulguları en sonda tek listede birleşir.
+  - **Paralel analiz + tekilleştirme** (`merge_findings`).
+  - **Belge-geneli tutarlılık geçişi:** bir terimin/birimin ifadesi belgenin her
+    yerinde aynı mı? Parçalamanın göremediği, bütünü tarayan hafif ek geçiş
+    (yukarıdaki "bütün belge" bazının uygulaması).
+  - *Not:* Parçalama yalnız AI kontrolleri (noktalama, anlatım, dil bilgisi, ton)
+    içindir; Hunspell deterministik olduğu için belge boyutundan etkilenmez.
 - ⏸️ **Faz 2 — RAG:** kural dökümanı büyüyünce `RetrievalRulesProvider`. (Gerçek
   büyük döküman gelince; küçük dökümanda gereksiz.)
 - 🔒 **Faz 8 — Self-host / air-gap:** yerel LLM (vLLM) + yerel embedding, telemetri
