@@ -29,12 +29,18 @@ def _read_input(argv: list[str]) -> str:
     return data
 
 
+def _stderr_progress(event) -> None:
+    """Analiz adımlarını stderr'e basar; stdout'taki JSON saf kalır (boru hattı bozulmaz)."""
+    print(f"  … {event.message}", file=sys.stderr)
+
+
 def main() -> None:
     text = _read_input(sys.argv)
     analyzer = build_default_analyzer()
     # Uzun belgeleri parçalayarak analiz eder; kısa metinde tek parça olur,
-    # davranış `analyze` ile aynıdır.
-    result = analyzer.analyze_document(text)
+    # davranış `analyze` ile aynıdır. İlerleme stderr'e akar (terminalde görünür),
+    # JSON sonucu stdout'a yazılır.
+    result = analyzer.analyze_document(text, progress=_stderr_progress)
     print(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
 
 

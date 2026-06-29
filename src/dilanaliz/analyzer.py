@@ -26,6 +26,7 @@ from .chunk import DEFAULT_MAX_CHARS, chunk_text
 from .config import Settings
 from .locate import enrich_with_offsets
 from .postprocess import drop_noop_findings, merge_findings, validate_suggestions
+from .progress import ProgressCallback, ProgressEvent, emit
 from .prompt import (
     CONSISTENCY_SYSTEM_PROMPT,
     LOCAL_SYSTEM_PROMPT,
@@ -68,20 +69,35 @@ class Analyzer:
         return self._finalize(findings, text)
 
     def analyze_document(
-        self, text: str, max_chars: int = DEFAULT_MAX_CHARS
+        self,
+        text: str,
+        max_chars: int = DEFAULT_MAX_CHARS,
+        progress: ProgressCallback | None = None,
     ) -> AnalysisResult:
         """Uzun belgeyi kademeli geçişlerle inceler.
 
         Yerel ve ton geçişleri parça parça (offset rebasing ile); tutarlılık geçişi
         bütün belgede bir kez. Tüm bulgular tek listede toplanır.
 
+        İsteğe bağlı `progress` callback'i her adımda bir `ProgressEvent` alır
+        (web paneli/CLI canlı geri bildirim için); `None` ise davranış değişmez.
+
         MVP: parçalar sırayla işlenir (paralelleştirme sonraki bir iyileştirme).
         """
         chunks = chunk_text(text, max_chars=max_chars)
+        total = len(chunks)
+        emit(progress, ProgressEvent("chunk", f"Belge {total} parçaya bölündü", 0, total))
+
         findings: list[Finding] = []
-        for chunk in chunks:
-            local_and_tone = self._local_pass(chunk.text) + self._tone_pass(chunk.text)
-            for finding in local_and_tone:
+        for index, chunk in enumerate(chunks, start=1):
+            emit(progress, ProgressEvent(
+                "local", f"Parça {index}/{total}: yazım ve dil bilgisi inceleniyor",
+                index, total))
+            local = self._local_pass(chunk.text)
+            emit(progress, ProgressEvent(
+                "tone", f"Parça {index}/{total}: ton/üslup inceleniyor", index, total))
+            tone = self._tone_pass(chunk.text)
+            for finding in local + tone:
                 if finding.start is not None:
                     finding.start += chunk.start
                 if finding.end is not None:
@@ -89,8 +105,15 @@ class Analyzer:
                 findings.append(finding)
 
         # Belge-geneli tutarlılık: bütün metinde tek geçiş (offsetler zaten global).
+        emit(progress, ProgressEvent(
+            "consistency", "Belge geneli tutarlılık inceleniyor", total, total))
         findings += self._consistency_pass(text)
-        return self._finalize(findings, text)
+
+        emit(progress, ProgressEvent(
+            "finalize", "Bulgular birleştiriliyor ve sıralanıyor", total, total))
+        result = self._finalize(findings, text)
+        emit(progress, ProgressEvent("done", "Analiz tamamlandı", total, total))
+        return result
 
     # --- Tek tek geçişler ----------------------------------------------------
 

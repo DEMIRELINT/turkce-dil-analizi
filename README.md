@@ -156,7 +156,35 @@ python cli.py < belge.txt
 ```
 
 Çıktı, her bulgu için `type, excerpt, explanation, suggestion, rule_id,
-start/end` içeren JSON'dur.
+start/end` içeren JSON'dur. Uzun belgelerde analiz adımları `stderr`'e canlı
+basılır (stdout'taki JSON saf kalır).
+
+`.docx` da doğrudan verilebilir:
+
+```bash
+python cli.py belge.docx > sonuc.json
+```
+
+---
+
+## Web paneli (canlı ilerleme)
+
+Terminal yerine, analiz adımlarını **canlı** gösteren yerel bir panel:
+
+```bash
+python web/server.py        # tarayıcı açılır: http://127.0.0.1:8765
+PORT=9000 python web/server.py
+```
+
+- `.docx` yükle **veya** metin yapıştır → "Analiz Et".
+- Her adım canlı akar: *"Belge 5 parçaya bölündü → Parça 2/5: yazım inceleniyor →
+  … → Belge geneli tutarlılık → Tamamlandı"*.
+- Sonuç: bulgular metin üzerinde vurgulanır ve eksene göre (imla / dil bilgisi /
+  ton / tutarlılık) gruplanmış kartlarda listelenir.
+
+**Güvenlik / air-gap:** yalnız `127.0.0.1`'e bağlanır (dışarı açılmaz);
+`GEMINI_API_KEY` sunucuda kalır, tarayıcıya gönderilmez; harici CDN/script/font
+yoktur; **sıfır yeni Python bağımlılığı** (yerleşik `http.server` + SSE).
 
 ---
 
