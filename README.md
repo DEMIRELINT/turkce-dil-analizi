@@ -1,35 +1,139 @@
-# Türkçe Doküman Dil Analizi — Faz 1 (prompt-first çekirdek)
+# Türkçe Doküman Dil Analizi
 
 Türkçe kurumsal metinleri **imla**, **dil bilgisi** ve **ton** eksenlerinde
-inceleyip her sorun için gerekçe + öneri üreten sistemin çekirdeği. Sistem
-**önerir**, düzeltmez; son söz kullanıcıdadır.
+inceleyip her sorun için **gerekçe + düzeltme önerisi** üreten hibrit bir sistem.
+Sistem **önerir, düzeltmez**; son söz kullanıcıdadır.
 
-Bu faz prompt tabanlıdır; mimari, dokümanlar geldiğinde **RAG**'e ve üretimde
-**self-host** (kapalı ağ) ortamına *kod değişmeden* büyüyecek şekilde tasarlandı.
+Çekirdek felsefe: **deterministik olarak çözülebilen işi araca, yargı/bağlam
+gerektiren işi yapay zekâya** bırakan bir hibrit. Yazım hatalarını yerel bir
+sözlük (Hunspell) **kesin** biçimde bulur; düzeltme önerisini, dil bilgisini ve
+tonu ise bağlamı anlayan bir LLM (Gemini) üretir.
 
-## Mimari (seam'ler)
+Mimari, ileride **RAG**'e ve üretimde **self-host / kapalı ağ (air-gap)** ortamına
+*kod değişmeden* büyüyecek şekilde tasarlandı.
 
-- **Davranış / Bilgi ayrımı** — `prompt.py` yalnız modelin davranışını tutar;
-  kurallar (`bilgi`) `RulesProvider` üzerinden ayrı gelir. Faz 1'de
-  `StaticRulesProvider` tüm `rules/rules.md`'yi verir; Faz 2'de aynı imzayla
-  retrieval gelir, analyzer değişmez.
+---
+
+## Ne yapıyor?
+
+- **İmla** — yazım hataları, eksik Türkçe karakter, bağlama bağlı yazım (de/da, ki, mi).
+- **Dil bilgisi** — özne-yüklem/tamlama uyumu, anlatım bozuklukları.
+- **Ton** — kurumsal/resmî yazışmaya uygunluk, üslup tutarlılığı.
+- Her bulgu: **tür, alıntı, açıklama, öneri, kural kimliği, metindeki konum (offset)**.
+- Çıktı: makine-işlenebilir **JSON** (rapora veya arayüze dönüşebilir).
+
+---
+
+## Algoritma akışı
+
+```mermaid
+flowchart TD
+    A["Metin (girdi)"] --> B["Hunspell<br/>yazım hatası TESPİTİ<br/>(tüm doküman, kesin offset)"]
+    C["Kural dökümanı<br/>rules.md"] --> D
+    A --> D{"Gemini — tek çağrı"}
+    B -->|şüpheli kelimeler| D
+    D -->|a| E["Şüpheli kelimeleri BAĞLAMA göre DÜZELT<br/>veya özel ad ise ELE"]
+    D -->|b| F["Dil bilgisi + Ton + bağlamsal imla<br/>(de/da, ki, mi)"]
+    E --> G["Birleştir + tekilleştir + konumla"]
+    F --> G
+    G --> H["JSON bulgu listesi<br/>(tür, alıntı, açıklama, öneri, konum)"]
+```
+
+Tek cümlede: **tespit = Hunspell (deterministik), düzeltme + yargı = Gemini.**
+Hunspell sözlükte olmayan kelimeleri bulur; Gemini bunları cümlenin akışına göre
+düzeltir ya da "bu bir özel ad, hata değil" diyerek eler, ayrıca dil bilgisi ve
+tonu analiz eder. İki kaynağın bulguları birleştirilir, çakışanlar tekilleştirilir.
+
+---
+
+## Neden her noktada yapay zeka kullanmadık?
+
+Bu, projenin en bilinçli kararı. Mantık şöyle:
+
+| İş türü | Kim yapar | Neden |
+|---|---|---|
+| Sözlükteki yazım hatası (var/yok) | **Hunspell (araç)** | Hızlı, ücretsiz, **sıfır halüsinasyon**, tamamen yerel. Sözlük temelli; uydurmaz. |
+| Düzeltme önerisi, dil bilgisi, ton, özel-ad ayırt etme | **Gemini (LLM)** | Cümlenin akışını/anlamını gerektirir; araçla çözülemez. |
+
+Bunu **ölçerek** öğrendik. İmla denetimini LLM'e bıraktığımızda model olmayan
+hatalar uyduruyordu (örn. doğru olan "yalnız mı"yı "yalnız mu" yapmak, cümle
+ortasındaki "sabah"ı gereksizce büyük harfe çevirmek). Aynı işi sözlüğe
+(Hunspell) devredince **imla precision'ı 1.00'a** çıktı ve bu uydurmalar bitti.
+
+Tersi de doğru: yazım denetçisinin önerileri zayıftı ("gonderecegim →
+gönderecekler" gibi yanlış), çünkü araç bağlama bakmaz. Önerileri Gemini'ye
+ürettirince bağlama uygun hale geldi ("gonderecegim → göndereceğim").
+
+Özetle:
+- **Her yere LLM koymak** = gereksiz maliyet, gecikme, kota tüketimi ve
+  halüsinasyon riski.
+- **Her yere kural koymak** = dili asla tam kapsayamama + prompt şişince modelin
+  dikkatinin dağılması (bunu da denedik, kural dökümanını büyütünce recall düştü).
+- **Hibrit** = her işi onu en iyi yapan araca vermek. Karar sezgiyle değil, altın
+  set üzerinde **ölçümle** verildi.
+
+---
+
+## Yolculuk: buraya gelene kadar ne yaptık, nerede ne kullandık?
+
+| Faz | Ne yaptık | Kullanılan |
+|---|---|---|
+| **1** | Prompt-first çekirdek: kısa metni alıp JSON bulgu üreten motor | Python, LangChain-core, Gemini, Pydantic (katı JSON şema), sağlayıcı + kural kaynağı "seam"leri |
+| **1.5** | Kalibrasyon: yanlış-pozitifleri ölçüp düşürme | Altın set (`eval/`), "düzeltme yoksa ele" filtresi, disk önbelleği (kota tasarrufu), dayanıklı eval |
+| **4 (denenen→terk)** | Deterministik imla için **Zemberek-python** denendi | Saf-Python port; ama vasat çıktı (`yanlız`, `herşey`, `Yarin` gibi hataları kaçırdı, çoğu kelimeyi geçerli sandı) → **terk edildi** |
+| **4 (kullanılan)** | Deterministik imla tespiti | **Hunspell (spylls, saf-Python) + LibreOffice tr_TR sözlüğü** |
+| **4.5** | Akıllı düzeltme: Hunspell bulur, Gemini bağlama göre düzeltir + özel-ad eler | Gemini (tek çağrıda imla düzeltme + dil bilgisi + ton); ton sıkılaştırma; eval'de tür yumuşatma |
+
+**Güncel sonuç (altın set):** genel precision **0.93**, imla precision **1.00**,
+temiz metinlerde yanlış-pozitif **0**.
+
+> Not: Zemberek artık projede **kullanılmıyor** — yukarıdaki tabloda yalnız
+> "denendi ve terk edildi" olarak yer alır.
+
+---
+
+## Teknoloji yığını (güncel)
+
+| Bileşen | Seçim | Rol |
+|---|---|---|
+| LLM | **Gemini** (geliştirmede `gemini-3.5-flash`) | Düzeltme önerisi, dil bilgisi, ton, bağlamsal imla, özel-ad ayırma |
+| Deterministik imla | **Hunspell** (`spylls`, saf-Python) + **tr_TR** sözlük | Yazım hatası tespiti (yerel, sıfır halüsinasyon) |
+| Orkestrasyon / soyutlama | **LangChain-core** (`BaseChatModel`, `with_structured_output`) | Sağlayıcı bağımsızlığı + katı JSON çıktı |
+| Şema | **Pydantic v2** | Bulgu/şema doğrulama |
+| Önbellek | Disk (`.cache/llm_cache.json`) | Kota tasarrufu + tekrarlanabilirlik |
+| Test/ölçüm | **pytest** + altın set (`eval/`) | Birim test + precision/recall |
+
+Tasarım ilkeleri: **modüler + pinli bağımlılık** (air-gap'te mirror'lanabilsin),
+telemetri kapalı, gizli dış çağrı yok.
+
+---
+
+## Mimari "seam"leri (değiştirilebilir bağlantı noktaları)
+
+- **Davranış / Bilgi ayrımı** — `prompt.py` yalnız modelin *davranışını* tutar;
+  *kurallar* `RulesProvider` üzerinden ayrı gelir. Bugün `StaticRulesProvider`
+  tüm `rules/rules.md`'yi verir; ileride aynı arayüzle RAG (retrieval) gelir,
+  analyzer değişmez.
 - **Sağlayıcı soyutlaması** — `providers/build_chat_model` bir LangChain
-  `BaseChatModel` döndürür. Bugün Gemini; Faz 8'de yerel vLLM aynı arayüzle.
-- **Katı JSON çıktı** — `with_structured_output(LLMAnalysis)` parse hatasını
-  kaldırır; offset/üstveri LLM'e gösterilmez, sonradan eklenir.
-- **Offset konumlama** — `locate.py` alıntıyı kaynakta bulur (birebir → boşluk
-  normalize → bulunamazsa konumsuz).
-- **Hibrit motor (Faz 4 + 4.5)** — `spell.py` Hunspell (spylls, saf-Python) ile
-  yazım hatalarını **deterministik tespit** eder (kesin offset). Gemini ise tek
-  çağrıda: (a) bu şüpheli kelimeleri **bağlama göre düzeltir** veya "hata değil
-  (özel ad)" diye **eler**, (b) dil bilgisi + ton + bağlamsal imla (de/da, ki, mi)
-  bulur. Yani **tespit = Hunspell, düzeltme/doğrulama = Gemini**. Bulgular
-  `postprocess.merge_findings` ile birleştirilip çakışanlar tekilleştirilir.
+  `BaseChatModel` döndürür. Bugün Gemini; üretimde yerel vLLM aynı arayüzle.
+- **Katı JSON çıktı** — `with_structured_output` parse hatasını kaldırır.
+- **Offset konumlama** — `locate.py` alıntıyı kaynakta bulur; Hunspell zaten
+  kesin offset üretir.
 
-## Hunspell sözlüğü (deterministik imla)
+---
 
-`dicts/tr_TR.aff` ve `dicts/tr_TR.dic` gereklidir (LibreOffice tr_TR). Yoksa
-deterministik katman otomatik devre dışı kalır (yalnız LLM çalışır). İndirme:
+## Kurulum
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+cp .env.example .env   # GEMINI_API_KEY değerini girin
+```
+
+### Hunspell sözlüğü (deterministik imla için gerekli)
+
+`dicts/tr_TR.aff` ve `dicts/tr_TR.dic` gerekir (repoda tutulmaz, indirilir). Yoksa
+deterministik katman otomatik devre dışı kalır (yalnız LLM çalışır).
 
 ```bash
 mkdir -p dicts
@@ -41,77 +145,77 @@ Air-gap'te bu iki dosya iç ağa vendor'lanır. Yol `.env`'de `DICT_PATH` ile
 değiştirilebilir. Bilinen sınır: sözlükte olmayan özel ad/yabancı kelime
 yanlış-pozitif olabilir → `HunspellChecker(whitelist=...)` ile beyaz liste.
 
-## Kurulum
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-cp .env.example .env   # GEMINI_API_KEY değerini girin
-```
+---
 
 ## Kullanım
 
 ```bash
 python cli.py "Bu cümlede ki hata var ve yanlız yazılmış."
 echo "uzun metin..." | python cli.py
+python cli.py < belge.txt
 ```
 
 Çıktı, her bulgu için `type, excerpt, explanation, suggestion, rule_id,
 start/end` içeren JSON'dur.
 
+---
+
 ## Kural dökümanını değiştirme (kod değişmeden)
 
 Kurallar [src/dilanaliz/rules/rules.md](src/dilanaliz/rules/rules.md) dosyasında
-tutulur; analiz motorundan bağımsızdır. İki yol:
+tutulur; analiz motorundan bağımsızdır:
 
-1. **Dosya içeriğini değiştir** — `rules.md`'yi düzenle/değiştir. Kod değişmez.
-2. **Harici dökümana işaret et** — `.env`'de `RULES_PATH=/yol/resmi_kurallar.md`
-   ver. Kod değişmez.
+1. **Dosya içeriğini değiştir** — `rules.md`'yi düzenle. Kod değişmez.
+2. **Harici dökümana işaret et** — `.env`'de `RULES_PATH=/yol/resmi_kurallar.md`.
 
-Döküman çok büyürse (bağlam bütçesini aşarsa) `StaticRulesProvider` yerine
-`RetrievalRulesProvider` (RAG) takılır — analyzer yine değişmez (Faz 2).
+Döküman çok büyürse `StaticRulesProvider` yerine `RetrievalRulesProvider` (RAG)
+takılır — analyzer yine değişmez.
 
-> Not: Kural metni değişince LLM önbellek anahtarı da değişir; bir sonraki çalışma
-> taze API çağrısı yapar.
+> Kural metni değişince LLM önbellek anahtarı da değişir; sonraki çalışma taze
+> API çağrısı yapar.
+
+---
 
 ## Ölçüm (altın set)
 
 ```bash
-python eval/run_eval.py   # eksen-bazlı precision/recall + temiz-metin yanlış pozitif
-pytest                    # locate + schema testleri (API gerektirmez)
+EVAL_DELAY_SEC=0 python eval/run_eval.py   # eksen-bazlı precision/recall + temiz-metin FP
+pytest                                      # API gerektirmeyen birim testler
 ```
 
-`eval/golden.jsonl` elle etiketli tohum settir (imla/gramer/ton + temiz metinler).
-Parametre/prompt değişiklikleri bu set üzerinde ölçülerek değerlendirilir.
-Her çalıştırma `eval/last_predictions.json`'a tüm tahminleri yazar (kalibrasyon için).
+`eval/golden.jsonl` elle etiketli settir (imla/gramer/ton + temiz metinler).
+Prompt/kural değişiklikleri bu set üzerinde **ölçülerek** değerlendirilir. Her
+çalıştırma `eval/last_predictions.json`'a tüm tahminleri yazar (kalibrasyon için).
 
-### Ücretsiz kota ve önbellek
+### Önbellek ve kota
 
-Gemini ücretsiz katmanı **günlük** istek sınırına sahiptir (model bazlı; `2.5-flash`
-çok düşük, `2.5-flash-lite` en bol). Bu yüzden:
-- Varsayılan model `gemini-2.5-flash-lite` (`.env`'de `MODEL_ID`).
-- LLM çağrıları `.cache/llm_cache.json`'a **önbelleklenir**: aynı metin+kural+model
+- LLM çağrıları `.cache/llm_cache.json`'a önbelleklenir: aynı metin+kural+model
   bir daha API'ye gitmez. Prompt/kural/model değişince anahtar değişir, önbellek
-  kendiliğinden tazelenir. Önbelleği sıfırlamak için `.cache/` silinir.
-- Dakikalık limit için eval çağrı aralarında bekler (`EVAL_DELAY_SEC`, varsayılan 13;
-  ücretli katmanda `EVAL_DELAY_SEC=0`).
+  kendiliğinden tazelenir. Sıfırlamak için `.cache/` silinir.
+- Gemini ücretsiz katmanı **günlük** istek sınırlıdır; ücretli katmanda
+  `EVAL_DELAY_SEC=0` ile beklemesiz çalışır. Model `.env`'de `MODEL_ID` ile seçilir.
 
-### Metrik hedefleri (başlangıç)
+### Güncel metrikler
 
-| Eksen | Recall hedefi | Precision hedefi |
+| Eksen | Precision | Recall |
 |---|---|---|
-| imla | ≥ 0.85 | ≥ 0.90 |
-| dil_bilgisi | ≥ 0.65 | ≥ 0.80 |
-| ton | ≥ 0.60 | ≥ 0.80 |
+| imla | 1.00 | 0.89 |
+| dil_bilgisi | 1.00 | 1.00 |
+| ton | 0.80 | 0.80 |
+| **GENEL** | **0.93** | **0.88** |
 
-Yanlış pozitif (özellikle temiz metinlerde) en kritik göstergedir; hedefler
-altın set büyüdükçe revize edilir.
+Temiz metinlerde yanlış-pozitif: **0**. (Altın set küçük; sayılar set büyüdükçe
+güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
 
-## Sonraki fazlar
+---
 
-- **Faz 2 — RAG:** `RetrievalRulesProvider` (langchain-chroma + splitter).
-- **Faz 3 — Uzun metin:** hiyerarşik parçalama + paralel analiz + tekilleştirme.
-- **Faz 4 — Hibrit (Zemberek):** deterministik imla katmanı, bulgu birleştirme.
-  Not: "de/da, mi, ki" saf regex değil — morfoloji gerektirir.
-- **Faz 8 — Self-host / air-gap:** `providers/vllm.py`, yerel embedding, telemetri
+## Yol haritası
+
+- ✅ **Faz 1 / 1.5** — Prompt-first çekirdek + kalibrasyon.
+- ✅ **Faz 4 / 4.5** — Hibrit motor (Hunspell tespiti + Gemini düzeltme/yargı).
+- ⏭️ **Faz 3 — Uzun metin:** hiyerarşik parçalama (paragraf→cümle) + paralel
+  analiz + tekilleştirme. (Sıradaki.)
+- ⏸️ **Faz 2 — RAG:** kural dökümanı büyüyünce `RetrievalRulesProvider`. (Gerçek
+  büyük döküman gelince; küçük dökümanda gereksiz.)
+- 🔒 **Faz 8 — Self-host / air-gap:** yerel LLM (vLLM) + yerel embedding, telemetri
   kapalı, pinli bağımlılıkların iç ağa mirror'lanması.
