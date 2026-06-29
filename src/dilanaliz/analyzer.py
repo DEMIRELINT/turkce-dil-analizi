@@ -16,6 +16,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .cache import DiskCache, make_key
+from .chunk import DEFAULT_MAX_CHARS, chunk_text
 from .config import Settings
 from .locate import enrich_with_offsets
 from .postprocess import drop_noop_findings, merge_findings
@@ -65,6 +66,39 @@ class Analyzer:
         spelling_findings = self._resolve_spelling(candidates, raw.spelling)
 
         result.findings = merge_findings(spelling_findings, result.findings)
+        return result
+
+    def analyze_document(
+        self, text: str, max_chars: int = DEFAULT_MAX_CHARS
+    ) -> AnalysisResult:
+        """Uzun metni parçalara bölüp her parçayı `analyze` ile inceler (Faz 3).
+
+        Parça-içi bulgu offsetleri, parçanın kaynaktaki başlangıcı kadar kaydırılıp
+        (rebasing) kaynak metne taşınır; böylece offsetler tüm belgeye göre doğru
+        kalır. Bulgular tek listede toplanır ve başlangıç offsetine göre sıralanır
+        (konumsuzlar sona).
+
+        MVP: parçalar sırayla işlenir (paralelleştirme sonraki bir iyileştirme).
+        Parçalar çakışmadığı için parçalar-arası tekrar oluşmaz; belge-geneli
+        tutarlılık (terim/birim) bu turun KAPSAMINDA DEĞİLDİR.
+        """
+        chunks = chunk_text(text, max_chars=max_chars)
+        all_findings: list[Finding] = []
+        for chunk in chunks:
+            part = self.analyze(chunk.text)
+            for finding in part.findings:
+                if finding.start is not None:
+                    finding.start += chunk.start
+                if finding.end is not None:
+                    finding.end += chunk.start
+                all_findings.append(finding)
+
+        all_findings.sort(
+            key=lambda f: (f.start is None, f.start if f.start is not None else 0)
+        )
+        result = AnalysisResult(findings=all_findings)
+        result.model_id = self._model_id
+        result.text_len = len(text)
         return result
 
     @staticmethod

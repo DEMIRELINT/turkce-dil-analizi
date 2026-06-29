@@ -2,7 +2,13 @@
 
 from dilanaliz.analyzer import Analyzer
 from dilanaliz.prompt import build_user_message
-from dilanaliz.schema import Finding, FindingType, LLMSpellingDecision
+from dilanaliz.schema import (
+    Finding,
+    FindingType,
+    LLMAnalysis,
+    LLMFinding,
+    LLMSpellingDecision,
+)
 
 
 def _candidate(excerpt: str, start: int, suggestion: str = "(öneri yok)") -> Finding:
@@ -58,3 +64,75 @@ def test_user_message_lists_candidates():
 def test_user_message_without_candidates():
     msg = build_user_message("KURALLAR", "metin", [])
     assert "hiçbir kelime işaretlemedi" in msg
+
+
+# --- analyze_document: parçalama + offset rebasing (sahte model, API yok) ------
+
+
+class _FakeRules:
+    def get_context(self, text: str) -> str:
+        return "KURALLAR"
+
+
+class _FakeStructured:
+    """`with_structured_output` sonrası nesne: her çağrıda sabit analiz döner."""
+
+    def __init__(self, analysis: LLMAnalysis) -> None:
+        self._analysis = analysis
+
+    def invoke(self, messages):  # noqa: ARG002 — mesaj içeriği önemsiz
+        return self._analysis
+
+
+class _FakeModel:
+    def __init__(self, analysis: LLMAnalysis) -> None:
+        self._analysis = analysis
+
+    def with_structured_output(self, schema):  # noqa: ARG002
+        return _FakeStructured(self._analysis)
+
+
+def _build_analyzer(analysis: LLMAnalysis) -> Analyzer:
+    return Analyzer(
+        chat_model=_FakeModel(analysis),
+        rules_provider=_FakeRules(),
+        model_id="test-model",
+        cache=None,
+        speller=None,
+    )
+
+
+def test_analyze_document_rebases_offsets_to_source():
+    # İki parça olacak: "aaaa" (start 0) ve "XXXX" (start 6). Sahte model her
+    # parçada "XXXX" bulgusu döndürür; yalnız ikinci parçada konumlanır ve offset
+    # parça başlangıcı (6) kadar kaydırılarak kaynağa taşınır.
+    analysis = LLMAnalysis(
+        findings=[
+            LLMFinding(
+                type=FindingType.DIL_BILGISI,
+                excerpt="XXXX",
+                explanation="x",
+                suggestion="düzeltme",
+            )
+        ],
+        spelling=[],
+    )
+    analyzer = _build_analyzer(analysis)
+    source = "aaaa\n\nXXXX"
+
+    result = analyzer.analyze_document(source, max_chars=5)
+
+    located = [f for f in result.findings if f.start is not None]
+    assert len(located) == 1
+    assert (located[0].start, located[0].end) == (6, 10)
+    assert source[located[0].start : located[0].end] == "XXXX"
+    assert result.text_len == len(source)
+    assert result.model_id == "test-model"
+
+
+def test_analyze_document_single_chunk_matches_analyze():
+    analysis = LLMAnalysis(findings=[], spelling=[])
+    analyzer = _build_analyzer(analysis)
+    result = analyzer.analyze_document("Kısa tek paragraf.")
+    assert result.findings == []
+    assert result.text_len == len("Kısa tek paragraf.")

@@ -3,6 +3,7 @@
 Kullanım:
     python cli.py "Bu cümlede ki hata var ve yanlız yazılmış."
     echo "uzun metin..." | python cli.py
+    python cli.py belge.docx        # .docx → çıkar + parçala + analiz et
 """
 
 from __future__ import annotations
@@ -15,6 +16,11 @@ from dilanaliz.analyzer import build_default_analyzer
 
 def _read_input(argv: list[str]) -> str:
     if len(argv) > 1:
+        arg = argv[1]
+        if arg.lower().endswith(".docx"):
+            from dilanaliz.extract import extract_docx
+
+            return extract_docx(arg)
         return " ".join(argv[1:])
     data = sys.stdin.read()
     if not data.strip():
@@ -26,7 +32,9 @@ def _read_input(argv: list[str]) -> str:
 def main() -> None:
     text = _read_input(sys.argv)
     analyzer = build_default_analyzer()
-    result = analyzer.analyze(text)
+    # Uzun belgeleri parçalayarak analiz eder; kısa metinde tek parça olur,
+    # davranış `analyze` ile aynıdır.
+    result = analyzer.analyze_document(text)
     print(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
 
 
