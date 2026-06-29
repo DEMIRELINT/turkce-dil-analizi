@@ -1,11 +1,17 @@
-"""Analiz orkestrasyonu.
+"""Analiz orkestrasyonu (kademeli geçişler).
 
-Akış: text → RulesProvider.get_context → prompt (system + rules + text)
-→ chat_model.with_structured_output(LLMAnalysis) → public sonuca dönüştür
-→ locate ile offset → AnalysisResult.
+Her kontrol kendi bazında AYRI bir geçişte çalışır:
+- Yerel geçiş (cümle)      : Hunspell adayları + noktalama/dil bilgisi/anlatım/
+  bağlamsal imla. Uzun belgede parça parça (chunk) çalışır.
+- Ton geçişi (paragraf)    : yalnız ton/üslup. Parça parça.
+- Tutarlılık geçişi (belge): terim/birim/kısaltma tutarsızlığı. BÜTÜN belgede bir
+  kez çalışır (tek parça göremez).
+
+Parça-içi geçişlerin offsetleri parçanın kaynaktaki başlangıcı kadar kaydırılır
+(rebasing); tutarlılık geçişi zaten bütün metinde çalıştığı için offsetleri global.
 
 Sağlayıcı ve kural kaynağı dışarıdan enjekte edilir; böylece test edilebilir ve
-ileride (RAG / self-host) bu parçalar değişse de analyzer değişmez.
+ileride (RAG / self-host) bu parçalar değişse de orkestrasyon değişmez.
 """
 
 from __future__ import annotations
@@ -19,8 +25,15 @@ from .cache import DiskCache, make_key
 from .chunk import DEFAULT_MAX_CHARS, chunk_text
 from .config import Settings
 from .locate import enrich_with_offsets
-from .postprocess import drop_noop_findings, merge_findings
-from .prompt import SYSTEM_PROMPT, build_user_message
+from .postprocess import drop_noop_findings, merge_findings, validate_suggestions
+from .prompt import (
+    CONSISTENCY_SYSTEM_PROMPT,
+    LOCAL_SYSTEM_PROMPT,
+    TONE_SYSTEM_PROMPT,
+    build_consistency_message,
+    build_tone_message,
+    build_user_message,
+)
 from .providers import build_chat_model
 from .rules import RulesProvider, StaticRulesProvider
 from .schema import AnalysisResult, Finding, LLMAnalysis, LLMSpellingDecision
@@ -28,7 +41,7 @@ from .spell import HunspellChecker
 
 
 class Analyzer:
-    """Metin analiz motoru."""
+    """Metin analiz motoru (çok geçişli)."""
 
     def __init__(
         self,
@@ -42,63 +55,95 @@ class Analyzer:
         self._model_id = model_id
         self._cache = cache
         self._speller = speller
-        # Yapılandırılmış çıktı: parse hatasını kaldırır.
+        # Yapılandırılmış çıktı: parse hatasını kaldırır. Tüm geçişler aynı şemayı
+        # döndürür; yalnız sistem promptu değişir.
         self._structured = chat_model.with_structured_output(LLMAnalysis)
 
     def analyze(self, text: str) -> AnalysisResult:
-        rules_context = self._rules.get_context(text)
-
-        # Deterministik tespit: Hunspell şüpheli kelimeleri (offsetli) bulur.
-        candidates = self._speller.check_text(text) if self._speller else []
-        candidate_words = [c.excerpt for c in candidates]
-
-        user_message = build_user_message(rules_context, text, candidate_words)
-        raw = self._invoke_cached(user_message)
-
-        # LLM bulguları: dil bilgisi + ton + bağlamsal imla.
-        result = raw.to_result()
-        result.model_id = self._model_id
-        result.text_len = len(text)
-        drop_noop_findings(result)
-        enrich_with_offsets(result, text)
-
-        # İmla bulguları: Hunspell adayları + Gemini'nin bağlamsal düzeltme/doğrulaması.
-        spelling_findings = self._resolve_spelling(candidates, raw.spelling)
-
-        result.findings = merge_findings(spelling_findings, result.findings)
-        return result
+        """Kısa metni TEK parça olarak üç geçişle inceler (chunk'lamadan)."""
+        findings: list[Finding] = []
+        findings += self._local_pass(text)
+        findings += self._tone_pass(text)
+        findings += self._consistency_pass(text)
+        return self._finalize(findings, text)
 
     def analyze_document(
         self, text: str, max_chars: int = DEFAULT_MAX_CHARS
     ) -> AnalysisResult:
-        """Uzun metni parçalara bölüp her parçayı `analyze` ile inceler (Faz 3).
+        """Uzun belgeyi kademeli geçişlerle inceler.
 
-        Parça-içi bulgu offsetleri, parçanın kaynaktaki başlangıcı kadar kaydırılıp
-        (rebasing) kaynak metne taşınır; böylece offsetler tüm belgeye göre doğru
-        kalır. Bulgular tek listede toplanır ve başlangıç offsetine göre sıralanır
-        (konumsuzlar sona).
+        Yerel ve ton geçişleri parça parça (offset rebasing ile); tutarlılık geçişi
+        bütün belgede bir kez. Tüm bulgular tek listede toplanır.
 
         MVP: parçalar sırayla işlenir (paralelleştirme sonraki bir iyileştirme).
-        Parçalar çakışmadığı için parçalar-arası tekrar oluşmaz; belge-geneli
-        tutarlılık (terim/birim) bu turun KAPSAMINDA DEĞİLDİR.
         """
         chunks = chunk_text(text, max_chars=max_chars)
-        all_findings: list[Finding] = []
+        findings: list[Finding] = []
         for chunk in chunks:
-            part = self.analyze(chunk.text)
-            for finding in part.findings:
+            local_and_tone = self._local_pass(chunk.text) + self._tone_pass(chunk.text)
+            for finding in local_and_tone:
                 if finding.start is not None:
                     finding.start += chunk.start
                 if finding.end is not None:
                     finding.end += chunk.start
-                all_findings.append(finding)
+                findings.append(finding)
 
-        all_findings.sort(
-            key=lambda f: (f.start is None, f.start if f.start is not None else 0)
-        )
-        result = AnalysisResult(findings=all_findings)
+        # Belge-geneli tutarlılık: bütün metinde tek geçiş (offsetler zaten global).
+        findings += self._consistency_pass(text)
+        return self._finalize(findings, text)
+
+    # --- Tek tek geçişler ----------------------------------------------------
+
+    def _local_pass(self, text: str) -> list[Finding]:
+        """Cümle bazlı geçiş: Hunspell adayları + noktalama/dil bilgisi/bağlamsal imla."""
+        rules_context = self._rules.get_context(text)
+        candidates = self._speller.check_text(text) if self._speller else []
+        candidate_words = [c.excerpt for c in candidates]
+
+        user_message = build_user_message(rules_context, text, candidate_words)
+        raw = self._invoke_cached(LOCAL_SYSTEM_PROMPT, user_message)
+
+        result = raw.to_result()
+        drop_noop_findings(result)
+        enrich_with_offsets(result, text)
+
+        spelling_findings = self._resolve_spelling(candidates, raw.spelling)
+        return merge_findings(spelling_findings, result.findings)
+
+    def _tone_pass(self, text: str) -> list[Finding]:
+        """Paragraf bazlı geçiş: yalnız ton/üslup."""
+        rules_context = self._rules.get_context(text)
+        user_message = build_tone_message(rules_context, text)
+        return self._located_findings(TONE_SYSTEM_PROMPT, user_message, text)
+
+    def _consistency_pass(self, text: str) -> list[Finding]:
+        """Bütün belge geçişi: terim/birim/kısaltma tutarsızlığı."""
+        user_message = build_consistency_message(text)
+        return self._located_findings(CONSISTENCY_SYSTEM_PROMPT, user_message, text)
+
+    def _located_findings(
+        self, system_prompt: str, user_message: str, text: str
+    ) -> list[Finding]:
+        """LLM geçişini çalıştırır, noop'ları atar, offsetleri konumlar."""
+        raw = self._invoke_cached(system_prompt, user_message)
+        result = raw.to_result()
+        drop_noop_findings(result)
+        enrich_with_offsets(result, text)
+        return result.findings
+
+    # --- Birleştirme / son işleme -------------------------------------------
+
+    def _finalize(self, findings: list[Finding], text: str) -> AnalysisResult:
+        """Tüm geçişlerin bulgularını tekilleştirir, doğrular ve sıralar."""
+        result = AnalysisResult(findings=_dedup(findings))
         result.model_id = self._model_id
         result.text_len = len(text)
+        # Bozuk öneri koruması (örn. "birçok" → "birchoq"): otomatik uygulamada
+        # veriyi bozacak önerileri eler.
+        validate_suggestions(result)
+        result.findings.sort(
+            key=lambda f: (f.start is None, f.start if f.start is not None else 0)
+        )
         return result
 
     @staticmethod
@@ -130,20 +175,33 @@ class Analyzer:
             resolved.append(c)
         return resolved
 
-    def _invoke_cached(self, user_message: str) -> LLMAnalysis:
-        key = make_key(self._model_id or "", SYSTEM_PROMPT, user_message)
+    def _invoke_cached(self, system_prompt: str, user_message: str) -> LLMAnalysis:
+        key = make_key(self._model_id or "", system_prompt, user_message)
         if self._cache is not None:
             hit = self._cache.get(key)
             if hit is not None:
                 return LLMAnalysis.model_validate_json(hit)
 
         raw: LLMAnalysis = self._structured.invoke(
-            [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=user_message)]
+            [SystemMessage(content=system_prompt), HumanMessage(content=user_message)]
         )
 
         if self._cache is not None:
             self._cache.set(key, raw.model_dump_json())
         return raw
+
+
+def _dedup(findings: list[Finding]) -> list[Finding]:
+    """Geçişler arası birebir tekrarları (aynı tip + konum + alıntı) eler."""
+    seen: set[tuple] = set()
+    out: list[Finding] = []
+    for f in findings:
+        key = (f.type, f.start, f.end, f.excerpt)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(f)
+    return out
 
 
 def build_default_analyzer(
