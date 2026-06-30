@@ -116,6 +116,46 @@
   .finding .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
   .empty { color: var(--ok); font-weight: 600; }
   .err { color: var(--imla); font-weight: 600; }
+
+  /* Düzen: solda log paneli + sağda içerik */
+  .layout { display: flex; align-items: flex-start; }
+  aside#logPanel {
+    width: 280px; flex: none; align-self: stretch;
+    border-right: 1px solid var(--line); background: var(--panel);
+    position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
+    padding: 16px 14px;
+  }
+  aside#logPanel h2 {
+    font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 12px;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .log-empty { color: var(--muted); font-size: 13px; }
+  .log-item {
+    border: 1px solid var(--line); background: var(--panel2); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 8px; cursor: pointer; position: relative;
+  }
+  .log-item:hover { border-color: var(--accent); }
+  .log-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .log-item .log-title {
+    font-weight: 650; font-size: 13.5px; padding-right: 20px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .log-item .log-meta { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  .log-item .log-meta .kind { text-transform: uppercase; letter-spacing: .03em; }
+  .log-item .log-del {
+    position: absolute; top: 6px; right: 8px; color: var(--muted);
+    font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 6px;
+    background: transparent; border: 0; cursor: pointer; margin: 0;
+  }
+  .log-item .log-del:hover { color: var(--imla); background: rgba(248,113,113,.12); }
+  main { flex: 1; min-width: 0; }
+  @media (max-width: 760px) {
+    .layout { flex-direction: column; }
+    aside#logPanel {
+      width: 100%; position: static; max-height: 240px;
+      border-right: 0; border-bottom: 1px solid var(--line);
+    }
+  }
 </style>
 </head>
 <body>
@@ -123,6 +163,12 @@
   <img class="logo" src="/logo.png" alt="Türkçe Dil Analizi" onerror="this.replaceWith(Object.assign(document.createElement('h1'),{textContent:'Türkçe Dil Analizi'}))">
   <span class="sub">Dokümanda Türkçe Kullanımı ve Uyumluluk Analizi Sistemi</span>
 </header>
+
+<div class="layout">
+<aside id="logPanel">
+  <h2>Log — Geçmiş Analizler</h2>
+  <div id="logList"><div class="log-empty">Henüz kayıt yok.</div></div>
+</aside>
 
 <main>
   <div class="card">
@@ -151,6 +197,7 @@
     <div id="findings"></div>
   </div>
 </main>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -249,6 +296,59 @@ function renderResult(payload) {
   $("resultCard").style.display = "block";
 }
 
+// --- Log (geçmiş analizler) ----------------------------------------------
+let activeLogId = null;
+
+function fmtDate(iso) { return iso ? iso.replace("T", " ") : ""; }
+
+async function loadHistory() {
+  let items = [];
+  try { items = await (await fetch("/history")).json(); }
+  catch (e) { return; }  // sunucu erişilemezse listeyi olduğu gibi bırak
+  const list = $("logList");
+  if (!items.length) { list.innerHTML = '<div class="log-empty">Henüz kayıt yok.</div>'; return; }
+  list.innerHTML = items.map((m) => {
+    const n = (m.counts && m.counts.toplam) || 0;
+    const cls = m.id === activeLogId ? "log-item active" : "log-item";
+    return `<div class="${cls}" data-id="${esc(m.id)}">
+      <button class="log-del" data-del="${esc(m.id)}" title="Sil">×</button>
+      <div class="log-title" title="${esc(m.title || "")}">${esc(m.title || "(başlıksız)")}</div>
+      <div class="log-meta"><span class="kind">${esc(m.kind || "")}</span> · ${esc(fmtDate(m.created_at))} · ${n} bulgu</div>
+    </div>`;
+  }).join("");
+}
+
+// Geçmiş kaydı aç: çıktıyı mevcut renderResult ile BİREBİR yeniden çiz.
+async function openHistory(id) {
+  let rec;
+  try {
+    const r = await fetch("/history/get?id=" + encodeURIComponent(id));
+    if (!r.ok) return;
+    rec = await r.json();
+  } catch (e) { return; }
+  activeLogId = id;
+  $("progressCard").style.display = "none";
+  $("extractNote").style.display = "none"; $("extractNote").innerHTML = "";
+  if (rec.extract) onExtract(rec.extract);   // belge okuma notunu da geri göster
+  renderResult(rec.payload);
+  document.querySelectorAll(".log-item").forEach((el) =>
+    el.classList.toggle("active", el.dataset.id === id));
+}
+
+async function deleteHistory(id) {
+  try { await fetch("/history/delete?id=" + encodeURIComponent(id), { method: "POST" }); }
+  catch (e) {}
+  if (activeLogId === id) activeLogId = null;
+  loadHistory();
+}
+
+$("logList").addEventListener("click", (e) => {
+  const del = e.target.closest("[data-del]");
+  if (del) { e.stopPropagation(); deleteHistory(del.dataset.del); return; }
+  const item = e.target.closest(".log-item");
+  if (item) openHistory(item.dataset.id);
+});
+
 // --- Akışı başlat ---------------------------------------------------------
 let running = false;
 async function start() {
@@ -270,13 +370,20 @@ async function start() {
     const es = new EventSource("/stream?job=" + job);
     es.addEventListener("progress", (e) => onProgress(JSON.parse(e.data)));
     es.addEventListener("extract", (e) => onExtract(JSON.parse(e.data)));
-    es.addEventListener("result", (e) => renderResult(JSON.parse(e.data)));
+    es.addEventListener("result", (e) => {
+      const p = JSON.parse(e.data);
+      activeLogId = p.id || null;  // yeni kayıt listede vurgulansın
+      renderResult(p);
+    });
     es.addEventListener("error", (e) => {
       const msg = e.data ? JSON.parse(e.data).message : "Bağlantı hatası.";
       $("steps").innerHTML += `<div class="step err">⚠ ${esc(msg)}</div>`;
       es.close(); running = false; $("run").disabled = false;
     });
-    es.addEventListener("done", () => { es.close(); running = false; $("run").disabled = false; });
+    es.addEventListener("done", () => {
+      es.close(); running = false; $("run").disabled = false;
+      loadHistory();  // yeni kayıt anında log paneline düşsün
+    });
   } catch (err) {
     $("steps").innerHTML += `<div class="step err">⚠ ${esc(String(err))}</div>`;
     running = false; $("run").disabled = false;
@@ -289,6 +396,8 @@ $("file").addEventListener("change", () => {
   $("fileName").textContent = f ? f.name : "";
   if (f) $("text").value = "";
 });
+
+loadHistory();  // sayfa açılışında geçmiş kayıtları getir
 </script>
 </body>
 </html>
