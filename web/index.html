@@ -80,6 +80,23 @@
   .step.done .dot::after { content: "✓"; position: absolute; inset: -3px 0 0 2px; color: #0a0c10; font-size: 11px; font-weight: 800; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Canlı parça ızgarası — paralel işlemeyi görünür kılar (her parça bir hücre) */
+  .prog-head { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  .prog-head b { color: var(--fg); }
+  .prog-head .run-n { color: var(--warn, #d8a657); font-weight: 650; }
+  .chunk-grid { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 16px; max-height: 170px; overflow: auto; }
+  .cell {
+    width: 18px; height: 18px; border-radius: 5px;
+    background: var(--panel2); border: 1px solid var(--line);
+    transition: background .2s ease, border-color .2s ease;
+  }
+  .cell.run {
+    border-color: var(--warn, #d8a657); background: rgba(216, 166, 87, .30);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  .cell.done { background: var(--ok); border-color: var(--ok); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
   /* Sonuç */
   #resultCard { display: none; }
   .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
@@ -188,6 +205,8 @@
 
   <div class="card" id="progressCard">
     <div class="bar"><i id="barFill"></i></div>
+    <div class="prog-head" id="progHead"></div>
+    <div class="chunk-grid" id="chunkGrid"></div>
     <div class="steps" id="steps"></div>
   </div>
 
@@ -210,11 +229,43 @@ function esc(s) {
 
 // --- İlerleme akışı -------------------------------------------------------
 let stepEls = {};
+let cells = {};                                  // parça kimliği (1..N) → hücre öğesi
+let progState = { total: 0, done: 0, run: 0 };   // canlı sayaçlar
+
 function resetProgress() {
-  $("steps").innerHTML = ""; stepEls = {}; $("barFill").style.width = "0";
+  $("steps").innerHTML = ""; stepEls = {};
+  $("chunkGrid").innerHTML = ""; cells = {};
+  $("progHead").textContent = "";
+  progState = { total: 0, done: 0, run: 0 };
+  $("barFill").style.width = "0";
   $("progressCard").style.display = "block";
   $("resultCard").style.display = "none";
   $("extractNote").style.display = "none"; $("extractNote").innerHTML = "";
+}
+
+// Üstteki canlı özet + ilerleme çubuğu (parçalar çubuğun %92'sini, kalanı
+// tutarlılık/finalize doldurur).
+function refreshHead() {
+  const t = progState.total;
+  $("progHead").innerHTML =
+    `<b>${progState.done}/${t}</b> parça tamamlandı` +
+    (progState.run > 0 ? ` · <span class="run-n">${progState.run} işleniyor</span>` : "");
+  if (t > 0) $("barFill").style.width = Math.round((progState.done / t) * 92) + "%";
+}
+
+// Kilometre-taşı satırı (tutarlılık/finalize): anahtarla oluştur/güncelle.
+function setStep(key, message, status) {
+  let el = stepEls[key];
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "step";
+    el.innerHTML = '<span class="dot"></span><span class="lbl"></span>';
+    $("steps").appendChild(el);
+    stepEls[key] = el;
+  }
+  el.querySelector(".lbl").textContent = message;
+  el.classList.remove("active", "done");
+  if (status) el.classList.add(status);
 }
 
 // Belge okuma özeti + okunamayan içerik uyarıları (ör. görsel içi yazı).
@@ -225,27 +276,42 @@ function onExtract(ev) {
   $("extractNote").style.display = "block";
 }
 function onProgress(ev) {
-  // Önceki aktif adımı "bitti" yap.
-  for (const k in stepEls) stepEls[k].classList.remove("active");
-  let el = stepEls[ev.stage + ":" + ev.current];
-  if (!el) {
-    el = document.createElement("div");
-    el.className = "step";
-    el.innerHTML = '<span class="dot"></span><span class="lbl"></span>';
-    $("steps").appendChild(el);
-    stepEls[ev.stage + ":" + ev.current] = el;
-  }
-  // Geçmiş adımları tamamlandı işaretle.
-  document.querySelectorAll(".step").forEach((s) => { if (s !== el && !s.classList.contains("done")) s.classList.add("done"); });
-  el.querySelector(".lbl").textContent = ev.message;
-  el.classList.add("active");
-  if (ev.total > 0) {
-    // Kaba ilerleme: tutarlılık/finalize sona yakın.
-    let frac = ev.current / ev.total;
-    if (ev.stage === "consistency") frac = 0.9;
-    if (ev.stage === "finalize") frac = 0.96;
-    if (ev.stage === "done") frac = 1;
-    $("barFill").style.width = Math.round(frac * 100) + "%";
+  switch (ev.stage) {
+    case "chunk": {
+      // Belge N parçaya bölündü → hepsini "bekliyor" hücresi olarak önceden çiz.
+      progState.total = ev.total;
+      const grid = $("chunkGrid");
+      for (let i = 1; i <= ev.total; i++) {
+        const c = document.createElement("div");
+        c.className = "cell"; c.title = "Parça " + i + " — bekliyor";
+        grid.appendChild(c); cells[i] = c;
+      }
+      refreshHead();
+      break;
+    }
+    case "chunk_start": {                 // bir parça işlenmeye başladı (amber, nabız)
+      const c = cells[ev.current];
+      if (c) { c.classList.add("run"); c.title = ev.message; }
+      progState.run++; refreshHead();
+      break;
+    }
+    case "chunk_done": {                   // bir parça bitti (yeşil)
+      const c = cells[ev.current];
+      if (c) { c.classList.remove("run"); c.classList.add("done"); c.title = ev.message; }
+      progState.run = Math.max(0, progState.run - 1); progState.done++;
+      refreshHead();
+      break;
+    }
+    case "consistency_start": setStep("consistency", ev.message, "active"); break;
+    case "consistency_done":  setStep("consistency", ev.message, "done");   break;
+    case "finalize":
+      setStep("finalize", ev.message, "active");
+      $("barFill").style.width = "96%";
+      break;
+    case "done":
+      setStep("finalize", ev.message, "done");
+      $("barFill").style.width = "100%";
+      break;
   }
 }
 

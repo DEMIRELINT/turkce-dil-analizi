@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 from pathlib import Path
 
 
@@ -27,10 +28,18 @@ def make_key(model_id: str, system: str, user_message: str) -> str:
 
 
 class DiskCache:
-    """JSON dosyasında tutulan basit anahtar→değer önbelleği."""
+    """JSON dosyasında tutulan basit anahtar→değer önbelleği.
+
+    Thread-safe: parçalar paralel işlendiğinde birden çok iş parçacığı aynı anda
+    `set` çağırabilir. `set` oku-değiştir-yaz (dict mutasyonu + tüm dosyayı yazma)
+    olduğundan kilitsiz çağrı kayıp yazmaya veya bozuk JSON'a yol açar. Bir
+    `Lock` ile `get`/`set` serileştirilir; yazma yalnız cache-miss'te olduğundan
+    kilit maliyeti ihmal edilebilir.
+    """
 
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
+        self._lock = threading.Lock()
         self._data: dict[str, str] = {}
         if self._path.exists():
             try:
@@ -39,11 +48,13 @@ class DiskCache:
                 self._data = {}
 
     def get(self, key: str) -> str | None:
-        return self._data.get(key)
+        with self._lock:
+            return self._data.get(key)
 
     def set(self, key: str, value: str) -> None:
-        self._data[key] = value
-        self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(
-            json.dumps(self._data, ensure_ascii=False), encoding="utf-8"
-        )
+        with self._lock:
+            self._data[key] = value
+            self._path.parent.mkdir(parents=True, exist_ok=True)
+            self._path.write_text(
+                json.dumps(self._data, ensure_ascii=False), encoding="utf-8"
+            )

@@ -97,6 +97,9 @@ pytest
 
 # Ölçüm (altın set — API gerektirir)
 EVAL_DELAY_SEC=0 python eval/run_eval.py
+
+# Sıralı vs paralel karşılaştırma (hız + eşdeğerlik; API gerektirir)
+python eval/compare_parallel.py belge.docx   # küçük belgeyle: belgeyi 3× analiz eder
 ```
 
 ---
@@ -118,6 +121,12 @@ koru:
   bazında ayrı geçişte çalıştırır; parçalama (`chunk.py`) deterministik koddur.
   Parça-içi offsetler kaynağa geri taşınır (rebasing) — yeni geçiş/baz eklerken
   bu sözleşmeyi koru.
+- **Paralel ama deterministik** — parçalar `CONCURRENCY` kadar eşzamanlı işlenir
+  (ThreadPoolExecutor); ama çıktı işlenme sırasından BAĞIMSIZ olmalı. `_finalize`
+  bulguları tam-sıra anahtarıyla (`_sort_key`) önce sıralar, sonra tekilleştirir —
+  böylece `CONCURRENCY` ne olursa olsun sonuç birebir aynıdır. Yeni geçiş/bulgu
+  eklerken bu deterministiklik sözleşmesini koru; önbellek (`cache.py`) ve ilerleme
+  yayını thread-safe'tir (kilitli).
 - **Air-gap uyumu** — bağımlılıklar pinli; telemetri kapalı; gizli dış çağrı
   ekleme. `docx2python` ve web paneli (stdlib) dahil her şey yereldir.
 

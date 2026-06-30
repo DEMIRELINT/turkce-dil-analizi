@@ -225,7 +225,15 @@ takılır — analyzer yine değişmez.
 ```bash
 EVAL_DELAY_SEC=0 python eval/run_eval.py   # eksen-bazlı precision/recall + temiz-metin FP
 pytest                                      # API gerektirmeyen birim testler
+python eval/compare_parallel.py belge.docx  # sıralı vs paralel: süre + çıktı birebir aynı mı
 ```
+
+> `compare_parallel.py` iki faz çalıştırır: **Hız** (önbellek kapalı; sıralı vs
+> paralel süre + hızlanma) ve **Eşdeğerlik** (paylaşımlı önbellekle aynı model
+> yanıtlarını iki yola verip çıktının birebir aynı olduğunu doğrular). İki faz
+> ayrıdır çünkü LLM'ler `temperature=0`'da bile çağrı-çağrı birebir aynı yanıtı
+> vermez; canlı koşulardaki küçük farklar paralellikten değil, modelin doğal
+> oynaklığındandır. Belgeyi 3× analiz eder → **küçük belgeyle** çalıştırın.
 
 `eval/golden.jsonl` elle etiketli settir (imla/gramer/ton + temiz metinler).
 `"mode": "document"` etiketli örnekler **uzun belge yolunu** (`analyze_document` —
@@ -290,7 +298,10 @@ güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
     Yani analiz tek seferde değil, bu bazlara göre **kademeli geçişlerle** yürür;
     parça-içi offsetler kaynağa geri taşınır (rebasing) ve her geçişin bulguları
     en sonda tek listede birleşir + tekilleştirilir (`merge_findings`, `_dedup`).
-    *Parçalar şimdilik sırayla işlenir; paralelleştirme sonraki bir iyileştirme.*
+    *Parçalar `CONCURRENCY` kadar eşzamanlı işlenir (LLM çağrıları ağ-bağımlı;
+    paralellik süreyi kısaltır). Çıktı parçaların işlenme sırasından bağımsızdır:
+    `_finalize` deterministik sıralayıp tekilleştirir, böylece sonuç birebir
+    aynı kalır. `CONCURRENCY=1` tamamen sıralı (eski) davranıştır.*
   - **Belge-geneli tutarlılık geçişi:** bir terimin/birimin ifadesi belgenin her
     yerinde aynı mı? Parçalamanın göremediği, bütünü tarayan ek geçiş (yeni
     `tutarlilik` ekseni).

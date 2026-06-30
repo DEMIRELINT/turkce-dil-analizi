@@ -22,6 +22,17 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return val.strip().lower() in {"1", "true", "yes", "on", "evet"}
 
 
+def _env_int(name: str, default: int) -> int:
+    """Tamsayı ortam değişkeni; tanımsız/geçersizse default'a düşer."""
+    val = os.getenv(name)
+    if val is None or not val.strip():
+        return default
+    try:
+        return int(val.strip())
+    except ValueError:
+        return default
+
+
 @dataclass(frozen=True)
 class Settings:
     """Çalışma zamanı ayarları."""
@@ -32,6 +43,11 @@ class Settings:
     langsmith_tracing: bool
     rules_path: str | None
     dict_path: str | None
+    # Uzun belge parçalarının eşzamanlı işlenme sayısı (ThreadPoolExecutor).
+    # LLM çağrıları ağ-bağımlı olduğundan paralellik toplam süreyi kısaltır;
+    # çıktı birebir aynı kalır (temperature=0 + önbellek deterministik).
+    # CONCURRENCY=1 → tamamen sıralı (eski) davranış: eval/hata ayıklama/karşılaştırma.
+    max_workers: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -44,6 +60,8 @@ class Settings:
         rules_path = os.getenv("RULES_PATH", "").strip() or None
         # Hunspell sözlük taban yolu (uzantısız). Boşsa varsayılan dicts/tr_TR.
         dict_path = os.getenv("DICT_PATH", "dicts/tr_TR").strip() or None
+        # Eşzamanlılık: en az 1. Geçersiz/0 değer 1'e (sıralı) düşer.
+        max_workers = max(1, _env_int("CONCURRENCY", 6))
         return cls(
             gemini_api_key=api_key,
             model_id=os.getenv("MODEL_ID", "gemini-2.5-flash-lite").strip(),
@@ -51,4 +69,5 @@ class Settings:
             langsmith_tracing=_env_bool("LANGSMITH_TRACING", False),
             rules_path=rules_path,
             dict_path=dict_path,
+            max_workers=max_workers,
         )

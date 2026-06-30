@@ -20,10 +20,13 @@ class ProgressEvent:
     """Tek bir analiz adımının insan-okur durumu.
 
     stage   : makine-okur aşama anahtarı
-              ("chunk" | "local" | "tone" | "consistency" | "finalize" | "done").
-    message : Türkçe, kullanıcıya gösterilecek mesaj ("Parça 2/5: yazım inceleniyor").
-    current : ilerleme sayacı (kaçıncı parça); 0 = anlamlı değil.
-    total   : toplam adım (parça sayısı); 0 = anlamlı değil.
+              ("chunk" = bölme tamamlandı | "chunk_start"/"chunk_done" = bir parça
+               başladı/bitti | "consistency_start"/"consistency_done" |
+               "finalize" | "done").
+    message : Türkçe, kullanıcıya gösterilecek mesaj ("Parça 2/5 inceleniyor").
+    current : parça kimliği (1 tabanlı, kararlı); 0 = anlamlı değil. Paralelde
+              parçalar sırasız biter, ama her parçanın `current`'ı sabittir.
+    total   : toplam parça sayısı; 0 = anlamlı değil.
     """
 
     stage: str
