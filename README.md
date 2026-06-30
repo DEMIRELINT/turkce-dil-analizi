@@ -96,8 +96,9 @@ gönderecekler" gibi yanlış), çünkü araç bağlama bakmaz. Önerileri Gemin
 | **3** | Uzun belge işleme: `.docx` girdisi, deterministik parçalama, çok-geçişli kademeli analiz, belge-geneli tutarlılık, canlı ilerlemeli web paneli | `docx2python` (çıkarma), `chunk.py` (parçalama), `progress.py` (SSE/CLI ilerleme), yeni `tutarlilik` ekseni, `web/` (stdlib panel) |
 
 **Güncel sonuç (altın set):** genel precision **0.93**, imla precision **1.00**,
-temiz metinlerde yanlış-pozitif **0**. (Faz 3'teki kademeli geçiş ve yapısal imla
-değişiklikleri sonrası altın set yeniden ölçülmelidir.)
+temiz metinlerde yanlış-pozitif **0**. (Altın set artık `analyze_document` (uzun
+belge/parçalama) yolunu da kapsar; Faz 3'teki kademeli geçiş ve yapısal imla
+değişiklikleri sonrası sayılar API ile yeniden ölçülmelidir.)
 
 > Not: Zemberek artık projede **kullanılmıyor** — yukarıdaki tabloda yalnız
 > "denendi ve terk edildi" olarak yer alır.
@@ -227,8 +228,11 @@ pytest                                      # API gerektirmeyen birim testler
 ```
 
 `eval/golden.jsonl` elle etiketli settir (imla/gramer/ton + temiz metinler).
-Prompt/kural değişiklikleri bu set üzerinde **ölçülerek** değerlendirilir. Her
-çalıştırma `eval/last_predictions.json`'a tüm tahminleri yazar (kalibrasyon için).
+`"mode": "document"` etiketli örnekler **uzun belge yolunu** (`analyze_document` —
+parçalama + kademeli geçiş) ölçer; diğerleri kısa metni tek parça olarak
+değerlendirir. Prompt/kural değişiklikleri bu set üzerinde **ölçülerek**
+değerlendirilir. Her çalıştırma `eval/last_predictions.json`'a tüm tahminleri yazar
+(kalibrasyon için).
 
 ### Önbellek ve kota
 
@@ -265,11 +269,17 @@ güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
     bildirilir (sessiz veri kaybı yok). PDF sonraki bir faza bırakıldı: çok
     sütunlu düzen + araya giren görsel metni bozar, güvenilir yol Word kaynaktır.
     *Yalnız temiz metin elde etmek için; biçim/şablon kontrolü değil.*
-  - **Deterministik parçalama (`chunk.py`):** MVP'de **paragraf bazlı** —
-    boş satırla ayrılmış bloklar atomik kabul edilir, cümle asla ortadan kesilmez;
-    paragraflar bir karakter bütçesine (`max_chars`) kadar gruplanır. Bölme
+  - **Deterministik parçalama (`chunk.py`):** **paragraf bazlı** — boş satırla
+    ayrılmış bloklar atomik kabul edilir, cümle asla ortadan kesilmez; paragraflar
+    bir karakter bütçesine (`max_chars`) kadar gruplanır. **Bütçeyi tek başına aşan
+    paragraf cümle sınırından** (kısaltma/sayı/baş-harf korumalı Türkçe regex)
+    parçalanır; güvenli bölünemeyen tek cümle son çare olarak bütün kalır. Bölme
     deterministik koddur (AI değil). *Hiyerarşik (bölüm/başlık `1.4`, `3.2`
     farkındalıklı) bölme sonraki bir iyileştirmedir.*
+    - *Bilinçli kapsam dışı:* **token-tabanlı bütçe** (Gemini token sayımı ağ ister
+      → air-gap'i bozar; karakter bütçesi 1M token penceresine göre zaten küçük) ve
+      **chunk overlap** (offset+dedup mimarisinde mükerrer bulgu üretir; paragraf-ötesi
+      bağlam zaten bütün-belge tutarlılık geçişiyle karşılanır).
   - **Kademeli analiz — kontrol bazları:** her kontrol kendi en küçük yeterli
     biriminde değerlendirilir (`analyzer.py`):
     - Yazım / Türkçe karakter → **kelime** (Hunspell, yerel geçiş).

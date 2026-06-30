@@ -59,7 +59,7 @@ src/dilanaliz/
   analyzer.py               # Ana orkestrasyon (kademeli geçişler, build_default_analyzer)
   spell.py                  # Hunspell tabanlı deterministik imla tespiti
   extract.py                # .docx → eksiksiz metin (docx2python; tablo/dipnot dahil)
-  chunk.py                  # Uzun metni deterministik paragraf parçalarına böler
+  chunk.py                  # Uzun metni deterministik paragraf parçalarına böler (taşan paragraf cümleye iner)
   progress.py               # Geçiş ilerleme olayları (CLI stderr / web SSE)
   prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı)
   providers/                # LLM sağlayıcı soyutlaması (Gemini → vLLM değişebilir)
