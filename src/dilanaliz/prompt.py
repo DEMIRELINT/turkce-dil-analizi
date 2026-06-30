@@ -30,9 +30,12 @@ B) `spelling`  — sana "ŞÜPHELİ KELİMELER" listesi verilir (bir yazım dene
 
 KURALLAR (uyman zorunlu):
 - Genel tek-kelime yazımını ve eksik Türkçe karakteri SEN serbestçe arama; o işi
-  "ŞÜPHELİ KELİMELER" listesi üzerinden yap (aşağıya bak). `findings` içinde imla
-  olarak yalnız BAĞLAMA bağlı olanları ("de/da", "ki", "mi" ayrı/bitişik) üret.
-  Kelime büyük harfe çevirme önerme.
+  "ŞÜPHELİ KELİMELER" listesi üzerinden yap (aşağıya bak). YASAK olan, kurallarda
+  TANIMSIZ serbest tek-kelime yazım/Türkçe-karakter taramasıdır. Buna karşılık
+  "DİL KURALLARI"nda AÇIKÇA tanımlı imla kurallarını `findings` içinde üret:
+  bağlama bağlı olanlar ("de/da", "ki", "mi" ayrı/bitişik) ve tek kelimeye
+  sığmayan yapısal imla (noktalama, kesme işareti, sayı/ölçü birimi biçimi,
+  düzeltme işareti). Kelime büyük harfe çevirme önerme.
 - Yalnız sana verilen "DİL KURALLARI" bölümüne dayan. Orada AÇIKÇA tanımlı
   olmayan bir konuda hata UYDURMA. Emin değilsen bulgu üretme.
 - En tehlikeli hata, var olmayan bir hatayı işaretlemektir (yanlış pozitif).
