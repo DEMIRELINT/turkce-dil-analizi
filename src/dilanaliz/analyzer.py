@@ -16,6 +16,8 @@ ileride (RAG / self-host) bu parçalar değişse de orkestrasyon değişmez.
 
 from __future__ import annotations
 
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -51,11 +53,14 @@ class Analyzer:
         model_id: str | None = None,
         cache: DiskCache | None = None,
         speller: HunspellChecker | None = None,
+        max_workers: int = 1,
     ) -> None:
         self._rules = rules_provider
         self._model_id = model_id
         self._cache = cache
         self._speller = speller
+        # Eşzamanlı işlenecek parça sayısı. 1 → sıralı (eski) davranış.
+        self._max_workers = max(1, max_workers)
         # Yapılandırılmış çıktı: parse hatasını kaldırır. Tüm geçişler aynı şemayı
         # döndürür; yalnız sistem promptu değişir.
         self._structured = chat_model.with_structured_output(LLMAnalysis)
@@ -82,38 +87,88 @@ class Analyzer:
         İsteğe bağlı `progress` callback'i her adımda bir `ProgressEvent` alır
         (web paneli/CLI canlı geri bildirim için); `None` ise davranış değişmez.
 
-        MVP: parçalar sırayla işlenir (paralelleştirme sonraki bir iyileştirme).
+        Parçalar `max_workers` kadar EŞZAMANLI işlenir (LLM çağrıları ağ-bağımlı;
+        paralellik toplam süreyi kısaltır). Çıktı parçaların işlenme sırasından
+        BAĞIMSIZ: `_finalize` deterministik sıralayıp tekilleştirir, böylece
+        `max_workers` ne olursa olsun sonuç birebir aynıdır. `max_workers == 1`
+        tamamen sıralı (eski) davranıştır.
         """
         chunks = chunk_text(text, max_chars=max_chars)
         total = len(chunks)
         emit(progress, ProgressEvent("chunk", f"Belge {total} parçaya bölündü", 0, total))
 
-        findings: list[Finding] = []
-        for index, chunk in enumerate(chunks, start=1):
-            emit(progress, ProgressEvent(
-                "local", f"Parça {index}/{total}: yazım ve dil bilgisi inceleniyor",
-                index, total))
-            local = self._local_pass(chunk.text)
-            emit(progress, ProgressEvent(
-                "tone", f"Parça {index}/{total}: ton/üslup inceleniyor", index, total))
-            tone = self._tone_pass(chunk.text)
-            for finding in local + tone:
-                if finding.start is not None:
-                    finding.start += chunk.start
-                if finding.end is not None:
-                    finding.end += chunk.start
-                findings.append(finding)
+        # İlerleme yayını thread-safe olmalı: paralelde parça-işçileri aynı anda
+        # "başladı/bitti" olayı yayar; callback (web SSE yazarı) thread-safe
+        # olmayabilir, bu yüzden emit'i kilitle serileştiriyoruz.
+        progress_lock = threading.Lock()
 
-        # Belge-geneli tutarlılık: bütün metinde tek geçiş (offsetler zaten global).
-        emit(progress, ProgressEvent(
-            "consistency", "Belge geneli tutarlılık inceleniyor", total, total))
-        findings += self._consistency_pass(text)
+        def emit_safe(event: ProgressEvent) -> None:
+            with progress_lock:
+                emit(progress, event)
+
+        def chunk_worker(index: int, chunk) -> list[Finding]:
+            # Parça başına İKİ olay: işçi parçayı ALDIĞINDA "chunk_start", BİTİRDİĞİNDE
+            # "chunk_done". `index` parçanın kararlı kimliği (1 tabanlı); arayüz bununla
+            # her parçayı ayrı satır/hücre olarak gösterip aynı anda kaçının işlendiğini
+            # canlı izleyebilir.
+            emit_safe(ProgressEvent(
+                "chunk_start", f"Parça {index}/{total} inceleniyor", index, total))
+            out = self._chunk_pass(chunk)
+            emit_safe(ProgressEvent(
+                "chunk_done", f"Parça {index}/{total} tamamlandı", index, total))
+            return out
+
+        def consistency_worker() -> list[Finding]:
+            emit_safe(ProgressEvent(
+                "consistency_start", "Belge geneli tutarlılık inceleniyor", total, total))
+            out = self._consistency_pass(text)
+            emit_safe(ProgressEvent(
+                "consistency_done", "Belge geneli tutarlılık tamamlandı", total, total))
+            return out
+
+        findings: list[Finding] = []
+
+        if self._max_workers <= 1:
+            # Sıralı referans yol: deterministik; eval/hata ayıklama/karşılaştırma.
+            for index, chunk in enumerate(chunks, start=1):
+                findings.extend(chunk_worker(index, chunk))
+            findings += consistency_worker()
+        else:
+            findings_lock = threading.Lock()
+            with ThreadPoolExecutor(max_workers=self._max_workers) as pool:
+                # Tutarlılık çağrısı (bütün belge) en uzun süren tek iştir; onu İLK
+                # gönderiyoruz ki bir işçiyi baştan tutup parça işleriyle örtüşsün
+                # (toplam süre ≈ max(tutarlılık, parça dalgaları)).
+                futures = {pool.submit(consistency_worker)}
+                futures |= {
+                    pool.submit(chunk_worker, index, chunk)
+                    for index, chunk in enumerate(chunks, start=1)
+                }
+                for fut in as_completed(futures):
+                    res = fut.result()  # hata olduğu gibi yükselir → "hata çıkarsa dur"
+                    with findings_lock:
+                        findings.extend(res)
 
         emit(progress, ProgressEvent(
             "finalize", "Bulgular birleştiriliyor ve sıralanıyor", total, total))
         result = self._finalize(findings, text)
         emit(progress, ProgressEvent("done", "Analiz tamamlandı", total, total))
         return result
+
+    def _chunk_pass(self, chunk) -> list[Finding]:
+        """Tek parça için yerel + ton geçişi; offsetleri kaynağa taşır (rebasing).
+
+        Saf: yalnız o parçanın bulgu listesini döndürür (paylaşılan duruma yazmaz),
+        böylece paralel çağrılabilir. Offset rebasing burada yapılır.
+        """
+        out: list[Finding] = []
+        for finding in self._local_pass(chunk.text) + self._tone_pass(chunk.text):
+            if finding.start is not None:
+                finding.start += chunk.start
+            if finding.end is not None:
+                finding.end += chunk.start
+            out.append(finding)
+        return out
 
     # --- Tek tek geçişler ----------------------------------------------------
 
@@ -157,16 +212,20 @@ class Analyzer:
     # --- Birleştirme / son işleme -------------------------------------------
 
     def _finalize(self, findings: list[Finding], text: str) -> AnalysisResult:
-        """Tüm geçişlerin bulgularını tekilleştirir, doğrular ve sıralar."""
-        result = AnalysisResult(findings=_dedup(findings))
+        """Tüm geçişlerin bulgularını sıralar, tekilleştirir ve doğrular.
+
+        ÖNCE deterministik (tam-sıra) sıralama, SONRA tekilleştirme yapılır:
+        böylece hem nihai sıra hem de tekilleştirmede "ilk korunan" kayıt,
+        parçaların paralel işlenme/toplanma sırasından BAĞIMSIZ olur — çıktı
+        `max_workers` değerinden etkilenmez (birebir aynı).
+        """
+        ordered = sorted(findings, key=_sort_key)
+        result = AnalysisResult(findings=_dedup(ordered))
         result.model_id = self._model_id
         result.text_len = len(text)
         # Bozuk öneri koruması (örn. "birçok" → "birchoq"): otomatik uygulamada
         # veriyi bozacak önerileri eler.
         validate_suggestions(result)
-        result.findings.sort(
-            key=lambda f: (f.start is None, f.start if f.start is not None else 0)
-        )
         return result
 
     @staticmethod
@@ -214,6 +273,25 @@ class Analyzer:
         return raw
 
 
+def _sort_key(f: Finding) -> tuple:
+    """Bulgular için tam-sıra (deterministik) anahtar.
+
+    Yalnız offset'e göre sıralamak, aynı konumdaki bulguların görece sırasını
+    ekleme sırasına (paralelde sırasız) bırakır. Tüm ayırt edici alanları
+    anahtara katarak sıralamayı işlenme sırasından bağımsız kılıyoruz.
+    Konumsuz bulgular (start=None) sona alınır.
+    """
+    return (
+        f.start is None,
+        f.start if f.start is not None else 0,
+        f.end if f.end is not None else 0,
+        f.type.value,
+        f.excerpt,
+        f.suggestion,
+        f.explanation,
+    )
+
+
 def _dedup(findings: list[Finding]) -> list[Finding]:
     """Geçişler arası birebir tekrarları (aynı tip + konum + alıntı) eler."""
     seen: set[tuple] = set()
@@ -246,4 +324,5 @@ def build_default_analyzer(
         model_id=settings.model_id,
         cache=cache,
         speller=speller,
+        max_workers=settings.max_workers,
     )

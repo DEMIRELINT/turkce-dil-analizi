@@ -35,7 +35,14 @@ def _read_input(argv: list[str]) -> str:
 
 
 def _stderr_progress(event) -> None:
-    """Analiz adımlarını stderr'e basar; stdout'taki JSON saf kalır (boru hattı bozulmaz)."""
+    """Analiz adımlarını stderr'e basar; stdout'taki JSON saf kalır (boru hattı bozulmaz).
+
+    Uzun belgede her parça "başladı/bitti" iki olay yayar; CLI'da gürültüyü
+    azaltmak için yalnız "bitti" + kilometre taşlarını basıyoruz (başlama olayını
+    atlıyoruz). Web paneli iki olayı da kullanır (canlı paralellik görünümü).
+    """
+    if event.stage == "chunk_start":
+        return
     print(f"  … {event.message}", file=sys.stderr)
 
 
