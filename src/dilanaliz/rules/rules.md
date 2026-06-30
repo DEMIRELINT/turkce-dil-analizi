@@ -60,12 +60,17 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   "Ahmet'in", "Türkiye'ye"). YAPIM ekleri ayrılmaz ("Türkçe", "Avrupalı").
   Kurum/kuruluş adlarına gelen ekler kesme ile ayrılmaz ("Türk Dil Kurumuna").
   Doğru: "İstanbul'da". Yanlış: "İstanbulda", "Türkçe'yi" (yapım eki → ayrılmaz).
+  Tırnak içine alınan bir ifadeye ek geldiğinde, ek kapanış tırnağından SONRA
+  kesme işaretiyle ayrılır. Doğru: "Tarama Listesi"'ne, "Tarama Modu"'nu.
+  Yanlış: "Tarama Listesi"ne, "Tarama Modu"nu (ek tırnağa kesmesiz bitişik).
 
 ### A6. Düzeltme işareti ve Türkçe karakter
 
 - **IMLA-DUZELTME-ISARETI** — Anlam ayırt eden yerlerde düzeltme/inceltme işareti
-  kullanılır: "kâr" (kazanç) ≠ "kar" (yağış); "hâlâ" (henüz) ≠ "hala" (teyze);
-  "âdet" (gelenek) ≠ "adet" (sayı).
+  kullanılır: "kâr" (kazanç) ≠ "kar" (yağış); "hâlâ" (henüz/şimdiye dek) ≠ "hala"
+  (teyze); "âdet" (gelenek) ≠ "adet" (sayı). Bağlamdan kastedilen anlam NETSE eksik
+  düzeltme işaretini öner. Örn. "Telsiz hala açıksa" → "Telsiz **hâlâ** açıksa"
+  (henüz anlamı). NOT: Anlam belirsizse bulgu üretme (yanlış-pozitif riski).
 - **IMLA-TURKCE-KARAKTER** — Türkçe karakter eksikliği bir imla hatasıdır
   (i/ı, ş/s, ç/c, ğ/g, ö/o, ü/u). Doğru: "geleceğim", "yarın". Yanlış: "gelecegim",
   "yarin".
@@ -76,6 +81,14 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   genellikle virgül konmaz. Sıralı öğeler virgülle ayrılır. Doğru: "elma, armut
   ve üzüm". Yanlış: "elma, armut, ve üzüm".
 
+### A8. Sayı ve ölçü birimi yazımı
+
+- **IMLA-BIRIM** — Ondalık ayracı VİRGÜLDÜR ("12,5"; "12.5" yanlıştır). Ölçü birimi
+  simgeleri doğru büyük/küçük harfle yazılır: "kHz" (Khz/KHz değil), "MHz"
+  (Mhz/mhz değil), "GHz", "W", "kW", "kg", "mm". Sayı ile birim simgesi arasında
+  bir boşluk bulunur ("5 W", "12,5 kHz"). Doğru: "12,5 kHz", "136-174 MHz",
+  "5 W". Yanlış: "12.5 KHz", "136-174 Mhz", "5W".
+
 ---
 
 ## B. DİL BİLGİSİ
@@ -84,7 +97,10 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   çoğul öznede yüklem TEKİL olur. Doğru: "Masalar geldi", "Öğrenciler geldi".
   Yanlış: "Masalar geldiler".
 - **GRAMER-TAMLAMA** — İsim tamlamasında ekler tutarlı olmalı ("okulun bahçesi",
-  "kapı kolu"). Ek eksikliği/fazlalığı hatadır.
+  "kapı kolu"). Ek eksikliği/fazlalığı hatadır. Belirtisiz isim tamlamasında
+  tamlanan (ikinci sözcük) "-ı/-i/-u/-ü" iyelik ekini DÜŞÜRMEZ: Doğru "pil
+  bölmesi kapağı", "cihaz menüsü", "ayar düğmesi". Yanlış "pil bölme kapağı"
+  (→ "pil bölmesi kapağı"), "cihaz menü".
 - **GRAMER-ANLATIM** — Anlatım bozuklukları (en yüksek yanlış-pozitif riski; yalnız
   AÇIK durumlarda işaretle):
   - Gereksiz sözcük / anlamca çelişki: "yaklaşık olarak tam on kişi" (yaklaşık +

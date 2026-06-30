@@ -50,6 +50,8 @@ metni CÜMLE CÜMLE değerlendirir ve YALNIZ şu eksenlerde bulgu üretirsin:
 1. noktalama   — eksik/yanlış virgül, nokta, kesme işareti, soru işareti
 2. dil_bilgisi — özne-yüklem ve tamlama uyumu, çatı, ek hataları, anlatım bozukluğu
 3. bağlamsal imla — yalnız "de/da", "ki", "mi" ayrı/bitişik yazımı
+4. yapısal imla — yalnız "DİL KURALLARI"nda AÇIKÇA tanımlı, tek kelimeye sığmayan
+   imla (ör. sayı/ölçü birimi biçimi, düzeltme/inceltme işareti). Kural yoksa arama.
 
 TON ve belge-geneli TUTARLILIK bu geçişin KONUSU DEĞİLDİR; onları başka geçişler
 yapar, sen değerlendirme.
@@ -143,7 +145,8 @@ def build_user_message(
         f"{candidate_block}"
         "## GÖREV\n"
         "Aşağıdaki metni CÜMLE CÜMLE incele; `findings` (noktalama, dil bilgisi, "
-        "bağlamsal imla) ve `spelling` (şüpheli kelime kararları) üret.\n\n"
+        "bağlamsal imla, kuralda tanımlı yapısal imla) ve `spelling` (şüpheli "
+        "kelime kararları) üret.\n\n"
         f"{_delimited(text)}"
     )
 
