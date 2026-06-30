@@ -96,7 +96,7 @@ temiz metinlerde yanlış-pozitif **0**.
 
 | Bileşen | Seçim | Rol |
 |---|---|---|
-| LLM | **Gemini** (geliştirmede `gemini-3.5-flash`) | Düzeltme önerisi, dil bilgisi, ton, bağlamsal imla, özel-ad ayırma |
+| LLM | **Gemini** (varsayılan `gemini-2.5-flash-lite`; `.env`'de `MODEL_ID` ile değişir) | Düzeltme önerisi, dil bilgisi, ton, bağlamsal imla, özel-ad ayırma |
 | Deterministik imla | **Hunspell** (`spylls`, saf-Python) + **tr_TR** sözlük | Yazım hatası tespiti (yerel, sıfır halüsinasyon) |
 | Orkestrasyon / soyutlama | **LangChain-core** (`BaseChatModel`, `with_structured_output`) | Sağlayıcı bağımsızlığı + katı JSON çıktı |
 | Şema | **Pydantic v2** | Bulgu/şema doğrulama |
