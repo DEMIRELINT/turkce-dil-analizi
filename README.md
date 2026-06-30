@@ -156,7 +156,35 @@ python cli.py < belge.txt
 ```
 
 Çıktı, her bulgu için `type, excerpt, explanation, suggestion, rule_id,
-start/end` içeren JSON'dur.
+start/end` içeren JSON'dur. Uzun belgelerde analiz adımları `stderr`'e canlı
+basılır (stdout'taki JSON saf kalır).
+
+`.docx` da doğrudan verilebilir:
+
+```bash
+python cli.py belge.docx > sonuc.json
+```
+
+---
+
+## Web paneli (canlı ilerleme)
+
+Terminal yerine, analiz adımlarını **canlı** gösteren yerel bir panel:
+
+```bash
+python web/server.py        # tarayıcı açılır: http://127.0.0.1:8765
+PORT=9000 python web/server.py
+```
+
+- `.docx` yükle **veya** metin yapıştır → "Analiz Et".
+- Her adım canlı akar: *"Belge 5 parçaya bölündü → Parça 2/5: yazım inceleniyor →
+  … → Belge geneli tutarlılık → Tamamlandı"*.
+- Sonuç: bulgular metin üzerinde vurgulanır ve eksene göre (imla / dil bilgisi /
+  ton / tutarlılık) gruplanmış kartlarda listelenir.
+
+**Güvenlik / air-gap:** yalnız `127.0.0.1`'e bağlanır (dışarı açılmaz);
+`GEMINI_API_KEY` sunucuda kalır, tarayıcıya gönderilmez; harici CDN/script/font
+yoktur; **sıfır yeni Python bağımlılığı** (yerleşik `http.server` + SSE).
 
 ---
 
@@ -213,8 +241,33 @@ güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
 
 - ✅ **Faz 1 / 1.5** — Prompt-first çekirdek + kalibrasyon.
 - ✅ **Faz 4 / 4.5** — Hibrit motor (Hunspell tespiti + Gemini düzeltme/yargı).
-- ⏭️ **Faz 3 — Uzun metin:** hiyerarşik parçalama (paragraf→cümle) + paralel
-  analiz + tekilleştirme. (Sıradaki.)
+- ⏭️ **Faz 3 — Uzun belge işleme (sıradaki):**
+  - **Girdi:** `.docx` → eksiksiz temiz metin çıkarma (`docx2python`). Gövde
+    paragraflarının yanı sıra **tablo hücreleri, metin kutuları/şekiller,
+    üst/altbilgiler ve dipnot/sonnotlar** belge sırasını koruyarak okunur;
+    böylece atlanan metin minimuma iner. Görsel içindeki yazı (OCR) kapsam
+    dışıdır ama `ExtractionReport` ile kaç görselin okunamadığı kullanıcıya
+    bildirilir (sessiz veri kaybı yok). PDF sonraki bir faza bırakıldı: çok
+    sütunlu düzen + araya giren görsel metni bozar, güvenilir yol Word kaynaktır.
+    *Yalnız temiz metin elde etmek için; biçim/şablon kontrolü değil.*
+  - **Hiyerarşik parçalama:** bölüm/başlık (örn. `1.4`, `3.2`) → paragraf →
+    cümle. Anlamlı sınırdan bölünür, cümle asla ortadan kesilmez. Bölme
+    deterministik kod yapar (AI değil).
+  - **Kademeli analiz — kontrol bazları:** her kontrol kendi en küçük yeterli
+    biriminde değerlendirilir:
+    - Yazım / Türkçe karakter → **kelime** (Hunspell, tek geçiş).
+    - Noktalama / anlatım bozukluğu / dil bilgisi / bağlamsal imla → **cümle**
+      (paragraf bağlamıyla beslenir).
+    - Ton / üslup → **paragraf**.
+    - Terim/birim tutarlılığı → **bütün belge**.
+    Yani analiz tek seferde değil, bu bazlara göre **kademeli geçişlerle** yürür;
+    her geçişin bulguları en sonda tek listede birleşir.
+  - **Paralel analiz + tekilleştirme** (`merge_findings`).
+  - **Belge-geneli tutarlılık geçişi:** bir terimin/birimin ifadesi belgenin her
+    yerinde aynı mı? Parçalamanın göremediği, bütünü tarayan hafif ek geçiş
+    (yukarıdaki "bütün belge" bazının uygulaması).
+  - *Not:* Parçalama yalnız AI kontrolleri (noktalama, anlatım, dil bilgisi, ton)
+    içindir; Hunspell deterministik olduğu için belge boyutundan etkilenmez.
 - ⏸️ **Faz 2 — RAG:** kural dökümanı büyüyünce `RetrievalRulesProvider`. (Gerçek
   büyük döküman gelince; küçük dökümanda gereksiz.)
 - 🔒 **Faz 8 — Self-host / air-gap:** yerel LLM (vLLM) + yerel embedding, telemetri

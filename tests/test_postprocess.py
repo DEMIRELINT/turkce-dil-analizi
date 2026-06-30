@@ -2,6 +2,7 @@ from dilanaliz.postprocess import (
     drop_noop_findings,
     is_noop_suggestion,
     merge_findings,
+    validate_suggestions,
 )
 from dilanaliz.schema import AnalysisResult, Finding, FindingType
 
@@ -70,3 +71,22 @@ def test_merge_keeps_unlocated_llm_findings():
     floating = _f("bir şey", "başka şey")  # offset yok
     merged = merge_findings(det, [floating])
     assert floating in merged
+
+
+def test_validate_drops_corrupt_suggestion():
+    # "birçok" → "birchoq": öneride alıntıda olmayan q var → bozuk, elenir.
+    result = AnalysisResult(
+        findings=[
+            _f("bir çok", "birchoq"),     # bozuk → atılır
+            _f("yanlız", "yalnız"),       # temiz → kalır
+        ]
+    )
+    validate_suggestions(result)
+    assert [f.excerpt for f in result.findings] == ["yanlız"]
+
+
+def test_validate_keeps_non_turkish_letter_when_in_excerpt():
+    # Marka adı: q/w/x alıntıda da varsa öneri bozuk sayılmaz, korunur.
+    result = AnalysisResult(findings=[_f("Linux'da", "Linux'ta")])
+    validate_suggestions(result)
+    assert len(result.findings) == 1
