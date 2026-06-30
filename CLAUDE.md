@@ -39,6 +39,13 @@ gerektiren işi yapay zekâya** bırakmak.
 - **Düzeltme + yargı (LLM):** Gemini — bağlama göre düzeltme önerir, dil bilgisi
   ve tonu analiz eder, özel adları eler.
 
+Analiz **tek çağrı değil, kademeli geçişlerle** yürür (bkz. `analyzer.py`):
+**yerel** (cümle: imla/noktalama/dil bilgisi), **ton** (paragraf) ve **bütün
+belgede tutarlılık** geçişi. Uzun belge önce deterministik olarak parçalanır
+(`chunk.py`); parça-içi offsetler kaynağa geri taşınır (rebasing). Girdi düz
+metin **veya** `.docx` olabilir (`extract.py`); bir **web paneli** (`web/`)
+docx yükleme + canlı ilerleme sunar.
+
 Detaylı anlatım için [README.md](README.md) dosyasına bakın.
 
 ---
@@ -46,19 +53,23 @@ Detaylı anlatım için [README.md](README.md) dosyasına bakın.
 ## Dizin Yapısı
 
 ```
-cli.py                      # Elle deneme girişi (CLI)
+cli.py                      # Elle deneme girişi (CLI; metin veya .docx)
 pyproject.toml              # Bağımlılıklar (pinli, air-gap uyumlu)
 src/dilanaliz/
-  analyzer.py               # Ana orkestrasyon (build_default_analyzer)
+  analyzer.py               # Ana orkestrasyon (kademeli geçişler, build_default_analyzer)
   spell.py                  # Hunspell tabanlı deterministik imla tespiti
-  prompt.py                 # LLM davranışı (yalnız davranış, kurallar ayrı)
+  extract.py                # .docx → eksiksiz metin (docx2python; tablo/dipnot dahil)
+  chunk.py                  # Uzun metni deterministik paragraf parçalarına böler
+  progress.py               # Geçiş ilerleme olayları (CLI stderr / web SSE)
+  prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı)
   providers/                # LLM sağlayıcı soyutlaması (Gemini → vLLM değişebilir)
   rules/                    # RulesProvider + rules.md (kurallar koddan ayrı)
-  schema.py                 # Pydantic v2 bulgu/çıktı şemaları
+  schema.py                 # Pydantic v2 bulgu/çıktı şemaları (imla/dil_bilgisi/ton/tutarlilik)
   locate.py                 # Alıntıyı kaynakta konumlama (offset)
-  postprocess.py            # Birleştirme + tekilleştirme
+  postprocess.py            # Birleştirme + tekilleştirme + öneri doğrulama
   cache.py                  # Disk önbelleği (.cache/llm_cache.json)
   config.py                 # Ortam değişkenleri / yapılandırma
+web/                        # Yerel web paneli (stdlib http.server + SSE; docx yükle)
 tests/                      # pytest birim testleri (API gerektirmez)
 eval/                       # Altın set + precision/recall ölçüm betiği
 ```
@@ -76,6 +87,10 @@ cp .env.example .env        # GEMINI_API_KEY girin
 # Çalıştırma
 python cli.py "Bu cümlede ki hata var ve yanlız yazılmış."
 echo "uzun metin..." | python cli.py
+python cli.py belge.docx > sonuc.json     # .docx → çıkar + parçala + analiz
+
+# Web paneli (docx yükle / metin yapıştır + canlı ilerleme)
+python web/server.py                       # http://127.0.0.1:8765
 
 # Test (API gerektirmez)
 pytest
@@ -99,8 +114,12 @@ koru:
   etkilememeli.
 - **Katı JSON çıktı** — `with_structured_output` parse hatasını engeller; çıktı
   şeması `schema.py`'dedir, gevşetme.
+- **Kademeli geçiş + parçalama** — orkestrasyon (`analyzer.py`) her kontrolü kendi
+  bazında ayrı geçişte çalıştırır; parçalama (`chunk.py`) deterministik koddur.
+  Parça-içi offsetler kaynağa geri taşınır (rebasing) — yeni geçiş/baz eklerken
+  bu sözleşmeyi koru.
 - **Air-gap uyumu** — bağımlılıklar pinli; telemetri kapalı; gizli dış çağrı
-  ekleme.
+  ekleme. `docx2python` ve web paneli (stdlib) dahil her şey yereldir.
 
 ---
 

@@ -16,9 +16,14 @@ Mimari, ileride **RAG**'e ve üretimde **self-host / kapalı ağ (air-gap)** ort
 
 ## Ne yapıyor?
 
-- **İmla** — yazım hataları, eksik Türkçe karakter, bağlama bağlı yazım (de/da, ki, mi).
+- **İmla** — yazım hataları, eksik Türkçe karakter, bağlama bağlı yazım (de/da,
+  ki, mi) ve kuralda tanımlı yapısal imla (sayı/ölçü birimi, düzeltme işareti).
 - **Dil bilgisi** — özne-yüklem/tamlama uyumu, anlatım bozuklukları.
 - **Ton** — kurumsal/resmî yazışmaya uygunluk, üslup tutarlılığı.
+- **Tutarlılık** — aynı terim/birim/kısaltmanın belge içinde farklı yazılması
+  (yalnız bütün-belge geçişinde görülebilir).
+- **Girdi:** düz metin, `stdin`, `.txt` **veya** `.docx` (tablo, metin kutusu,
+  üst/altbilgi, dipnot dahil eksiksiz çıkarma).
 - Her bulgu: **tür, alıntı, açıklama, öneri, kural kimliği, metindeki konum (offset)**.
 - Çıktı: makine-işlenebilir **JSON** (rapora veya arayüze dönüşebilir).
 
@@ -28,21 +33,26 @@ Mimari, ileride **RAG**'e ve üretimde **self-host / kapalı ağ (air-gap)** ort
 
 ```mermaid
 flowchart TD
-    A["Metin (girdi)"] --> B["Hunspell<br/>yazım hatası TESPİTİ<br/>(tüm doküman, kesin offset)"]
-    C["Kural dökümanı<br/>rules.md"] --> D
-    A --> D{"Gemini — tek çağrı"}
-    B -->|şüpheli kelimeler| D
-    D -->|a| E["Şüpheli kelimeleri BAĞLAMA göre DÜZELT<br/>veya özel ad ise ELE"]
-    D -->|b| F["Dil bilgisi + Ton + bağlamsal imla<br/>(de/da, ki, mi)"]
-    E --> G["Birleştir + tekilleştir + konumla"]
-    F --> G
+    A["Girdi<br/>(.docx → çıkar / metin)"] --> P["Deterministik parçalama<br/>(paragraf bazlı chunk)"]
+    C["Kural dökümanı<br/>rules.md"] --> L
+    C --> T
+    P -->|her parça| L["YEREL geçiş (cümle)<br/>Hunspell adayları + noktalama<br/>+ dil bilgisi + bağlamsal/yapısal imla"]
+    P -->|her parça| T["TON geçişi (paragraf)<br/>yalnız üslup"]
+    A -->|bütün belge| K["TUTARLILIK geçişi<br/>terim/birim/kısaltma tutarsızlığı"]
+    L --> G["Offset rebasing + birleştir<br/>+ tekilleştir + doğrula"]
+    T --> G
+    K --> G
     G --> H["JSON bulgu listesi<br/>(tür, alıntı, açıklama, öneri, konum)"]
 ```
 
-Tek cümlede: **tespit = Hunspell (deterministik), düzeltme + yargı = Gemini.**
-Hunspell sözlükte olmayan kelimeleri bulur; Gemini bunları cümlenin akışına göre
-düzeltir ya da "bu bir özel ad, hata değil" diyerek eler, ayrıca dil bilgisi ve
-tonu analiz eder. İki kaynağın bulguları birleştirilir, çakışanlar tekilleştirilir.
+Tek cümlede: **tespit = Hunspell (deterministik), düzeltme + yargı = Gemini**;
+analiz tek seferde değil, kontrol bazına göre **kademeli geçişlerle** yürür. Metin
+deterministik olarak parçalara (chunk) bölünür; her parçada **yerel** (cümle:
+imla/noktalama/dil bilgisi) ve **ton** (paragraf) geçişi, ayrıca **bütün belgede
+bir kez tutarlılık** geçişi çalışır. Hunspell sözlükte olmayan kelimeleri bulur,
+Gemini bunları bağlama göre düzeltir ya da özel ad ise eler. Parça-içi bulguların
+offsetleri kaynağa geri taşınır (rebasing); tüm geçişlerin bulguları en sonda tek
+listede birleşir ve tekilleştirilir.
 
 ---
 
@@ -82,10 +92,12 @@ gönderecekler" gibi yanlış), çünkü araç bağlama bakmaz. Önerileri Gemin
 | **1.5** | Kalibrasyon: yanlış-pozitifleri ölçüp düşürme | Altın set (`eval/`), "düzeltme yoksa ele" filtresi, disk önbelleği (kota tasarrufu), dayanıklı eval |
 | **4 (denenen→terk)** | Deterministik imla için **Zemberek-python** denendi | Saf-Python port; ama vasat çıktı (`yanlız`, `herşey`, `Yarin` gibi hataları kaçırdı, çoğu kelimeyi geçerli sandı) → **terk edildi** |
 | **4 (kullanılan)** | Deterministik imla tespiti | **Hunspell (spylls, saf-Python) + LibreOffice tr_TR sözlüğü** |
-| **4.5** | Akıllı düzeltme: Hunspell bulur, Gemini bağlama göre düzeltir + özel-ad eler | Gemini (tek çağrıda imla düzeltme + dil bilgisi + ton); ton sıkılaştırma; eval'de tür yumuşatma |
+| **4.5** | Akıllı düzeltme: Hunspell bulur, Gemini bağlama göre düzeltir + özel-ad eler | Gemini (imla düzeltme + dil bilgisi + ton); ton sıkılaştırma; eval'de tür yumuşatma |
+| **3** | Uzun belge işleme: `.docx` girdisi, deterministik parçalama, çok-geçişli kademeli analiz, belge-geneli tutarlılık, canlı ilerlemeli web paneli | `docx2python` (çıkarma), `chunk.py` (parçalama), `progress.py` (SSE/CLI ilerleme), yeni `tutarlilik` ekseni, `web/` (stdlib panel) |
 
 **Güncel sonuç (altın set):** genel precision **0.93**, imla precision **1.00**,
-temiz metinlerde yanlış-pozitif **0**.
+temiz metinlerde yanlış-pozitif **0**. (Faz 3'teki kademeli geçiş ve yapısal imla
+değişiklikleri sonrası altın set yeniden ölçülmelidir.)
 
 > Not: Zemberek artık projede **kullanılmıyor** — yukarıdaki tabloda yalnız
 > "denendi ve terk edildi" olarak yer alır.
@@ -98,8 +110,11 @@ temiz metinlerde yanlış-pozitif **0**.
 |---|---|---|
 | LLM | **Gemini** (varsayılan `gemini-2.5-flash-lite`; `.env`'de `MODEL_ID` ile değişir) | Düzeltme önerisi, dil bilgisi, ton, bağlamsal imla, özel-ad ayırma |
 | Deterministik imla | **Hunspell** (`spylls`, saf-Python) + **tr_TR** sözlük | Yazım hatası tespiti (yerel, sıfır halüsinasyon) |
+| Belge çıkarma | **docx2python** (`extract.py`) | `.docx` → eksiksiz metin (tablo, metin kutusu, üst/altbilgi, dipnot); yerel, air-gap uyumlu |
+| Uzun belge | `chunk.py` + `progress.py` | Deterministik paragraf parçalama + kademeli geçiş + canlı ilerleme |
 | Orkestrasyon / soyutlama | **LangChain-core** (`BaseChatModel`, `with_structured_output`) | Sağlayıcı bağımsızlığı + katı JSON çıktı |
 | Şema | **Pydantic v2** | Bulgu/şema doğrulama |
+| Web paneli | **stdlib** `http.server` + SSE (`web/`) | Yerel, sıfır yeni bağımlılık; docx yükle/metin yapıştır + canlı adım akışı + analiz geçmişi (Log) |
 | Önbellek | Disk (`.cache/llm_cache.json`) | Kota tasarrufu + tekrarlanabilirlik |
 | Test/ölçüm | **pytest** + altın set (`eval/`) | Birim test + precision/recall |
 
@@ -241,7 +256,7 @@ güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
 
 - ✅ **Faz 1 / 1.5** — Prompt-first çekirdek + kalibrasyon.
 - ✅ **Faz 4 / 4.5** — Hibrit motor (Hunspell tespiti + Gemini düzeltme/yargı).
-- ⏭️ **Faz 3 — Uzun belge işleme (sıradaki):**
+- ✅ **Faz 3 — Uzun belge işleme (tamamlandı):**
   - **Girdi:** `.docx` → eksiksiz temiz metin çıkarma (`docx2python`). Gövde
     paragraflarının yanı sıra **tablo hücreleri, metin kutuları/şekiller,
     üst/altbilgiler ve dipnot/sonnotlar** belge sırasını koruyarak okunur;
@@ -250,22 +265,27 @@ güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
     bildirilir (sessiz veri kaybı yok). PDF sonraki bir faza bırakıldı: çok
     sütunlu düzen + araya giren görsel metni bozar, güvenilir yol Word kaynaktır.
     *Yalnız temiz metin elde etmek için; biçim/şablon kontrolü değil.*
-  - **Hiyerarşik parçalama:** bölüm/başlık (örn. `1.4`, `3.2`) → paragraf →
-    cümle. Anlamlı sınırdan bölünür, cümle asla ortadan kesilmez. Bölme
-    deterministik kod yapar (AI değil).
+  - **Deterministik parçalama (`chunk.py`):** MVP'de **paragraf bazlı** —
+    boş satırla ayrılmış bloklar atomik kabul edilir, cümle asla ortadan kesilmez;
+    paragraflar bir karakter bütçesine (`max_chars`) kadar gruplanır. Bölme
+    deterministik koddur (AI değil). *Hiyerarşik (bölüm/başlık `1.4`, `3.2`
+    farkındalıklı) bölme sonraki bir iyileştirmedir.*
   - **Kademeli analiz — kontrol bazları:** her kontrol kendi en küçük yeterli
-    biriminde değerlendirilir:
-    - Yazım / Türkçe karakter → **kelime** (Hunspell, tek geçiş).
-    - Noktalama / anlatım bozukluğu / dil bilgisi / bağlamsal imla → **cümle**
-      (paragraf bağlamıyla beslenir).
-    - Ton / üslup → **paragraf**.
-    - Terim/birim tutarlılığı → **bütün belge**.
+    biriminde değerlendirilir (`analyzer.py`):
+    - Yazım / Türkçe karakter → **kelime** (Hunspell, yerel geçiş).
+    - Noktalama / anlatım bozukluğu / dil bilgisi / bağlamsal/yapısal imla →
+      **cümle** (yerel geçiş).
+    - Ton / üslup → **paragraf** (ton geçişi).
+    - Terim/birim tutarlılığı → **bütün belge** (tutarlılık geçişi).
     Yani analiz tek seferde değil, bu bazlara göre **kademeli geçişlerle** yürür;
-    her geçişin bulguları en sonda tek listede birleşir.
-  - **Paralel analiz + tekilleştirme** (`merge_findings`).
+    parça-içi offsetler kaynağa geri taşınır (rebasing) ve her geçişin bulguları
+    en sonda tek listede birleşir + tekilleştirilir (`merge_findings`, `_dedup`).
+    *Parçalar şimdilik sırayla işlenir; paralelleştirme sonraki bir iyileştirme.*
   - **Belge-geneli tutarlılık geçişi:** bir terimin/birimin ifadesi belgenin her
-    yerinde aynı mı? Parçalamanın göremediği, bütünü tarayan hafif ek geçiş
-    (yukarıdaki "bütün belge" bazının uygulaması).
+    yerinde aynı mı? Parçalamanın göremediği, bütünü tarayan ek geçiş (yeni
+    `tutarlilik` ekseni).
+  - **Canlı ilerleme (`progress.py`):** her adım bir `ProgressEvent` yayar; CLI'da
+    `stderr`'e, web panelinde SSE ile akar.
   - *Not:* Parçalama yalnız AI kontrolleri (noktalama, anlatım, dil bilgisi, ton)
     içindir; Hunspell deterministik olduğu için belge boyutundan etkilenmez.
 - ⏸️ **Faz 2 — RAG:** kural dökümanı büyüyünce `RetrievalRulesProvider`. (Gerçek
