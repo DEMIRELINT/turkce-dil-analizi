@@ -41,11 +41,47 @@ def test_split_when_budget_exceeded():
 
 
 def test_oversized_single_paragraph_kept_whole():
-    # Tek paragraf bütçeyi aşsa bile bölünmez (cümle ortadan kesilmez).
+    # Cümle sınırı OLMAYAN tek paragraf bütçeyi aşsa da bölünemez (bütün kalır).
     big = "x" * 50
     chunks = chunk_text(big, max_chars=10)
     assert len(chunks) == 1
     assert chunks[0].text == big
+
+
+def test_oversized_paragraph_split_at_sentences():
+    # Cümle sınırı olan, bütçeyi aşan tek paragraf birden çok parçaya bölünür;
+    # hiçbir parça bütçeyi aşmaz ve metin birebir korunur (sözleşme).
+    source = (
+        "Birinci cümle burada yer alıyor. İkinci cümle de buradadır. "
+        "Üçüncü cümle son cümledir."
+    )
+    chunks = chunk_text(source, max_chars=40)
+    assert len(chunks) > 1
+    assert all(len(c.text) <= 40 for c in chunks)
+    # Birebir-dilim / offset sözleşmesi.
+    assert all(source[c.start : c.end] == c.text for c in chunks)
+    # Birleştirildiğinde kaynağa eşit (hiç karakter kaybı/çoğalması yok).
+    assert "".join(c.text for c in chunks) == source
+
+
+def test_sentence_split_respects_abbreviations_and_numbers():
+    # "Prof.", "Dr." kısaltma; "15.30", "2." sayı/sıra → bölme bunlardan OLMAZ.
+    # Yalnız "geldi." sonrası gerçek cümle sınırıdır.
+    source = "Prof. Dr. Ahmet Bey saat 15.30'da 2. kez geldi. Sonra hemen çıktı."
+    chunks = chunk_text(source, max_chars=40)
+    # İlk parça tüm ilk cümleyi (kısaltma/sayı bölünmeden) içermeli.
+    assert chunks[0].text.startswith("Prof. Dr. Ahmet Bey")
+    assert chunks[0].text.rstrip().endswith("geldi.")
+    assert all(source[c.start : c.end] == c.text for c in chunks)
+
+
+def test_single_sentence_longer_than_budget_kept_whole():
+    # Bölünemeyen tek bir cümle (sınır yok) bütçeyi aşsa da son çare olarak bütün
+    # kalır — veri bozulmaz.
+    source = "Bu cümlede hiç cümle sonu noktalaması bulunmuyor ve oldukça uzundur"
+    chunks = chunk_text(source, max_chars=20)
+    assert len(chunks) == 1
+    assert chunks[0].text == source
 
 
 def test_invalid_max_chars_raises():

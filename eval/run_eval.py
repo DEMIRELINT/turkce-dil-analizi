@@ -22,7 +22,7 @@ from dilanaliz.schema import AnalysisResult
 
 GOLDEN = Path(__file__).with_name("golden.jsonl")
 DUMP = Path(__file__).with_name("last_predictions.json")
-AXES = ["imla", "dil_bilgisi", "ton"]
+AXES = ["imla", "dil_bilgisi", "ton", "tutarlilik"]
 
 
 def _norm(s: str) -> str:
@@ -85,7 +85,12 @@ def main() -> None:
         if i > 0 and delay > 0:
             time.sleep(delay)
         try:
-            result = analyzer.analyze(ex["text"])
+            # "document" modu uzun belge yolunu (parçalama + kademeli geçiş)
+            # ölçer; diğerleri kısa metni tek parça olarak değerlendirir.
+            if ex.get("mode") == "document":
+                result = analyzer.analyze_document(ex["text"])
+            else:
+                result = analyzer.analyze(ex["text"])
         except Exception as exc:  # kota (429) vb. — eldekini kaybetme
             print(f"! {ex['id']}: çağrı başarısız ({type(exc).__name__}). Durduruluyor.")
             aborted = True
