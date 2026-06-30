@@ -15,6 +15,9 @@ venv/
 .cache/
 eval/last_predictions.json
 
+# Web panelinin analiz geçmişi (kullanıcı verisi; yerel/üretilen)
+history/
+
 # İndirilen sözlük (büyük; README'deki komutla indirilir — repoda tutulmaz)
 dicts/
 

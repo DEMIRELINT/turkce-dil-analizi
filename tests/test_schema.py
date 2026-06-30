@@ -35,4 +35,9 @@ def test_empty_findings_default():
 
 
 def test_finding_type_enum_values():
-    assert {t.value for t in FindingType} == {"imla", "dil_bilgisi", "ton"}
+    assert {t.value for t in FindingType} == {
+        "imla",
+        "dil_bilgisi",
+        "ton",
+        "tutarlilik",
+    }

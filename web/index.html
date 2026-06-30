@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Türkçe Dil Analizi — Panel</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --panel2: #1e222b; --line: #2a2f3a;
+    --fg: #e7eaf0; --muted: #9aa3b2; --accent: #4f8cff; --accent2: #6ee7b7;
+    --imla: #f87171; --dil_bilgisi: #fbbf24; --ton: #a78bfa; --tutarlilik: #34d399;
+    --ok: #34d399; --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.55 -apple-system, "Segoe UI", Roboto, system-ui, sans-serif;
+  }
+  header {
+    padding: 20px 28px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header .logo { height: 36px; width: auto; display: block; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  main { max-width: 980px; margin: 0 auto; padding: 24px 28px 80px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 20px;
+  }
+  label.file, textarea, button { font: inherit; }
+  textarea {
+    width: 100%; min-height: 120px; resize: vertical; color: var(--fg);
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+  label.file {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 9px 14px; color: var(--fg);
+  }
+  label.file input { display: none; }
+  #fileName { color: var(--muted); font-size: 13px; }
+  button {
+    background: var(--accent); color: #0a0c10; border: 0; border-radius: 10px;
+    padding: 10px 18px; font-weight: 650; cursor: pointer; margin-left: auto;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+
+  /* Belge okuma notu (kapsam özeti + okunamayan içerik uyarısı) */
+  #extractNote { display: none; margin-bottom: 16px; font-size: 13px; }
+  #extractNote .ex-summary { color: var(--muted); }
+  #extractNote .ex-warn {
+    margin-top: 8px; padding: 8px 12px; border-radius: 8px;
+    border: 1px solid var(--warn, #d8a657); color: var(--warn, #d8a657);
+    background: rgba(216, 166, 87, .08);
+  }
+
+  /* İlerleme akışı */
+  #progressCard { display: none; }
+  .bar { height: 6px; background: var(--panel2); border-radius: 99px; overflow: hidden; margin: 6px 0 16px; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s ease; }
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step { display: flex; align-items: center; gap: 10px; color: var(--muted); }
+  .step .dot {
+    width: 16px; height: 16px; border-radius: 99px; border: 2px solid var(--line);
+    flex: none; position: relative;
+  }
+  .step.active { color: var(--fg); }
+  .step.active .dot { border-color: var(--accent); }
+  .step.active .dot::after {
+    content: ""; position: absolute; inset: 1px; border-radius: 99px;
+    border: 2px solid transparent; border-top-color: var(--accent);
+    animation: spin .7s linear infinite;
+  }
+  .step.done { color: var(--fg); }
+  .step.done .dot { border-color: var(--ok); background: var(--ok); }
+  .step.done .dot::after { content: "✓"; position: absolute; inset: -3px 0 0 2px; color: #0a0c10; font-size: 11px; font-weight: 800; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Sonuç */
+  #resultCard { display: none; }
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .chip { border-radius: 99px; padding: 4px 12px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); }
+  .chip b { font-weight: 800; }
+  .source {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; white-space: pre-wrap; word-break: break-word; margin-bottom: 18px;
+    max-height: 320px; overflow: auto; font-size: 14.5px;
+  }
+  mark { border-radius: 4px; padding: 0 2px; color: #0a0c10; font-weight: 600; cursor: help; }
+  mark.imla { background: var(--imla); }
+  mark.dil_bilgisi { background: var(--dil_bilgisi); }
+  mark.ton { background: var(--ton); }
+  mark.tutarlilik { background: var(--tutarlilik); }
+  .finding {
+    border-left: 4px solid var(--line); background: var(--panel2);
+    border-radius: 0 10px 10px 0; padding: 12px 14px; margin-bottom: 10px;
+  }
+  .finding.imla { border-left-color: var(--imla); }
+  .finding.dil_bilgisi { border-left-color: var(--dil_bilgisi); }
+  .finding.ton { border-left-color: var(--ton); }
+  .finding.tutarlilik { border-left-color: var(--tutarlilik); }
+  .finding .head { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+  .tag { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; color: #0a0c10; }
+  .tag.imla { background: var(--imla); }
+  .tag.dil_bilgisi { background: var(--dil_bilgisi); }
+  .tag.ton { background: var(--ton); }
+  .tag.tutarlilik { background: var(--tutarlilik); }
+  .finding .excerpt { font-weight: 650; }
+  .finding .arrow { color: var(--muted); }
+  .finding .sug { color: var(--accent2); font-weight: 650; }
+  .finding .exp { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+  .finding .meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .empty { color: var(--ok); font-weight: 600; }
+  .err { color: var(--imla); font-weight: 600; }
+
+  /* Düzen: solda log paneli + sağda içerik */
+  .layout { display: flex; align-items: flex-start; }
+  aside#logPanel {
+    width: 280px; flex: none; align-self: stretch;
+    border-right: 1px solid var(--line); background: var(--panel);
+    position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
+    padding: 16px 14px;
+  }
+  aside#logPanel h2 {
+    font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 12px;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .log-empty { color: var(--muted); font-size: 13px; }
+  .log-item {
+    border: 1px solid var(--line); background: var(--panel2); border-radius: 10px;
+    padding: 10px 12px; margin-bottom: 8px; cursor: pointer; position: relative;
+  }
+  .log-item:hover { border-color: var(--accent); }
+  .log-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .log-item .log-title {
+    font-weight: 650; font-size: 13.5px; padding-right: 20px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .log-item .log-meta { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  .log-item .log-meta .kind { text-transform: uppercase; letter-spacing: .03em; }
+  .log-item .log-del {
+    position: absolute; top: 6px; right: 8px; color: var(--muted);
+    font-size: 15px; line-height: 1; padding: 2px 4px; border-radius: 6px;
+    background: transparent; border: 0; cursor: pointer; margin: 0;
+  }
+  .log-item .log-del:hover { color: var(--imla); background: rgba(248,113,113,.12); }
+  main { flex: 1; min-width: 0; }
+  @media (max-width: 760px) {
+    .layout { flex-direction: column; }
+    aside#logPanel {
+      width: 100%; position: static; max-height: 240px;
+      border-right: 0; border-bottom: 1px solid var(--line);
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <img class="logo" src="/logo.png" alt="Türkçe Dil Analizi" onerror="this.replaceWith(Object.assign(document.createElement('h1'),{textContent:'Türkçe Dil Analizi'}))">
+  <span class="sub">Dokümanda Türkçe Kullanımı ve Uyumluluk Analizi Sistemi</span>
+</header>
+
+<div class="layout">
+<aside id="logPanel">
+  <h2>Log — Geçmiş Analizler</h2>
+  <div id="logList"><div class="log-empty">Henüz kayıt yok.</div></div>
+</aside>
+
+<main>
+  <div class="card">
+    <textarea id="text" placeholder="Analiz edilecek metni buraya yapıştırın ya da aşağıdan bir .docx seçin…"></textarea>
+    <div class="row">
+      <label class="file">
+        📄 .docx seç
+        <input type="file" id="file" accept=".docx">
+      </label>
+      <span id="fileName"></span>
+      <button id="run">Analiz Et</button>
+    </div>
+    <div class="hint">Belge ve metin sunucuda işlenir; analiz adımları aşağıda canlı akar. (Yalnız 127.0.0.1)</div>
+  </div>
+
+  <div id="extractNote"></div>
+
+  <div class="card" id="progressCard">
+    <div class="bar"><i id="barFill"></i></div>
+    <div class="steps" id="steps"></div>
+  </div>
+
+  <div class="card" id="resultCard">
+    <div class="summary" id="summary"></div>
+    <div class="source" id="source"></div>
+    <div id="findings"></div>
+  </div>
+</main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const TYPE_LABEL = { imla: "İmla", dil_bilgisi: "Dil bilgisi", ton: "Ton", tutarlilik: "Tutarlılık" };
+const TYPES = ["imla", "dil_bilgisi", "ton", "tutarlilik"];
+
+function esc(s) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+// --- İlerleme akışı -------------------------------------------------------
+let stepEls = {};
+function resetProgress() {
+  $("steps").innerHTML = ""; stepEls = {}; $("barFill").style.width = "0";
+  $("progressCard").style.display = "block";
+  $("resultCard").style.display = "none";
+  $("extractNote").style.display = "none"; $("extractNote").innerHTML = "";
+}
+
+// Belge okuma özeti + okunamayan içerik uyarıları (ör. görsel içi yazı).
+function onExtract(ev) {
+  let html = `<div class="ex-summary">${esc(ev.summary || "")}</div>`;
+  (ev.warnings || []).forEach((w) => { html += `<div class="ex-warn">⚠ ${esc(w)}</div>`; });
+  $("extractNote").innerHTML = html;
+  $("extractNote").style.display = "block";
+}
+function onProgress(ev) {
+  // Önceki aktif adımı "bitti" yap.
+  for (const k in stepEls) stepEls[k].classList.remove("active");
+  let el = stepEls[ev.stage + ":" + ev.current];
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "step";
+    el.innerHTML = '<span class="dot"></span><span class="lbl"></span>';
+    $("steps").appendChild(el);
+    stepEls[ev.stage + ":" + ev.current] = el;
+  }
+  // Geçmiş adımları tamamlandı işaretle.
+  document.querySelectorAll(".step").forEach((s) => { if (s !== el && !s.classList.contains("done")) s.classList.add("done"); });
+  el.querySelector(".lbl").textContent = ev.message;
+  el.classList.add("active");
+  if (ev.total > 0) {
+    // Kaba ilerleme: tutarlılık/finalize sona yakın.
+    let frac = ev.current / ev.total;
+    if (ev.stage === "consistency") frac = 0.9;
+    if (ev.stage === "finalize") frac = 0.96;
+    if (ev.stage === "done") frac = 1;
+    $("barFill").style.width = Math.round(frac * 100) + "%";
+  }
+}
+
+// --- Sonuç ----------------------------------------------------------------
+function renderResult(payload) {
+  document.querySelectorAll(".step.active").forEach((s) => s.classList.add("done"));
+  $("barFill").style.width = "100%";
+  const source = payload.source;
+  const findings = payload.result.findings || [];
+
+  // Özet rozetleri
+  const counts = {}; TYPES.forEach((t) => counts[t] = 0);
+  findings.forEach((f) => { if (counts[f.type] !== undefined) counts[f.type]++; });
+  let chips = `<span class="chip">Toplam <b>${findings.length}</b> bulgu</span>`;
+  TYPES.forEach((t) => { if (counts[t]) chips += `<span class="chip" style="border-color:var(--${t})">${TYPE_LABEL[t]} <b>${counts[t]}</b></span>`; });
+  $("summary").innerHTML = chips;
+
+  // Kaynak metin + vurgular (çakışmayanları sırayla işaretle)
+  const located = findings.filter((f) => f.start != null && f.end != null).sort((a, b) => a.start - b.start);
+  let html = "", cur = 0, lastEnd = -1;
+  for (const f of located) {
+    if (f.start < lastEnd) continue; // çakışma → atla
+    html += esc(source.slice(cur, f.start));
+    html += `<mark class="${f.type}" title="${esc(f.explanation)}">${esc(source.slice(f.start, f.end))}</mark>`;
+    cur = f.end; lastEnd = f.end;
+  }
+  html += esc(source.slice(cur));
+  $("source").innerHTML = html || '<span class="muted">(boş)</span>';
+
+  // Bulgu kartları (eksen sırasına göre)
+  if (!findings.length) {
+    $("findings").innerHTML = '<div class="empty">✓ Hiç bulgu yok — metin temiz görünüyor.</div>';
+  } else {
+    const order = { imla: 0, dil_bilgisi: 1, ton: 2, tutarlilik: 3 };
+    const sorted = findings.slice().sort((a, b) => (order[a.type] - order[b.type]) || ((a.start ?? 1e9) - (b.start ?? 1e9)));
+    $("findings").innerHTML = sorted.map((f) => {
+      const conf = f.confidence != null ? ` · güven ${(f.confidence * 100).toFixed(0)}%` : "";
+      const rule = f.rule_id ? ` · ${esc(f.rule_id)}` : "";
+      const sug = f.suggestion ? `<span class="arrow"> → </span><span class="sug">${esc(f.suggestion)}</span>` : "";
+      return `<div class="finding ${f.type}">
+        <div class="head"><span class="tag ${f.type}">${TYPE_LABEL[f.type] || f.type}</span>
+          <span class="excerpt">${esc(f.excerpt)}</span>${sug}</div>
+        <div class="exp">${esc(f.explanation)}</div>
+        <div class="meta">${rule}${conf}</div>
+      </div>`;
+    }).join("");
+  }
+  $("resultCard").style.display = "block";
+}
+
+// --- Log (geçmiş analizler) ----------------------------------------------
+let activeLogId = null;
+
+function fmtDate(iso) { return iso ? iso.replace("T", " ") : ""; }
+
+async function loadHistory() {
+  let items = [];
+  try { items = await (await fetch("/history")).json(); }
+  catch (e) { return; }  // sunucu erişilemezse listeyi olduğu gibi bırak
+  const list = $("logList");
+  if (!items.length) { list.innerHTML = '<div class="log-empty">Henüz kayıt yok.</div>'; return; }
+  list.innerHTML = items.map((m) => {
+    const n = (m.counts && m.counts.toplam) || 0;
+    const cls = m.id === activeLogId ? "log-item active" : "log-item";
+    return `<div class="${cls}" data-id="${esc(m.id)}">
+      <button class="log-del" data-del="${esc(m.id)}" title="Sil">×</button>
+      <div class="log-title" title="${esc(m.title || "")}">${esc(m.title || "(başlıksız)")}</div>
+      <div class="log-meta"><span class="kind">${esc(m.kind || "")}</span> · ${esc(fmtDate(m.created_at))} · ${n} bulgu</div>
+    </div>`;
+  }).join("");
+}
+
+// Geçmiş kaydı aç: çıktıyı mevcut renderResult ile BİREBİR yeniden çiz.
+async function openHistory(id) {
+  let rec;
+  try {
+    const r = await fetch("/history/get?id=" + encodeURIComponent(id));
+    if (!r.ok) return;
+    rec = await r.json();
+  } catch (e) { return; }
+  activeLogId = id;
+  $("progressCard").style.display = "none";
+  $("extractNote").style.display = "none"; $("extractNote").innerHTML = "";
+  if (rec.extract) onExtract(rec.extract);   // belge okuma notunu da geri göster
+  renderResult(rec.payload);
+  document.querySelectorAll(".log-item").forEach((el) =>
+    el.classList.toggle("active", el.dataset.id === id));
+}
+
+async function deleteHistory(id) {
+  try { await fetch("/history/delete?id=" + encodeURIComponent(id), { method: "POST" }); }
+  catch (e) {}
+  if (activeLogId === id) activeLogId = null;
+  loadHistory();
+}
+
+$("logList").addEventListener("click", (e) => {
+  const del = e.target.closest("[data-del]");
+  if (del) { e.stopPropagation(); deleteHistory(del.dataset.del); return; }
+  const item = e.target.closest(".log-item");
+  if (item) openHistory(item.dataset.id);
+});
+
+// --- Akışı başlat ---------------------------------------------------------
+let running = false;
+async function start() {
+  if (running) return;
+  const file = $("file").files[0];
+  const text = $("text").value;
+  if (!file && !text.trim()) { alert("Önce bir metin yapıştırın ya da .docx seçin."); return; }
+
+  running = true; $("run").disabled = true; resetProgress();
+  try {
+    let job;
+    if (file) {
+      const r = await fetch("/upload?kind=docx&name=" + encodeURIComponent(file.name), { method: "POST", body: file });
+      job = (await r.json()).job;
+    } else {
+      const r = await fetch("/upload?kind=text", { method: "POST", body: text });
+      job = (await r.json()).job;
+    }
+    const es = new EventSource("/stream?job=" + job);
+    es.addEventListener("progress", (e) => onProgress(JSON.parse(e.data)));
+    es.addEventListener("extract", (e) => onExtract(JSON.parse(e.data)));
+    es.addEventListener("result", (e) => {
+      const p = JSON.parse(e.data);
+      activeLogId = p.id || null;  // yeni kayıt listede vurgulansın
+      renderResult(p);
+    });
+    es.addEventListener("error", (e) => {
+      const msg = e.data ? JSON.parse(e.data).message : "Bağlantı hatası.";
+      $("steps").innerHTML += `<div class="step err">⚠ ${esc(msg)}</div>`;
+      es.close(); running = false; $("run").disabled = false;
+    });
+    es.addEventListener("done", () => {
+      es.close(); running = false; $("run").disabled = false;
+      loadHistory();  // yeni kayıt anında log paneline düşsün
+    });
+  } catch (err) {
+    $("steps").innerHTML += `<div class="step err">⚠ ${esc(String(err))}</div>`;
+    running = false; $("run").disabled = false;
+  }
+}
+
+$("run").addEventListener("click", start);
+$("file").addEventListener("change", () => {
+  const f = $("file").files[0];
+  $("fileName").textContent = f ? f.name : "";
+  if (f) $("text").value = "";
+});
+
+loadHistory();  // sayfa açılışında geçmiş kayıtları getir
+</script>
+</body>
+</html>

@@ -3,6 +3,7 @@
 Kullanım:
     python cli.py "Bu cümlede ki hata var ve yanlız yazılmış."
     echo "uzun metin..." | python cli.py
+    python cli.py belge.docx        # .docx → çıkar + parçala + analiz et
 """
 
 from __future__ import annotations
@@ -15,6 +16,16 @@ from dilanaliz.analyzer import build_default_analyzer
 
 def _read_input(argv: list[str]) -> str:
     if len(argv) > 1:
+        arg = argv[1]
+        if arg.lower().endswith(".docx"):
+            from dilanaliz.extract import extract_docx_with_report
+
+            text, report = extract_docx_with_report(arg)
+            # Kapsam özeti + okunamayan içerik uyarıları stderr'e (stdout JSON saf kalsın).
+            print(f"  … {report.describe()}", file=sys.stderr)
+            for warning in report.warnings:
+                print(f"  ⚠ {warning}", file=sys.stderr)
+            return text
         return " ".join(argv[1:])
     data = sys.stdin.read()
     if not data.strip():
@@ -23,10 +34,18 @@ def _read_input(argv: list[str]) -> str:
     return data
 
 
+def _stderr_progress(event) -> None:
+    """Analiz adımlarını stderr'e basar; stdout'taki JSON saf kalır (boru hattı bozulmaz)."""
+    print(f"  … {event.message}", file=sys.stderr)
+
+
 def main() -> None:
     text = _read_input(sys.argv)
     analyzer = build_default_analyzer()
-    result = analyzer.analyze(text)
+    # Uzun belgeleri parçalayarak analiz eder; kısa metinde tek parça olur,
+    # davranış `analyze` ile aynıdır. İlerleme stderr'e akar (terminalde görünür),
+    # JSON sonucu stdout'a yazılır.
+    result = analyzer.analyze_document(text, progress=_stderr_progress)
     print(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
 
 

@@ -18,6 +18,9 @@ class FindingType(str, Enum):
     IMLA = "imla"
     DIL_BILGISI = "dil_bilgisi"
     TON = "ton"
+    # Belge-geneli tutarlılık: aynı terim/birim/kısaltmanın farklı yazılması.
+    # Yalnız bütün-belge geçişinde üretilir (tek chunk göremez).
+    TUTARLILIK = "tutarlilik"
 
 
 class Finding(BaseModel):

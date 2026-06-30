@@ -11,7 +11,11 @@ KORUNUR, çünkü "yalnız mı" → "yalnız mı?" gerçek bir düzeltmedir.
 
 from __future__ import annotations
 
-from .schema import AnalysisResult
+from .schema import AnalysisResult, Finding
+
+# Türkçe alfabede bulunmayan harfler. Öneride bunlar varken ALINTIDA yoksa, öneri
+# büyük olasılıkla bozulmuştur (örn. "birçok" → "birchoq") → güvenilmez sayılır.
+_NON_TURKISH = set("qwxQWX")
 
 
 def _norm(s: str) -> str:
@@ -27,6 +31,26 @@ def drop_noop_findings(result: AnalysisResult) -> AnalysisResult:
     """Önerisi alıntıyla aynı olan bulguları çıkarır (yerinde)."""
     result.findings = [
         f for f in result.findings if not is_noop_suggestion(f.excerpt, f.suggestion)
+    ]
+    return result
+
+
+def _suggestion_is_corrupt(excerpt: str, suggestion: str) -> bool:
+    """Öneri, alıntıda olmayan Türkçe-dışı harf (q/w/x) içeriyorsa True."""
+    return bool((set(suggestion) & _NON_TURKISH) - set(excerpt))
+
+
+def validate_suggestions(result: AnalysisResult) -> AnalysisResult:
+    """Bozuk öneri içeren bulguları eler (yerinde).
+
+    Model bazen yakaladığı bir hataya geçersiz/ASCII'leştirilmiş öneri üretir
+    (örn. "birçok" yerine "birchoq"). Böyle bir öneri otomatik uygulanırsa metni
+    bozar; kaçırmaktan daha tehlikelidir. Bu yüzden güvenilmez kabul edilip atılır.
+    """
+    result.findings = [
+        f
+        for f in result.findings
+        if not _suggestion_is_corrupt(f.excerpt, f.suggestion)
     ]
     return result
 
