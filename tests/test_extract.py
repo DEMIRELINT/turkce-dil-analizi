@@ -1,8 +1,114 @@
+from pathlib import Path
+
 import pytest
 
-from dilanaliz.extract import extract_docx, extract_docx_with_report
+from dilanaliz.extract import _repair_broken_words, extract_docx, extract_docx_with_report
 
 docx = pytest.importorskip("docx")
+
+
+class _FakeSpeller:
+    """`_repair_broken_words`'ün MANTIĞINI gerçek sözlük olmadan test etmek için
+    sahte bir `HunspellChecker` (yalnız `is_known` gerekir)."""
+
+    def __init__(self, known: set[str]) -> None:
+        self._known = known
+
+    def is_known(self, word: str) -> bool:
+        return word in self._known
+
+
+def test_repair_merges_when_one_side_invalid_and_union_valid():
+    # "değer" geçerli, "lendirme" geçersiz, birleşim "değerlendirme" geçerli.
+    speller = _FakeSpeller({"değer", "değerlendirme"})
+    text = "Ekip performansını değer lendirme toplantısında tartıştı."
+    repaired, n = _repair_broken_words(text, speller)
+    assert n == 1
+    assert "değerlendirme" in repaired
+    assert "değer lendirme" not in repaired
+
+
+def test_repair_merges_dot_separator():
+    speller = _FakeSpeller({"I", "KAPSAMADIĞI"})
+    text = "Cihaz bu modu KAPSAMADIĞ.I için manuel ayar gerekir."
+    repaired, n = _repair_broken_words(text, speller)
+    assert n == 1
+    assert "KAPSAMADIĞI" in repaired
+    assert "KAPSAMADIĞ.I" not in repaired
+
+
+def test_repair_skips_when_both_sides_valid():
+    # İki taraf da geçerli kelime — deterministik katman dokunmamalı (LLM'e bırakılır).
+    speller = _FakeSpeller({"kapı", "dayım", "kapıdayım"})
+    text = "Kurye şu anda kapı dayım dedi."
+    repaired, n = _repair_broken_words(text, speller)
+    assert n == 0
+    assert repaired == text
+
+
+def test_repair_skips_when_union_also_invalid():
+    # Birleşim de sözlükte yoksa (asıl kelimede ayrıca karakter bozulması var) dokunma.
+    speller = _FakeSpeller({"Değ"})  # "ıştirmeyı" ve "Değıştirmeyı" bilinmiyor
+    text = "Sinyal Değ ıştirmeyı düğmesi."
+    repaired, n = _repair_broken_words(text, speller)
+    assert n == 0
+    assert repaired == text
+
+
+def test_repair_ignores_normal_sentence_boundaries():
+    # Nokta + boşluk (normal cümle sonu) tek karakterlik ayraç DEĞİLDİR; dokunulmaz.
+    speller = _FakeSpeller({"doğru", "şimdi"})
+    text = "Bu doğru. Şimdi devam edelim."
+    repaired, n = _repair_broken_words(text, speller)
+    assert n == 0
+    assert repaired == text
+
+
+# --- Gerçek tr_TR sözlüğüyle uçtan uca doğrulama (sözlük yoksa atlanır) -----
+
+_DICT_BASE = "dicts/tr_TR"
+_has_dict = Path(f"{_DICT_BASE}.dic").exists()
+
+
+@pytest.fixture(scope="module")
+def real_speller():
+    from dilanaliz.spell import HunspellChecker
+
+    return HunspellChecker(_DICT_BASE)
+
+
+@pytest.mark.skipif(not _has_dict, reason="tr_TR sözlüğü yok")
+def test_extract_repairs_split_word_with_real_dict(tmp_path, real_speller):
+    path = _make_docx(tmp_path, ["Ekip performansını değer lendirme toplantısında tartıştı."])
+    text = extract_docx(path, speller=real_speller)
+    assert "değerlendirme" in text
+    assert "değer lendirme" not in text
+
+
+@pytest.mark.skipif(not _has_dict, reason="tr_TR sözlüğü yok")
+def test_extract_reports_repaired_word_count(tmp_path, real_speller):
+    path = _make_docx(tmp_path, ["Cihaz bu modu KAPSAMADIĞ.I için manuel ayar gerekir."])
+    text, report = extract_docx_with_report(path, speller=real_speller)
+    assert "KAPSAMADIĞI" in text
+    assert report.repaired_words == 1
+    assert any("onarıldı" in w for w in report.warnings)
+
+
+@pytest.mark.skipif(not _has_dict, reason="tr_TR sözlüğü yok")
+def test_extract_does_not_merge_two_valid_words(tmp_path, real_speller):
+    # "kapı" ve "dayım" ikisi de tek başına geçerli — deterministik katman dokunmamalı.
+    path = _make_docx(tmp_path, ["Kurye geldiğinde şu anda kapı dayım dedi."])
+    text = extract_docx(path, speller=real_speller)
+    assert "kapı dayım" in text
+
+
+@pytest.mark.skipif(not _has_dict, reason="tr_TR sözlüğü yok")
+def test_extract_no_repair_without_speller(tmp_path):
+    # speller=None (varsayılan) → davranış tamamen geriye dönük uyumlu.
+    path = _make_docx(tmp_path, ["Ekip performansını değer lendirme toplantısında tartıştı."])
+    text, report = extract_docx_with_report(path)
+    assert "değer lendirme" in text
+    assert report.repaired_words == 0
 
 
 def _make_docx(tmp_path, paragraphs):

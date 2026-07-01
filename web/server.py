@@ -319,11 +319,12 @@ class Handler(BaseHTTPRequestHandler):
                     pass
 
     def _run_analysis(self, job: dict) -> None:
+        analyzer = get_analyzer()
         extract_info: dict | None = None
         if job["kind"] == "docx":
             self._sse("progress", json.dumps(
                 {"stage": "extract", "message": "Belge metni çıkarılıyor", "current": 0, "total": 0}))
-            text, report = extract_docx_with_report(job["path"])
+            text, report = extract_docx_with_report(job["path"], speller=analyzer.speller)
             # Kapsam özeti + okunamayan içerik uyarıları (ör. görsel içi yazı).
             extract_info = {"summary": report.describe(), "warnings": report.warnings}
             self._sse("extract", json.dumps(extract_info))
@@ -340,7 +341,6 @@ class Handler(BaseHTTPRequestHandler):
                 "current": ev.current, "total": ev.total,
             }))
 
-        analyzer = get_analyzer()
         result = analyzer.analyze_document(text, progress=on_progress)
 
         payload = {
