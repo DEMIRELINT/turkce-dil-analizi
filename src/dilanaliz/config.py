@@ -43,6 +43,7 @@ class Settings:
     langsmith_tracing: bool
     rules_path: str | None
     dict_path: str | None
+    genai_transport: str | None
     # Uzun belge parçalarının eşzamanlı işlenme sayısı (ThreadPoolExecutor).
     # LLM çağrıları ağ-bağımlı olduğundan paralellik toplam süreyi kısaltır;
     # çıktı birebir aynı kalır (temperature=0 + önbellek deterministik).
@@ -62,6 +63,10 @@ class Settings:
         dict_path = os.getenv("DICT_PATH", "dicts/tr_TR").strip() or None
         # Eşzamanlılık: en az 1. Geçersiz/0 değer 1'e (sıralı) düşer.
         max_workers = max(1, _env_int("CONCURRENCY", 6))
+        # Gemini istemci taşıma katmanı (opsiyonel). Boşsa SDK varsayılanı (grpc)
+        # kullanılır. Kurumsal ağlarda grpc/HTTP2 trafiği sessizce engellenebiliyorsa
+        # "rest" ile REST/HTTP1.1'e zorlanabilir (bkz. GOOGLE_GENAI_TRANSPORT).
+        genai_transport = os.getenv("GOOGLE_GENAI_TRANSPORT", "").strip() or None
         return cls(
             gemini_api_key=api_key,
             model_id=os.getenv("MODEL_ID", "gemini-2.5-flash-lite").strip(),
@@ -70,4 +75,5 @@ class Settings:
             rules_path=rules_path,
             dict_path=dict_path,
             max_workers=max_workers,
+            genai_transport=genai_transport,
         )

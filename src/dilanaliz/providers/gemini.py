@@ -14,4 +14,5 @@ def build_gemini(settings: Settings) -> BaseChatModel:
         model=settings.model_id,
         google_api_key=settings.gemini_api_key,
         temperature=settings.temperature,
+        transport=settings.genai_transport,
     )
