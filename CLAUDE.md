@@ -230,15 +230,18 @@ kaynağı sanma, gözden geçirmeden silme:
 
 ## Git / Dal / PR Kuralları
 
-- **İki makineli akış (bu projenin gerçek düzeni):**
-  - *İş bilgisayarı:* Claude Code Web — repo'yu seçip **`main`'den** yeni bir
-    `claude/...` dalı açar, çalışır ve **PR** açar.
-  - *Ev (macOS):* `~/Desktop/a-proje` altında yerel `.venv` + dolu `.env`.
-  - **`main` tek doğruluk kaynağıdır.** Her Web oturumu PR açar; o PR **`main`'e
-    MERGE edilmezse** diğer makine değişikliği göremez (en sık yaşanan karışıklık).
-    Makineler arası senkron: her iki tarafta `git checkout main && git pull`.
-- **`main`'e izinsiz doğrudan push yapma** — değişiklik dal + PR üzerinden gider.
-- **Ajan kendi açtığı PR'ı otomatik merge etmez** — merge kullanıcı onayıyla olur.
+- **`main` tek doğruluk kaynağıdır.** İki makine de yalnız `main` üzerinden
+  senkron olur; makine ≠ dal. Altın kural: **başlamadan günceli çek, bitirince
+  işini `main`'e indir; açık PR bırakma.**
+- **Ev (macOS, yerel):** `~/Desktop/a-proje` altında `.venv` + dolu `.env`.
+  Burada **doğrudan `main`'de** çalışılır: `git pull` → değişiklik → `git push`.
+  Dal/PR seremonisi yok (ev = tek kullanıcı, çakışma riski düşük).
+- **Kurum (Claude Code Web):** araç doğası gereği `main`'den `claude/...` dalı
+  açıp **PR** bırakır (main'e doğrudan yazamaz). O iş `main`'e ancak **PR merge
+  edilince** iner; **PR'ı hemen merge et** — açık kalırsa ev değişikliği görmez
+  (en sık yaşanan karışıklık).
+- **Ajan `main`'e onaysız push yapmaz** ve **kendi açtığı PR'ı otomatik merge
+  etmez** — push/merge kullanıcı onayıyla olur.
 - **Commit mesajları Türkçe** ve büyük değişikliklerde "Ne / Neden / Etki"
   formatını içerir.
 - **Commit'lenmeyecekler:** `.cache/` ve `.env` (`.gitignore`'da); büyük ikili
