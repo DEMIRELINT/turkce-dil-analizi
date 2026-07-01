@@ -230,18 +230,40 @@ kaynağı sanma, gözden geçirmeden silme:
 
 ## Git / Dal / PR Kuralları
 
-- **`main` tek doğruluk kaynağıdır.** İki makine de yalnız `main` üzerinden
-  senkron olur; makine ≠ dal. Altın kural: **başlamadan günceli çek, bitirince
-  işini `main`'e indir; açık PR bırakma.**
+- **`main` tek doğruluk kaynağıdır — main'e yalnız TEST EDİLMİŞ kod iner.**
+  Test makine seviyesindedir (`web/server.py`, `cli.py`, gerçek API); her
+  değişiklik merge'den önce fiziksel bir makinede çalıştırılıp denenmelidir.
+  makine ≠ dal.
+
 - **Ev (macOS, yerel):** `~/Desktop/a-proje` altında `.venv` + dolu `.env`.
-  Burada **doğrudan `main`'de** çalışılır: `git pull` → değişiklik → `git push`.
-  Dal/PR seremonisi yok (ev = tek kullanıcı, çakışma riski düşük).
-- **Kurum (Claude Code Web):** araç doğası gereği `main`'den `claude/...` dalı
-  açıp **PR** bırakır (main'e doğrudan yazamaz). O iş `main`'e ancak **PR merge
-  edilince** iner; **PR'ı hemen merge et** — açık kalırsa ev değişikliği görmez
-  (en sık yaşanan karışıklık).
-- **Ajan `main`'e onaysız push yapmaz** ve **kendi açtığı PR'ı otomatik merge
-  etmez** — push/merge kullanıcı onayıyla olur.
+  Burada **doğrudan `main`'de** çalışılır: `git pull` → değişiklik → yerelde test
+  → `git push`. Dal/PR seremonisi yok (tek kullanıcı, çakışma riski düşük).
+
+- **Kurum — iki katman:**
+  - *Claude Code Web (bulut):* değişikliği yazar ve `claude/...` **dalına** push
+    eder; fiziksel makineye/`main`'e yazamaz. Kod bu aşamada TEST EDİLMEMİŞTİR.
+  - *Kurum bilgisayarı (fiziksel):* webserver testi burada yapılır → Web'in dalı
+    buraya çekilir ve çalıştırılır. Bu, günde **birçok kez**, her küçük
+    değişiklikte olur.
+  - **Sürtünmeyi azalt:** Web **tek bir feature dalında** kalsın (yeni oturumda
+    yeni dal AÇMA, aynı dala devam et). Böylece fiziksel makine dal değiştirmez,
+    yalnız `git pull --ff-only` yapar.
+
+- **Kurum test döngüsü (fiziksel makinede):**
+  ```bash
+  git fetch origin
+  git checkout -t origin/<claude/dal>   # ilk kez; zaten o daldaysan atla
+  git pull --ff-only                    # Web'in son değişikliğini al
+  python web/server.py                  # (veya python cli.py "...") test et
+  ```
+  Aktif dalı bul: `git branch -r --sort=-committerdate | grep claude/ | head -1`.
+
+- **Test geçince:** dalı `main`'e indir (PR merge ya da fiziksel makinede
+  `git checkout main && git merge --ff-only <dal> && git push`). main artık
+  test edilmiştir. **Test kalırsa:** Web'de AYNI dalda düzelt, makinede tekrar
+  `git pull` → tekrar test (main kirlenmez).
+
+- **Ajan `main`'e onaysız push/merge yapmaz** — push/merge kullanıcı onayıyladır.
 - **Commit mesajları Türkçe** ve büyük değişikliklerde "Ne / Neden / Etki"
   formatını içerir.
 - **Commit'lenmeyecekler:** `.cache/` ve `.env` (`.gitignore`'da); büyük ikili
