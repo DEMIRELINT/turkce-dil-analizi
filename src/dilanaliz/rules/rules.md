@@ -139,8 +139,19 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 - **TON-RESMI** — Resmî/kurumsal yazışmada argo, günlük kısaltma ("slm", "tşk",
   "bi", "naber") ve aşırı samimi ifade uygun değildir. Doğru: "Selam" yerine
   "Sayın ...", "tşk" yerine "Teşekkür ederim".
-- **TON-NEZAKET** — Emir kipi yerine nazik rica dili. Doğru: "Gönderebilir
-  misiniz / rica ederiz". Uygunsuz: "Hemen gönderin".
+- **TON-NEZAKET** — Kurumsal YAZIŞMADA (e-posta, resmi yazı, iç yazışma) bir
+  KİŞİYE yöneltilen emir kipi yerine nazik rica dili tercih edilir. Doğru:
+  "Gönderebilir misiniz / rica ederiz". Uygunsuz: "Hemen gönderin".
+  **İSTİSNA:** Kullanım kılavuzu, teknik talimat, prosedür/adım adım işlem
+  tarifi gibi metinlerde, bir İŞLEM ADIMINI/CİHAZI anlatan emir kipi ("düğmeye
+  basın", "kabloyu takın", "cihazı kapatın") STANDART ve DOĞRU bir anlatım
+  biçimidir — bulgu ÜRETME. Ayırt edici soru: emir bir KİŞİYE mi (yazışma,
+  sosyal/idari eylem: gönderin, onaylayın, yollayın) yoksa bir İŞLEM ADIMINA mı
+  (talimat, fiziksel/teknik eylem: basın, takın, kapatın) yöneltilmiş? İkincisiyse
+  dokunma. Kural gerçekten uygulanacaksa (yazışmada kişiye yöneltilmiş emir), TEK
+  bir hedef kalıp kullan: "...-ebilir misiniz?" ya da "...rica ederiz" — aynı fiil
+  için farklı öneri biçimleri (örn. "basınız", "basmanız gerekmektedir",
+  "basabilirsiniz" gibi birbirinden farklı biçimler) ÜRETME; tutarsızlık yaratır.
 - **TON-HITAP-TUTARLILIK** — Aynı metinde sen/siz hitabı ve resmiyet düzeyi
   tutarlı olmalı; karışık hitap üslup bozukluğudur.
 - **TON-ACIKLIK** — Belirsiz, muğlak veya gereğinden uzun dolambaçlı anlatım
