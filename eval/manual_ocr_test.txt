@@ -2,7 +2,13 @@
 
 Cihazın arka panelindeki Sinyal Değ ıştirmeyı düğmesi, kullanım kılavuzunun üçüncü bölümünde ayrıntılı biçimde açıklanmıştır.
 
-Yöneticiler, ekip performansını değer lendirme toplantısında ayrıntılı biçimde tartıştı.
+Yöneticiler, ekip performansını değerlendirme toplantısında ayrıntılı biçimde tartıştı. (gerçek satır içi kırılma ile)
+
+NOT: Bu satırda .docx dosyasında "değer" ile "lendirme" arasında gerçek bir
+Word satır içi kırılması (Shift+Enter, <w:br/>) var — düz metinde gösterilemez,
+bu yüzden burada zaten onarılmış hâli yazılmıştır. Gerçek kusur budur (bkz.
+plan dosyası): docx2python bunu "değer\nlendirme" olarak çıkarır, kod bunu
+sessizce "değerlendirme" olarak onarır.
 
 Kurye geldiğinde "şu anda kapı dayım, birazdan açarım" diye seslendi.
 

@@ -43,16 +43,25 @@ _WORD_TOKEN = re.compile(r"[^\W\d_]+", re.UNICODE)
 
 
 def _repair_broken_words(text: str, speller: HunspellChecker) -> tuple[str, int]:
-    """docx2python'un run-birleştirme kusuruna karşı dar, Hunspell-doğrulamalı onarım.
+    """docx2python'un çıkarma kusurlarına karşı dar, Hunspell-doğrulamalı onarım.
 
-    Word bir kelimeyi biçimlendirme farkı yüzünden iki run'a bölebilir; docx2python
-    yalnız AYNI biçimlendirmeye sahip run'ları birleştirir, farklıysa aralarında
-    beklenmeyen bir ayraç (tek boşluk/nokta) kalır (bkz. kütüphanenin belgelenmiş
-    sınırı). Burada yalnız EN AZ BİR parça tek başına sözlükte yoksa VE
+    Doğrulanmış mekanizma: Word'de kelime ortasına kaçırılan bir SATIR İÇİ
+    kırılma (Shift+Enter, `<w:br/>`) — gözle fark edilmesi zor, özellikle dar
+    tablo hücresi/sütun genişliğinde veya PDF/OCR kaynaklı belgelerde satır
+    sonlarının olduğu gibi korunduğu durumlarda — docx2python tarafından
+    kelimenin ortasında bir `"\\n"` karakteri olarak çıkarılır (bu, çeşitli
+    biçimlendirme farkı senaryolarıyla ayrı ayrı test edilip DOĞRULANDI: run'lar
+    arasında kalın/punto/renk/dil etiketi farkı olması TEK BAŞINA sorun
+    yaratmıyor, docx2python bunları düzgün birleştiriyor — yalnız gerçek bir
+    satır içi kırılma karakteri sorun yaratıyor). Kelime içine sızan tek nokta
+    ("KAPSAMADIĞ.I" gibi) gözlemlenen ama kaynağı ayrıca doğrulanmamış BENZER
+    bir desendir; aynı güvenli kuralla ele alınır.
+
+    Kural: bitişik iki parçadan EN AZ BİRİ tek başına sözlükte yoksa VE
     birleştirilmiş hali TAM OLARAK sözlükte varsa ayraç kaldırılır; aksi halde
-    (ikisi de geçerliyse ya da birleşim de geçersizse) metne DOKUNULMAZ — belirsiz
-    durumlarda içerik uydurmaktansa olduğu gibi bırakıp mevcut Hunspell-aday/LLM
-    akışına devretmek tercih edilir.
+    (ikisi de geçerliyse ya da birleşim de geçersizse) metne DOKUNULMAZ —
+    belirsiz durumlarda içerik uydurmaktansa olduğu gibi bırakıp mevcut
+    Hunspell-aday/LLM akışına devretmek tercih edilir.
     """
     tokens = list(_WORD_TOKEN.finditer(text))
     if len(tokens) < 2:
@@ -61,7 +70,7 @@ def _repair_broken_words(text: str, speller: HunspellChecker) -> tuple[str, int]
     gaps_to_remove: list[tuple[int, int]] = []
     for left, right in zip(tokens, tokens[1:]):
         gap = text[left.end():right.start()]
-        if gap not in (" ", "."):
+        if gap not in (" ", ".", "\n"):
             continue
         left_word, right_word = left.group(0), right.group(0)
         if speller.is_known(left_word) and speller.is_known(right_word):
