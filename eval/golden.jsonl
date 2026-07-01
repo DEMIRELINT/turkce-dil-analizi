@@ -22,6 +22,7 @@
 {"id": "gramer-bolunmus-1", "text": "Ali kapıda uzun süre bekledikten sonra içeri alındı.", "expected": []}
 {"id": "gramer-bolunmus-2", "text": "Kurye geldiğinde şu anda kapı dayım, birazdan açarım diye seslendi.", "expected": [{"type": "dil_bilgisi", "excerpt": "kapı dayım"}]}
 {"id": "imla-kesme-tek-tirnak-1", "text": "'Kanal Ayarları'na gidin.", "expected": []}
-{"id": "imla-kesme-cift-tirnak-1", "text": "\"Kanal Ayarları\"na gidin.", "expected": [{"type": "imla", "excerpt": "\"Kanal Ayarları\"na"}]}
+{"id": "imla-kesme-cift-tirnak-1", "text": "\"Kanal Ayarları\"na gidin.", "expected": []}
+{"id": "imla-kesme-cift-tirnak-fazladan-1", "text": "\"Kanal Ayarları\"'na gidin.", "expected": [{"type": "imla", "excerpt": "\"Kanal Ayarları\"'na"}]}
 {"id": "tutarlilik-tekil-sayi-1", "text": "Cihaz on iki saat kesintisiz çalışabilir.", "expected": []}
 {"id": "tutarlilik-cakisma-1", "text": "RX (Alım) düğmesine basıldığında cihaz sinyal almaya başlar. Sinyal alımı RX (Alım) göstergesinde yeşil ışıkla belirtilir. İşlem bittiğinde RX (Alıcı) düğmesine tekrar basılması gerekir.", "expected": [{"type": "tutarlilik", "excerpt": "RX (Alıcı)"}]}
