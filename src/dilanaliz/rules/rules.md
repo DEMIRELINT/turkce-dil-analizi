@@ -139,19 +139,27 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 - **TON-RESMI** — Resmî/kurumsal yazışmada argo, günlük kısaltma ("slm", "tşk",
   "bi", "naber") ve aşırı samimi ifade uygun değildir. Doğru: "Selam" yerine
   "Sayın ...", "tşk" yerine "Teşekkür ederim".
-- **TON-NEZAKET** — Kurumsal YAZIŞMADA (e-posta, resmi yazı, iç yazışma) bir
-  KİŞİYE yöneltilen emir kipi yerine nazik rica dili tercih edilir. Doğru:
-  "Gönderebilir misiniz / rica ederiz". Uygunsuz: "Hemen gönderin".
-  **İSTİSNA:** Kullanım kılavuzu, teknik talimat, prosedür/adım adım işlem
-  tarifi gibi metinlerde, bir İŞLEM ADIMINI/CİHAZI anlatan emir kipi ("düğmeye
-  basın", "kabloyu takın", "cihazı kapatın") STANDART ve DOĞRU bir anlatım
-  biçimidir — bulgu ÜRETME. Ayırt edici soru: emir bir KİŞİYE mi (yazışma,
-  sosyal/idari eylem: gönderin, onaylayın, yollayın) yoksa bir İŞLEM ADIMINA mı
-  (talimat, fiziksel/teknik eylem: basın, takın, kapatın) yöneltilmiş? İkincisiyse
-  dokunma. Kural gerçekten uygulanacaksa (yazışmada kişiye yöneltilmiş emir), TEK
-  bir hedef kalıp kullan: "...-ebilir misiniz?" ya da "...rica ederiz" — aynı fiil
-  için farklı öneri biçimleri (örn. "basınız", "basmanız gerekmektedir",
-  "basabilirsiniz" gibi birbirinden farklı biçimler) ÜRETME; tutarsızlık yaratır.
+- **TON-NEZAKET** — Bu kural YALNIZ gerçek kişiler-arası YAZIŞMADA (e-posta,
+  resmi yazı, iç yazışma — kişisel hitap taşıyan: "Sayın ...", "bana",
+  "sizden rica ederim" gibi işaretler içeren metin) işler: kişiye yöneltilen
+  emir kipi yerine nazik rica dili tercih edilir. Doğru: "Gönderebilir
+  misiniz / rica ederiz". Uygunsuz: "Hemen gönderin".
+  **İSTİSNA (kapsamlı):** Kullanım kılavuzu, teknik talimat, prosedür/adım
+  adım işlem tarifi gibi metinlerde emir kipi — CİHAZ/İŞLEM adımı olsun
+  ("düğmeye basın", "kabloyu takın") İDARİ/kurumsal adım olsun ("servis
+  formunu doldurup gönderin", "garanti belgesini saklayın") FARK ETMEZ —
+  STANDART ve DOĞRU bir anlatım biçimidir, bulgu ÜRETME. Gerçek Türkçe
+  kılavuzlarda idari/kurumsal adımlar da AYNI doğrudan emir kipiyle yazılır;
+  "nazik rica dili" yalnız kişiler-arası yazışmaya özgü bir konvansiyondur,
+  kılavuzun HİÇBİR bölümüne uygulanmaz. Ayırt edici soru artık "kime
+  yöneltilmiş" DEĞİL, "bu metin NE TÜR bir metin": bir KILAVUZ/TALİMAT/
+  PROSEDÜR mü (baştan sona emir kipi doğaldır, hiç işaretleme) yoksa gerçek
+  bir kişiler-arası YAZIŞMA mı (kişisel hitap/imza içerir, o zaman kural
+  işler)? Kural gerçekten uygulanacaksa (yazışmada kişiye yöneltilmiş emir),
+  TEK bir hedef kalıp kullan: "...-ebilir misiniz?" ya da "...rica ederiz" —
+  aynı fiil için farklı öneri biçimleri (örn. "basınız", "basmanız
+  gerekmektedir", "basabilirsiniz" gibi birbirinden farklı biçimler)
+  ÜRETME; tutarsızlık yaratır.
 - **TON-HITAP-TUTARLILIK** — Aynı metinde sen/siz hitabı ve resmiyet düzeyi
   tutarlı olmalı; karışık hitap üslup bozukluğudur.
 - **TON-ACIKLIK** — Belirsiz, muğlak veya gereğinden uzun dolambaçlı anlatım
