@@ -55,6 +55,27 @@ def test_error_without_correction_keeps_existing_suggestion():
     assert out[0].suggestion == "herke"  # boş düzeltme → mevcut öneri kalır
 
 
+def test_casefold_variants_each_get_their_own_correction():
+    # Regresyon: "Herşey" (cümle başı) ve "herşey" (cümle içi) SADECE büyük/
+    # küçük harfle ayrılan iki AYRI candidate. Her biri kendi kararını almalı;
+    # "Herşey"in kararı, "herşey" candidate'ının kararını GÖLGELEMEMELİ
+    # (bkz. eski tek-geçişli by_word doldurma hatası).
+    cands = [
+        _candidate("Herşey", 0, suggestion="(öneri yok)"),
+        _candidate("herşey", 40, suggestion="(öneri yok)"),
+        _candidate("herşey", 90, suggestion="(öneri yok)"),
+    ]
+    decisions = [
+        LLMSpellingDecision(word="Herşey", is_error=True, correction="Her şey"),
+        LLMSpellingDecision(word="herşey", is_error=True, correction="her şey"),
+    ]
+    out = Analyzer._resolve_spelling(cands, decisions)
+    assert len(out) == 3
+    assert out[0].suggestion == "Her şey"  # cümle başı → büyük harf korunur
+    assert out[1].suggestion == "her şey"  # cümle içi → küçük harf, GÖLGELENMEMELİ
+    assert out[2].suggestion == "her şey"
+
+
 def test_user_message_lists_candidates():
     msg = build_user_message("KURALLAR", "metin", ["yanlız", "herkez"])
     assert "ŞÜPHELİ KELİMELER" in msg
