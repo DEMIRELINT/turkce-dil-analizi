@@ -30,10 +30,6 @@ class HunspellChecker:
         self._dict = Dictionary.from_files(str(dict_base))
         self._whitelist = {w.casefold() for w in (whitelist or set())}
 
-    def is_known(self, word: str) -> bool:
-        """Kelime sözlükte var mı (extract.py'nin onarım katmanı da kullanır)."""
-        return bool(self._dict.lookup(word))
-
     def check_text(self, text: str) -> list[Finding]:
         findings: list[Finding] = []
         for m in _WORD_RE.finditer(text):
@@ -42,7 +38,7 @@ class HunspellChecker:
                 continue
             if word.casefold() in self._whitelist:
                 continue
-            if self.is_known(word):
+            if self._dict.lookup(word):
                 continue
             suggestions = list(self._dict.suggest(word))
             suggestion = suggestions[0] if suggestions else "(sözlükte öneri yok)"
