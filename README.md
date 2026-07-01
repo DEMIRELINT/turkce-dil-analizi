@@ -195,8 +195,14 @@ PORT=9000 python web/server.py
 - `.docx` yükle **veya** metin yapıştır → "Analiz Et".
 - Her adım canlı akar: *"Belge 5 parçaya bölündü → Parça 2/5: yazım inceleniyor →
   … → Belge geneli tutarlılık → Tamamlandı"*.
-- Sonuç: bulgular metin üzerinde vurgulanır ve eksene göre (imla / dil bilgisi /
-  ton / tutarlılık) gruplanmış kartlarda listelenir.
+- Sonuç ekranı iki sütunludur: solda kaynak metin (bulgular vurgulu), sağda
+  eksene göre (imla / dil bilgisi / ton / tutarlılık) gruplanmış kartlar.
+  Analiz adımlarının aktığı log paneli sonuç ekranında kenara küçük bir ok
+  düğmesiyle açılıp kapanabilir.
+- **Aynı bulgu belgede kaç kez tekrarlanırsa etsin** (ör. bir düzeltme 50
+  yerde geçiyorsa) tek bir kartta gruplanır; kart, her geçtiği konuma
+  tıklayarak gitmeyi sağlayan bir liste açar. Uzun belgelerde raporu
+  okunabilir tutan asıl mekanizma budur.
 
 **Güvenlik / air-gap:** yalnız `127.0.0.1`'e bağlanır (dışarı açılmaz);
 `GEMINI_API_KEY` sunucuda kalır, tarayıcıya gönderilmez; harici CDN/script/font
