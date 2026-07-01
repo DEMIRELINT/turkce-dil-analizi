@@ -134,6 +134,22 @@
   .empty { color: var(--ok); font-weight: 600; }
   .err { color: var(--imla); font-weight: 600; }
 
+  /* Toplulaştırılmış bulgu: tekrar rozeti + genişletilebilir konum çipleri */
+  .finding .count-badge {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 99px;
+    padding: 2px 10px; font-size: 11.5px; font-weight: 700; color: var(--muted);
+  }
+  .finding details { margin-top: 8px; }
+  .finding summary { cursor: pointer; color: var(--accent); font-size: 12.5px; user-select: none; }
+  .loc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .loc-chip {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    padding: 2px 8px; font-size: 12px; color: var(--muted); cursor: pointer;
+  }
+  .loc-chip:hover { border-color: var(--accent); color: var(--fg); }
+  mark.flash { outline: 2px solid var(--accent); animation: flash-fade 1s ease-out; }
+  @keyframes flash-fade { 0% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
+
   /* Düzen: solda log paneli + sağda içerik */
   .layout { display: flex; align-items: flex-start; }
   aside#logPanel {
@@ -335,32 +351,61 @@ function renderResult(payload) {
   for (const f of located) {
     if (f.start < lastEnd) continue; // çakışma → atla
     html += esc(source.slice(cur, f.start));
-    html += `<mark class="${f.type}" title="${esc(f.explanation)}">${esc(source.slice(f.start, f.end))}</mark>`;
+    html += `<mark class="${f.type}" data-start="${f.start}" title="${esc(f.explanation)}">${esc(source.slice(f.start, f.end))}</mark>`;
     cur = f.end; lastEnd = f.end;
   }
   html += esc(source.slice(cur));
   $("source").innerHTML = html || '<span class="muted">(boş)</span>';
 
-  // Bulgu kartları (eksen sırasına göre)
+  // Bulgu kartları: aynı (tip + alıntı + öneri) tekrarları TEK kartta toplanır
+  // (bkz. plan — "hacim/tekrar" sorunu), konum bilgisi hiçbiri KAYBOLMADAN
+  // genişletilebilir konum çipleri olarak korunur.
   if (!findings.length) {
     $("findings").innerHTML = '<div class="empty">✓ Hiç bulgu yok — metin temiz görünüyor.</div>';
   } else {
     const order = { imla: 0, dil_bilgisi: 1, ton: 2, tutarlilik: 3 };
-    const sorted = findings.slice().sort((a, b) => (order[a.type] - order[b.type]) || ((a.start ?? 1e9) - (b.start ?? 1e9)));
+    const normKey = (s) => (s || "").trim().replace(/\s+/g, " ");
+    const groups = new Map();
+    for (const f of findings) {
+      const key = `${f.type} ${normKey(f.excerpt)} ${normKey(f.suggestion)}`;
+      if (!groups.has(key)) groups.set(key, { ...f, count: 0, occurrences: [] });
+      const g = groups.get(key);
+      g.count++;
+      if (f.start != null) g.occurrences.push(f.start);
+    }
+    const sorted = Array.from(groups.values()).sort((a, b) =>
+      (order[a.type] - order[b.type]) || (b.count - a.count) || ((a.start ?? 1e9) - (b.start ?? 1e9)));
     $("findings").innerHTML = sorted.map((f) => {
       const conf = f.confidence != null ? ` · güven ${(f.confidence * 100).toFixed(0)}%` : "";
       const rule = f.rule_id ? ` · ${esc(f.rule_id)}` : "";
       const sug = f.suggestion ? `<span class="arrow"> → </span><span class="sug">${esc(f.suggestion)}</span>` : "";
+      const badge = f.count > 1 ? ` <span class="count-badge">${f.count} yerde</span>` : "";
+      const details = f.count > 1 ? `<details><summary>Tüm konumları göster</summary>
+        <div class="loc-chips">${f.occurrences.map((start, i) => `<span class="loc-chip" data-jump="${start}">${i + 1}</span>`).join("")}</div>
+      </details>` : "";
       return `<div class="finding ${f.type}">
         <div class="head"><span class="tag ${f.type}">${TYPE_LABEL[f.type] || f.type}</span>
-          <span class="excerpt">${esc(f.excerpt)}</span>${sug}</div>
+          <span class="excerpt">${esc(f.excerpt)}</span>${sug}${badge}</div>
         <div class="exp">${esc(f.explanation)}</div>
         <div class="meta">${rule}${conf}</div>
+        ${details}
       </div>`;
     }).join("");
   }
   $("resultCard").style.display = "block";
 }
+
+// Bir konum çipine tıklanınca kaynak metindeki ilgili <mark>'a kaydır + vurgula.
+$("findings").addEventListener("click", (e) => {
+  const chip = e.target.closest("[data-jump]");
+  if (!chip) return;
+  const mark = $("source").querySelector(`mark[data-start="${chip.dataset.jump}"]`);
+  if (!mark) return;
+  mark.scrollIntoView({ block: "center", behavior: "smooth" });
+  mark.classList.remove("flash"); void mark.offsetWidth; // yeniden tetikle
+  mark.classList.add("flash");
+  setTimeout(() => mark.classList.remove("flash"), 1000);
+});
 
 // --- Log (geçmiş analizler) ----------------------------------------------
 let activeLogId = null;
