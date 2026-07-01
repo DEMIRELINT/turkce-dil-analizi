@@ -60,19 +60,16 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   "Ahmet'in", "Türkiye'ye"). YAPIM ekleri ayrılmaz ("Türkçe", "Avrupalı").
   Kurum/kuruluş adlarına gelen ekler kesme ile ayrılmaz ("Türk Dil Kurumuna").
   Doğru: "İstanbul'da". Yanlış: "İstanbulda", "Türkçe'yi" (yapım eki → ayrılmaz).
-  Tırnak içine alınan bir ifadeye ek geldiğinde, tırnağın ÇİFT mi TEK mi
-  olduğuna göre kural değişir:
-  - ÇİFT tırnak (") kullanılmışsa, ek kapanış tırnağından SONRA AYRI bir
-    kesme işaretiyle eklenir (çift tırnak ile kesme FARKLI karakterlerdir,
-    aralarında ayrım için ek kesme gerekir). Doğru: "Tarama Listesi"'ne,
-    "Tarama Modu"'nu. Yanlış: "Tarama Listesi"ne, "Tarama Modu"nu (ek
-    tırnağa kesmesiz bitişik).
-  - TEK tırnak (') kullanılmışsa, kapanış tek tırnağı ZATEN kesme işaretiyle
-    AYNI karakterdir — ek DOĞRUDAN, EKSTRA bir kesme EKLENMEDEN kapanış tek
-    tırnağına bitişik yazılır. Doğru: 'Tarama Listesi'ne, 'Tarama Modu'nu
-    (zaten doğru, dokunma). **Yanlış: 'Tarama Listesi''ne, 'Tarama Modu''nu
-    (kapanış tek tırnağının yanına BİR KESME DAHA eklenmiş — böyle yan yana
-    iki kesme/tırnak İŞARETİ ASLA ÜRETME, bu bozuk bir öneridir).**
+  Tırnak içine alınan bir ifadeye ek geldiğinde (tırnak TEK ' ya da ÇİFT "
+  fark etmez), kesme işareti EKLENMEZ — ek doğrudan kapanış tırnağına
+  bitişik yazılır. Tırnağın kendisi zaten bir sınırlayıcı görevi gördüğünden
+  ayrıca kesmeye gerek yoktur (TDK: tırnak içine alınan sözlerden sonra
+  gelen ekleri ayırmak için kesme işareti kullanılmaz — ör. eser adlarında
+  "Sinekli Bakkal"ı, "Bit Palas"ını). Doğru: "Tarama Modu"nu, 'Tarama
+  Modu'nu, "Bakım Modu"na. **Yanlış: "Tarama Modu"'nu, 'Tarama Modu''nu
+  (kapanış tırnağının yanına GEREKSİZ bir kesme/tırnak daha eklenmiş —
+  böyle yan yana iki kesme/tırnak İŞARETİ ASLA ÜRETME, bu bozuk bir
+  öneridir).**
 
 ### A6. Düzeltme işareti ve Türkçe karakter
 
