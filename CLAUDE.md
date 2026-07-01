@@ -20,7 +20,14 @@ her değişiklikten sonra:
 
 Bu rapor; commit mesajında, PR açıklamasında ve kullanıcıya verilen yanıtta
 açıkça belirtilmelidir. **Küçük düzeltmeler (typo, format) için gerekmez; ama
-büyük güncellemelerde raporlama atlanmamalıdır.**
+büyük güncellemelerde raporlama atlanmamalıdır. Yapılan güncellemeler sonrasında kullanıcıya yapılacak açıklama, teknik terimlerle boğulmamalı ve net anlaşılır olmalıdır.**
+
+**CLAUDE.md güncel tutulmalıdır.** Yapılan bir güncelleme, bu dosyada yazılı bir
+bilgiyi (mimari, dizin yapısı, komutlar, ortam değişkenleri, kural kimlikleri,
+bilinen sınırlar vb.) etkiliyor ya da burada belgelenmesi gereken yeni bir kural/
+komut/seam getiriyorsa, **değişiklikle birlikte CLAUDE.md de güncellenmelidir** —
+kod ile rehberin ayrışması (drift) önlenir. Değişiklik CLAUDE.md'yi
+ilgilendirmiyorsa (yalnız yerel bir hata düzeltmesi gibi) güncelleme gerekmez.
 
 ---
 
@@ -109,7 +116,22 @@ EVAL_DELAY_SEC=0 python eval/run_eval.py
 
 # Sıralı vs paralel karşılaştırma (hız + eşdeğerlik; API gerektirir)
 python eval/compare_parallel.py belge.docx  # küçük belgeyle: belgeyi 3× analiz eder
+
+# Hızlı reçeteler
+pytest tests/test_chunk.py -q               # tek modülü çalıştır
+pytest -x -q                                # ilk hatada dur (hızlı geri bildirim)
+pytest -k chunk                             # ada göre süz
+python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 ```
+
+**Sorun giderme (hata alınca buraya bak — her seferinde önden çalıştırma):**
+
+- **Beklenmedik "eksik/bayat sonuç":** önce `rm -rf .cache/` ve tekrar dene
+  (bkz. Bilinen Sınırlar → bayat önbellek).
+- **Sözlük/`HunspellChecker` hatası veya imla bulgusu hiç çıkmıyor:**
+  `dicts/tr_TR.dic` var mı? Yoksa Hunspell katmanı sessizce kapanır.
+- **`GEMINI_API_KEY` / kimlik hatası:** `.env` dolu mu, `.venv` aktif mi?
+- **Bağlantı donuyor/timeout (kurumsal ağ):** `GOOGLE_GENAI_TRANSPORT=rest` dene.
 
 ---
 
@@ -176,6 +198,34 @@ koru:
   değiştiysen `golden.jsonl`'e örnek + `run_eval.py` ölçümü; (3) davranış/çıktı
   değiştiyse Büyük Güncelleme Raporu.
 
+### İş Bitti mi? (Definition of Done — koşullu)
+
+İşi tamamlamadan aşağıdakileri **duruma göre** çalıştır. Hepsini her seferinde
+körlemesine çalıştırma; özellikle API'li adımlar zaman ve para harcar.
+
+- **Her zaman:** `pytest` (API gerektirmez, ucuz — kod değiştiyse çalıştır).
+- **Prompt/kural değiştiyse:** `eval/run_eval.py` (öncesi/sonrası precision-recall
+  karşılaştır) + `golden.jsonl`'e örnek ekle. *Yalnız* bu durumda — aksi hâlde
+  gereksiz API maliyeti.
+- **Deterministiklik/paralellik sözleşmesine dokundunsa:** `compare_parallel.py`.
+- **Davranış/çıktı/mimari değiştiyse:** Büyük Güncelleme Raporu + gerekiyorsa
+  CLAUDE.md güncellemesi (bkz. Öncelikli Kural).
+
+---
+
+## Üretilmiş / Elle Dokunulmayan Dosyalar
+
+Bunlar araç tarafından üretilir veya hassastır; **elle düzenleme**, canlı sonuç
+kaynağı sanma, gözden geçirmeden silme:
+
+- **`.cache/`** — LLM yanıt önbelleği; canlı sonuç değildir (bayat olabilir).
+  Elle düzenleme; şüpheli sonuçta topluca sil (`rm -rf .cache/`).
+- **`eval/last_predictions.json`** — `run_eval.py`'nin ürettiği son tahmin
+  dökümü; elle yazma, ölçüm çıktısıdır.
+- **`dicts/tr_TR.{aff,dic}`** — dış sözlük (LibreOffice); elle düzeltme, vendor'la.
+- **`.env`** — sırlar; commit'lenmez, içeriği yanıtlara/loglara yazılmaz.
+- **`history/`** — web panelinin analiz geçmişi kayıtları (üretilmiş).
+
 ---
 
 ## Git / Dal / PR Kuralları
@@ -193,6 +243,7 @@ koru:
   formatını içerir.
 - **Commit'lenmeyecekler:** `.cache/` ve `.env` (`.gitignore`'da); büyük ikili
   dosyalar (ör. `.pdf`, kaynak belgeler) repoya girmez.
+- Kullanıcı yeni bir chat başlangıcında çalıştığı ortamı (iş veya ev) belirtmezse kullanıcıya öncelikle nerede çalıştığını sor.
 
 ---
 

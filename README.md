@@ -1,321 +1,417 @@
 # Türkçe Doküman Dil Analizi
 
-Türkçe kurumsal metinleri **imla**, **dil bilgisi** ve **ton** eksenlerinde
-inceleyip her sorun için **gerekçe + düzeltme önerisi** üreten hibrit bir sistem.
-Sistem **önerir, düzeltmez**; son söz kullanıcıdadır.
+Türkçe kurumsal metinleri **imla**, **dil bilgisi**, **ton** ve **belge-geneli
+tutarlılık** eksenlerinde inceleyip her sorun için *gerekçe + düzeltme önerisi*
+üreten **hibrit** bir sistem. Deterministik olarak çözülebilen işi araca
+(Hunspell), yargı/bağlam gerektiren işi yapay zekâya (Gemini) bırakır.
 
-Çekirdek felsefe: **deterministik olarak çözülebilen işi araca, yargı/bağlam
-gerektiren işi yapay zekâya** bırakan bir hibrit. Yazım hatalarını yerel bir
-sözlük (Hunspell) **kesin** biçimde bulur; düzeltme önerisini, dil bilgisini ve
-tonu ise bağlamı anlayan bir LLM (Gemini) üretir.
-
-Mimari, ileride **RAG**'e ve üretimde **self-host / kapalı ağ (air-gap)** ortamına
-*kod değişmeden* büyüyecek şekilde tasarlandı.
+**Sistem önerir, düzeltmez** — son söz her zaman kullanıcıdadır.
 
 ---
 
-## Ne yapıyor?
+## 1. Ne İşe Yarar? (Problem & Değer)
 
-- **İmla** — yazım hataları, eksik Türkçe karakter, bağlama bağlı yazım (de/da,
-  ki, mi) ve kuralda tanımlı yapısal imla (sayı/ölçü birimi, düzeltme işareti).
-- **Dil bilgisi** — özne-yüklem/tamlama uyumu, anlatım bozuklukları.
-- **Ton** — kurumsal/resmî yazışmaya uygunluk, üslup tutarlılığı.
-- **Tutarlılık** — aynı terim/birim/kısaltmanın belge içinde farklı yazılması
-  (yalnız bütün-belge geçişinde görülebilir).
-- **Girdi:** düz metin, `stdin`, `.txt` **veya** `.docx` (tablo, metin kutusu,
-  üst/altbilgi, dipnot dahil eksiksiz çıkarma).
-- Her bulgu: **tür, alıntı, açıklama, öneri, kural kimliği, metindeki konum (offset)**.
-- Çıktı: makine-işlenebilir **JSON** (rapora veya arayüze dönüşebilir).
+Kurumsal Türkçe metinlerde (resmî yazışma, rapor, prosedür) dil kalitesini
+denetlemek elle yavaş, tutarsız ve gözden kaçmalara açıktır. Bu sistem metni
+dört eksende tarar, her bulgu için **nerede/neden hatalı** olduğunu ve **nasıl
+düzeltileceğini** söyler; kararı kullanıcıya bırakır.
 
----
+Tasarımın çekirdek felsefesi: **deterministik olan işi araca, yargı gerektiren
+işi LLM'e.** Yazım hatası gibi kesin çözülebilen bir sorunu kural motoru
+(Hunspell) sıfır halüsinasyonla ve kesin konumla bulur; "bu özel ad mı, bu ton
+kurumsal mı, bu terim belgede tutarlı mı" gibi bağlam/yargı gerektiren soruları
+Gemini yanıtlar.
 
-## Algoritma akışı
+**Neden değerli:** Bir kurumsal denetçide en büyük kusur, temiz metinde hata
+*uydurmaktır* (yanlış-pozitif). Bu yüzden sistem ölçülerek geliştirilir ve
+yanlış-pozitifi düşük tutmak, kapsamı artırmaktan önce gelir.
 
-```mermaid
-flowchart TD
-    A["Girdi<br/>(.docx → çıkar / metin)"] --> P["Deterministik parçalama<br/>(paragraf bazlı chunk)"]
-    C["Kural dökümanı<br/>rules.md"] --> L
-    C --> T
-    P -->|her parça| L["YEREL geçiş (cümle)<br/>Hunspell adayları + noktalama<br/>+ dil bilgisi + bağlamsal/yapısal imla"]
-    P -->|her parça| T["TON geçişi (paragraf)<br/>yalnız üslup"]
-    A -->|bütün belge| K["TUTARLILIK geçişi<br/>terim/birim/kısaltma tutarsızlığı"]
-    L --> G["Offset rebasing + birleştir<br/>+ tekilleştir + doğrula"]
-    T --> G
-    K --> G
-    G --> H["JSON bulgu listesi<br/>(tür, alıntı, açıklama, öneri, konum)"]
+## 2. Öne Çıkan Özellikler
+
+- **Sıfır-halüsinasyon deterministik imla** — Hunspell (`spylls`, saf-Python) +
+  `tr_TR` sözlüğü; yazım hatasını kesin offset ile bulur.
+- **LLM ile bağlamsal yargı** — Gemini; aday kelimeleri bağlama göre eler (özel
+  ad/terim), düzeltme önerir, dil bilgisi ve tonu değerlendirir.
+- **Kademeli geçişler** — yerel (cümle), ton (paragraf), tutarlılık (belge) ayrı
+  geçişlerde çalışır; her eksen kendi bazında incelenir.
+- **Belge-geneli tutarlılık** — aynı terim/birim/kısaltmanın farklı yazımlarını
+  tek çağrıda, bütün metni görerek yakalar.
+- **.docx tam çıkarma** — gövde + tablo + metin kutusu + üst/altbilgi + dipnot
+  (`docx2python`).
+- **Paralel ama deterministik** — parçalar eşzamanlı işlenir; çıktı işlenme
+  sırasından bağımsız, birebir aynıdır.
+- **Air-gap uyumu** — bağımlılıklar pinli, telemetri kapalı, gizli dış çağrı yok;
+  sözlük ve web paneli dahil her şey yerel.
+- **Canlı web paneli** — docx yükle / metin yapıştır + gerçek-zamanlı ilerleme
+  (yalnız stdlib, sıfır ek bağımlılık).
+
+## 3. Nasıl Çalışır? — Mimari & Algoritmik Akış ⭐
+
+Analiz tek bir dev çağrı değil; **deterministik parçalama + kademeli LLM
+geçişleri**dir. Uçtan uca boru hattı:
+
+```
+  Girdi (.docx / düz metin)
+        │
+        ▼
+  extract.py ──► tam metin (tablo/dipnot/altbilgi dahil)
+        │
+        ▼
+  chunk.py ────► [parça 1] [parça 2] … [parça N]   (deterministik; offset korunur)
+        │
+        ├─ her parça (paralel, CONCURRENCY kadar):
+        │     ├─ yerel geçiş  : Hunspell adayları + noktalama/dil bilgisi/imla
+        │     └─ ton geçişi   : üslup/nezaket/resmiyet
+        │     └─ offset rebasing (parça-içi → kaynak)
+        │
+        └─ bütün belge (tek çağrı):
+              tutarlılık geçişi : terim/birim/kısaltma çakışması
+        │
+        ▼
+  postprocess ─► noop ele + birleştir + deterministik sırala + tekilleştir
+        │
+        ▼
+  AnalysisResult (JSON)
 ```
 
-Tek cümlede: **tespit = Hunspell (deterministik), düzeltme + yargı = Gemini**;
-analiz tek seferde değil, kontrol bazına göre **kademeli geçişlerle** yürür. Metin
-deterministik olarak parçalara (chunk) bölünür; her parçada **yerel** (cümle:
-imla/noktalama/dil bilgisi) ve **ton** (paragraf) geçişi, ayrıca **bütün belgede
-bir kez tutarlılık** geçişi çalışır. Hunspell sözlükte olmayan kelimeleri bulur,
-Gemini bunları bağlama göre düzeltir ya da özel ad ise eler. Parça-içi bulguların
-offsetleri kaynağa geri taşınır (rebasing); tüm geçişlerin bulguları en sonda tek
-listede birleşir ve tekilleştirilir.
+**3.1 Girdi.** Düz metin veya `.docx`. `.docx`'te `extract.py` gövdenin
+yanında tablo, metin kutusu, üst/altbilgi ve dipnotları da çıkarır; okunan/
+okunamayan içeriği bir rapor (`ExtractionReport`) ile bildirir.
 
----
+**3.2 Parçalama.** [chunk.py](src/dilanaliz/chunk.py) uzun metni **deterministik**
+(AI değil) böler. Birim paragraftır (boş satırla ayrılmış blok), böylece cümle
+asla ortadan kesilmez; bütçeyi (`max_chars=3000`) aşan paragraf, kısaltma/sayı/
+baş-harf korumalı cümle sınırından bölünür. Her parça kaynağın **birebir
+dilimidir** ve başlangıç offsetini taşır — parça-içi bulgu offsetleri kaynağa
+geri taşınabilir (*rebasing*).
 
-## Neden her noktada yapay zeka kullanmadık?
+**3.3 Kademeli geçişler.** [analyzer.py](src/dilanaliz/analyzer.py) her kontrolü
+ayrı geçişte çalıştırır: **yerel** (cümle: imla + noktalama + dil bilgisi),
+**ton** (paragraf), **tutarlılık** (belge). *Niçin ayrı?* Her eksen farklı bir
+bağlam penceresi ister; birini diğerinin gürültüsünden ayırmak isabeti artırır.
 
-Bu, projenin en bilinçli kararı. Mantık şöyle:
+**3.4 Deterministik imla + LLM ayrımı.** [spell.py](src/dilanaliz/spell.py)
+Hunspell ile şüpheli kelimeleri offset'leriyle bulur; Gemini her adayı bağlamda
+değerlendirir (`LLMSpellingDecision`): gerçek hata mı, yoksa özel ad/terim mi?
+Gemini karar vermezse tespit kaybolmasın diye Hunspell bulgusu korunur (fallback).
 
-| İş türü | Kim yapar | Neden |
+**3.5 Offset üretimi.** LLM offset **üretmez** (uydurma konum riski).
+[locate.py](src/dilanaliz/locate.py) her bulgunun `excerpt`'ini kaynak metinde
+konumlayıp `start`/`end` hesaplar.
+
+**3.6 Birleştirme.** [postprocess.py](src/dilanaliz/postprocess.py) noop/bozuk
+önerileri eler; `_finalize` bulguları **önce** tam-sıra anahtarıyla sıralar,
+**sonra** tekilleştirir.
+
+**3.7 Paralel ama deterministik.** Parçalar `CONCURRENCY` kadar eşzamanlı
+işlenir (`ThreadPoolExecutor`); en uzun süren tutarlılık çağrısı ilk gönderilip
+parça işleriyle örtüştürülür. Deterministik sıralama sayesinde `CONCURRENCY` ne
+olursa olsun çıktı birebir aynıdır. Önbellek (`cache.py`) ve ilerleme yayını
+thread-safe'tir (kilitli). **Tutarlılık geçişi parçalanamaz** — parçalanırsa
+"AI" ↔ "Artificial Intelligence" gibi çapraz-parça çakışmaları görülmez.
+
+## 4. Teknoloji Yığını (Ne + Niçin) ⭐
+
+| Katman | Teknoloji | Niçin |
 |---|---|---|
-| Sözlükteki yazım hatası (var/yok) | **Hunspell (araç)** | Hızlı, ücretsiz, **sıfır halüsinasyon**, tamamen yerel. Sözlük temelli; uydurmaz. |
-| Düzeltme önerisi, dil bilgisi, ton, özel-ad ayırt etme | **Gemini (LLM)** | Cümlenin akışını/anlamını gerektirir; araçla çözülemez. |
+| LLM | **Gemini** (`gemini-2.5-flash-lite`) | Bağlam/yargı gerektiren düzeltme, dil bilgisi ve ton için. `flash-lite` geliştirme/eval'de en bol ücretsiz kotayı verir; nihai kalite için `-flash`/`-pro`'ya yükseltilebilir. |
+| İmla motoru | **spylls** (saf-Python Hunspell) | Yazım hatasını deterministik + sıfır halüsinasyonla bulur. Saf-Python olması JVM/dış ikili gerektirmez → **air-gap** uyumlu. |
+| Sözlük | `dicts/tr_TR.{aff,dic}` (LibreOffice) | Türkçe morfolojik sözlük; repoda/yerel ağda bulundurulur. |
+| Belge çıkarma | **docx2python** | `.docx`'ten tablo/metin kutusu/üst-altbilgi/dipnot dahil eksiksiz metin; saf Python, ağ gerektirmez. |
+| Orkestrasyon | **langchain-core** + `with_structured_output` | Sağlayıcıdan bağımsız `BaseChatModel` soyutlaması; katı JSON çıktı → parse hatası olmaz. |
+| Şema/doğrulama | **Pydantic v2** | Çıktı sözleşmesini tipli ve doğrulanmış tutar (`schema.py`). |
+| Web paneli | **stdlib** `http.server` + SSE | Canlı ilerleme için **sıfır yeni bağımlılık**; harici CDN/font/script yok. |
 
-Bunu **ölçerek** öğrendik. İmla denetimini LLM'e bıraktığımızda model olmayan
-hatalar uyduruyordu (örn. doğru olan "yalnız mı"yı "yalnız mu" yapmak, cümle
-ortasındaki "sabah"ı gereksizce büyük harfe çevirmek). Aynı işi sözlüğe
-(Hunspell) devredince **imla precision'ı 1.00'a** çıktı ve bu uydurmalar bitti.
+Python **≥ 3.11**. Tüm bağımlılıklar **pinli aralıkta** — kapalı ağa (air-gap)
+mirror/vendor edilebilsin diye. Meta `langchain` paketi değil, modüler
+`langchain-core` kullanılır.
 
-Tersi de doğru: yazım denetçisinin önerileri zayıftı ("gonderecegim →
-gönderecekler" gibi yanlış), çünkü araç bağlama bakmaz. Önerileri Gemini'ye
-ürettirince bağlama uygun hale geldi ("gonderecegim → göndereceğim").
-
-Özetle:
-- **Her yere LLM koymak** = gereksiz maliyet, gecikme, kota tüketimi ve
-  halüsinasyon riski.
-- **Her yere kural koymak** = dili asla tam kapsayamama + prompt şişince modelin
-  dikkatinin dağılması (bunu da denedik, kural dökümanını büyütünce recall düştü).
-- **Hibrit** = her işi onu en iyi yapan araca vermek. Karar sezgiyle değil, altın
-  set üzerinde **ölçümle** verildi.
-
----
-
-## Yolculuk: buraya gelene kadar ne yaptık, nerede ne kullandık?
-
-| Faz | Ne yaptık | Kullanılan |
-|---|---|---|
-| **1** | Prompt-first çekirdek: kısa metni alıp JSON bulgu üreten motor | Python, LangChain-core, Gemini, Pydantic (katı JSON şema), sağlayıcı + kural kaynağı "seam"leri |
-| **1.5** | Kalibrasyon: yanlış-pozitifleri ölçüp düşürme | Altın set (`eval/`), "düzeltme yoksa ele" filtresi, disk önbelleği (kota tasarrufu), dayanıklı eval |
-| **4 (denenen→terk)** | Deterministik imla için **Zemberek-python** denendi | Saf-Python port; ama vasat çıktı (`yanlız`, `herşey`, `Yarin` gibi hataları kaçırdı, çoğu kelimeyi geçerli sandı) → **terk edildi** |
-| **4 (kullanılan)** | Deterministik imla tespiti | **Hunspell (spylls, saf-Python) + LibreOffice tr_TR sözlüğü** |
-| **4.5** | Akıllı düzeltme: Hunspell bulur, Gemini bağlama göre düzeltir + özel-ad eler | Gemini (imla düzeltme + dil bilgisi + ton); ton sıkılaştırma; eval'de tür yumuşatma |
-| **3** | Uzun belge işleme: `.docx` girdisi, deterministik parçalama, çok-geçişli kademeli analiz, belge-geneli tutarlılık, canlı ilerlemeli web paneli | `docx2python` (çıkarma), `chunk.py` (parçalama), `progress.py` (SSE/CLI ilerleme), yeni `tutarlilik` ekseni, `web/` (stdlib panel) |
-
-**Güncel sonuç (altın set):** genel precision **0.93**, imla precision **1.00**,
-temiz metinlerde yanlış-pozitif **0**. (Altın set artık `analyze_document` (uzun
-belge/parçalama) yolunu da kapsar; Faz 3'teki kademeli geçiş ve yapısal imla
-değişiklikleri sonrası sayılar API ile yeniden ölçülmelidir.)
-
-> Not: Zemberek artık projede **kullanılmıyor** — yukarıdaki tabloda yalnız
-> "denendi ve terk edildi" olarak yer alır.
-
----
-
-## Teknoloji yığını (güncel)
-
-| Bileşen | Seçim | Rol |
-|---|---|---|
-| LLM | **Gemini** (varsayılan `gemini-2.5-flash-lite`; `.env`'de `MODEL_ID` ile değişir) | Düzeltme önerisi, dil bilgisi, ton, bağlamsal imla, özel-ad ayırma |
-| Deterministik imla | **Hunspell** (`spylls`, saf-Python) + **tr_TR** sözlük | Yazım hatası tespiti (yerel, sıfır halüsinasyon) |
-| Belge çıkarma | **docx2python** (`extract.py`) | `.docx` → eksiksiz metin (tablo, metin kutusu, üst/altbilgi, dipnot); yerel, air-gap uyumlu |
-| Uzun belge | `chunk.py` + `progress.py` | Deterministik paragraf parçalama + kademeli geçiş + canlı ilerleme |
-| Orkestrasyon / soyutlama | **LangChain-core** (`BaseChatModel`, `with_structured_output`) | Sağlayıcı bağımsızlığı + katı JSON çıktı |
-| Şema | **Pydantic v2** | Bulgu/şema doğrulama |
-| Web paneli | **stdlib** `http.server` + SSE (`web/`) | Yerel, sıfır yeni bağımlılık; docx yükle/metin yapıştır + canlı adım akışı + analiz geçmişi (Log) |
-| Önbellek | Disk (`.cache/llm_cache.json`) | Kota tasarrufu + tekrarlanabilirlik |
-| Test/ölçüm | **pytest** + altın set (`eval/`) | Birim test + precision/recall |
-
-Tasarım ilkeleri: **modüler + pinli bağımlılık** (air-gap'te mirror'lanabilsin),
-telemetri kapalı, gizli dış çağrı yok.
-
----
-
-## Mimari "seam"leri (değiştirilebilir bağlantı noktaları)
-
-- **Davranış / Bilgi ayrımı** — `prompt.py` yalnız modelin *davranışını* tutar;
-  *kurallar* `RulesProvider` üzerinden ayrı gelir. Bugün `StaticRulesProvider`
-  tüm `rules/rules.md`'yi verir; ileride aynı arayüzle RAG (retrieval) gelir,
-  analyzer değişmez.
-- **Sağlayıcı soyutlaması** — `providers/build_chat_model` bir LangChain
-  `BaseChatModel` döndürür. Bugün Gemini; üretimde yerel vLLM aynı arayüzle.
-- **Katı JSON çıktı** — `with_structured_output` parse hatasını kaldırır.
-- **Offset konumlama** — `locate.py` alıntıyı kaynakta bulur; Hunspell zaten
-  kesin offset üretir.
-
----
-
-## Kurulum
+## 5. Kurulum
 
 ```bash
+# 1) Sanal ortam
 python -m venv .venv && source .venv/bin/activate
+
+# 2) Bağımlılıklar (geliştirme ekleriyle)
 pip install -e ".[dev]"
-cp .env.example .env   # GEMINI_API_KEY değerini girin
-```
 
-### Hunspell sözlüğü (deterministik imla için gerekli)
+# 3) Ortam değişkenleri
+cp .env.example .env        # .env içine GEMINI_API_KEY girin
 
-`dicts/tr_TR.aff` ve `dicts/tr_TR.dic` gerekir (repoda tutulmaz, indirilir). Yoksa
-deterministik katman otomatik devre dışı kalır (yalnız LLM çalışır).
-
-```bash
+# 4) Türkçe Hunspell sözlüğü (repoda yoksa)
 mkdir -p dicts
 curl -fsSL -o dicts/tr_TR.aff https://raw.githubusercontent.com/LibreOffice/dictionaries/master/tr_TR/tr_TR.aff
 curl -fsSL -o dicts/tr_TR.dic https://raw.githubusercontent.com/LibreOffice/dictionaries/master/tr_TR/tr_TR.dic
 ```
 
-Air-gap'te bu iki dosya iç ağa vendor'lanır. Yol `.env`'de `DICT_PATH` ile
-değiştirilebilir. Bilinen sınır: sözlükte olmayan özel ad/yabancı kelime
-yanlış-pozitif olabilir → `HunspellChecker(whitelist=...)` ile beyaz liste.
+> **Not:** Sözlük dosyaları yoksa deterministik imla katmanı (Hunspell) sessizce
+> devre dışı kalır ve yalnız LLM çalışır. Air-gap ortamda bu iki dosya yerel
+> ağdan vendor'lanır.
 
----
+## 6. Kullanım
 
-## Kullanım
+### 6.1 CLI
 
 ```bash
+# Doğrudan metin
 python cli.py "Bu cümlede ki hata var ve yanlız yazılmış."
-echo "uzun metin..." | python cli.py
-python cli.py < belge.txt
-```
 
-Çıktı, her bulgu için `type, excerpt, explanation, suggestion, rule_id,
-start/end` içeren JSON'dur. Uzun belgelerde analiz adımları `stderr`'e canlı
-basılır (stdout'taki JSON saf kalır).
+# stdin (.txt için önerilen — cli yalnız .docx'i dosya sanar)
+cat metin.txt | python cli.py
 
-`.docx` da doğrudan verilebilir:
-
-```bash
+# .docx → çıkar + parçala + analiz
 python cli.py belge.docx > sonuc.json
+
+# Sıralı (paralelliği kapat)
+CONCURRENCY=1 python cli.py belge.docx
 ```
 
----
+Çıktı **JSON olarak stdout**'a yazılır; ilerleme mesajları **stderr**'e akar
+(boru hattı bozulmaz). Metin verilmezse çıkış kodu `2`.
 
-## Web paneli (canlı ilerleme)
-
-Terminal yerine, analiz adımlarını **canlı** gösteren yerel bir panel:
+### 6.2 Web paneli
 
 ```bash
-python web/server.py        # tarayıcı açılır: http://127.0.0.1:8765
-PORT=9000 python web/server.py
+python web/server.py            # http://127.0.0.1:8765 (PORT ile değiştirilebilir)
 ```
 
-- `.docx` yükle **veya** metin yapıştır → "Analiz Et".
-- Her adım canlı akar: *"Belge 5 parçaya bölündü → Parça 2/5: yazım inceleniyor →
-  … → Belge geneli tutarlılık → Tamamlandı"*.
-- Sonuç ekranı iki sütunludur: solda kaynak metin (bulgular vurgulu), sağda
-  eksene göre (imla / dil bilgisi / ton / tutarlılık) gruplanmış kartlar.
-  Analiz adımlarının aktığı log paneli sonuç ekranında kenara küçük bir ok
-  düğmesiyle açılıp kapanabilir.
-- **Aynı bulgu belgede kaç kez tekrarlanırsa etsin** (ör. bir düzeltme 50
-  yerde geçiyorsa) tek bir kartta gruplanır; kart, her geçtiği konuma
-  tıklayarak gitmeyi sağlayan bir liste açar. Uzun belgelerde raporu
-  okunabilir tutan asıl mekanizma budur.
+docx yükleyip veya metin yapıştırıp canlı ilerlemeyle analiz eder (bkz. §10).
 
-**Güvenlik / air-gap:** yalnız `127.0.0.1`'e bağlanır (dışarı açılmaz);
-`GEMINI_API_KEY` sunucuda kalır, tarayıcıya gönderilmez; harici CDN/script/font
-yoktur; **sıfır yeni Python bağımlılığı** (yerleşik `http.server` + SSE).
+### 6.3 Örnek çıktı (kısaltılmış)
 
----
-
-## Kural dökümanını değiştirme (kod değişmeden)
-
-Kurallar [src/dilanaliz/rules/rules.md](src/dilanaliz/rules/rules.md) dosyasında
-tutulur; analiz motorundan bağımsızdır:
-
-1. **Dosya içeriğini değiştir** — `rules.md`'yi düzenle. Kod değişmez.
-2. **Harici dökümana işaret et** — `.env`'de `RULES_PATH=/yol/resmi_kurallar.md`.
-
-Döküman çok büyürse `StaticRulesProvider` yerine `RetrievalRulesProvider` (RAG)
-takılır — analyzer yine değişmez.
-
-> Kural metni değişince LLM önbellek anahtarı da değişir; sonraki çalışma taze
-> API çağrısı yapar.
-
----
-
-## Ölçüm (altın set)
-
-```bash
-EVAL_DELAY_SEC=0 python eval/run_eval.py   # eksen-bazlı precision/recall + temiz-metin FP
-pytest                                      # API gerektirmeyen birim testler
-python eval/compare_parallel.py belge.docx  # sıralı vs paralel: süre + çıktı birebir aynı mı
+```json
+{
+  "findings": [
+    {
+      "type": "imla",
+      "excerpt": "cümlede ki",
+      "explanation": "Bağlaç olan 'ki' ayrı yazılır; ama burada ek olan '-ki' bitişik olmalı.",
+      "suggestion": "cümledeki",
+      "rule_id": "IMLA-KI",
+      "confidence": 0.95,
+      "start": 4,
+      "end": 14
+    }
+  ],
+  "model_id": "gemini-2.5-flash-lite",
+  "text_len": 47
+}
 ```
 
-> `compare_parallel.py` iki faz çalıştırır: **Hız** (önbellek kapalı; sıralı vs
-> paralel süre + hızlanma) ve **Eşdeğerlik** (paylaşımlı önbellekle aynı model
-> yanıtlarını iki yola verip çıktının birebir aynı olduğunu doğrular). İki faz
-> ayrıdır çünkü LLM'ler `temperature=0`'da bile çağrı-çağrı birebir aynı yanıtı
-> vermez; canlı koşulardaki küçük farklar paralellikten değil, modelin doğal
-> oynaklığındandır. Belgeyi 3× analiz eder → **küçük belgeyle** çalıştırın.
+## 7. Çıktı Şeması (JSON Sözleşmesi)
 
-`eval/golden.jsonl` elle etiketli settir (imla/gramer/ton + temiz metinler).
-`"mode": "document"` etiketli örnekler **uzun belge yolunu** (`analyze_document` —
-parçalama + kademeli geçiş) ölçer; diğerleri kısa metni tek parça olarak
-değerlendirir. Prompt/kural değişiklikleri bu set üzerinde **ölçülerek**
-değerlendirilir. Her çalıştırma `eval/last_predictions.json`'a tüm tahminleri yazar
-(kalibrasyon için).
+Şema [schema.py](src/dilanaliz/schema.py)'de Pydantic v2 ile tanımlıdır.
 
-### Önbellek ve kota
+**`AnalysisResult`** (kök):
 
-- LLM çağrıları `.cache/llm_cache.json`'a önbelleklenir: aynı metin+kural+model
-  bir daha API'ye gitmez. Prompt/kural/model değişince anahtar değişir, önbellek
-  kendiliğinden tazelenir. Sıfırlamak için `.cache/` silinir.
-- Gemini ücretsiz katmanı **günlük** istek sınırlıdır; ücretli katmanda
-  `EVAL_DELAY_SEC=0` ile beklemesiz çalışır. Model `.env`'de `MODEL_ID` ile seçilir.
-
-### Güncel metrikler
-
-| Eksen | Precision | Recall |
+| Alan | Tip | Açıklama |
 |---|---|---|
-| imla | 1.00 | 0.89 |
-| dil_bilgisi | 1.00 | 1.00 |
-| ton | 0.80 | 0.80 |
-| **GENEL** | **0.93** | **0.88** |
+| `findings` | `Finding[]` | Bulgu listesi |
+| `model_id` | `str \| null` | Kullanılan model (üstveri) |
+| `text_len` | `int \| null` | Kaynak metin uzunluğu (üstveri) |
 
-Temiz metinlerde yanlış-pozitif: **0**. (Altın set küçük; sayılar set büyüdükçe
-güncellenir. Yanlış-pozitif, kurumsal denetçide en kritik göstergedir.)
+**`Finding`** (tek bulgu):
 
----
+| Alan | Tip | Açıklama |
+|---|---|---|
+| `type` | `imla \| dil_bilgisi \| ton \| tutarlilik` | Bulgunun ekseni |
+| `excerpt` | `str` | Metinden **birebir** alınan en kısa alıntı |
+| `explanation` | `str` | Sorunun kısa gerekçesi |
+| `suggestion` | `str` | Önerilen düzeltme (uygulama kullanıcıya bırakılır) |
+| `rule_id` | `str \| null` | Tetikleyen kuralın kimliği (varsa) |
+| `confidence` | `float \| null` | 0–1 arası güven |
+| `start`, `end` | `int \| null` | Kaynak metindeki offset — **LLM üretmez**, `locate.py` hesaplar |
 
-## Yol haritası
+> LLM yalnız `LLMFinding`/`LLMSpellingDecision` alanlarını üretir; offset ve
+> üstveri sonradan analyzer/locate tarafından eklenir. Böylece modele offset
+> göstermeyiz ve uydurma konum riskini kaldırırız.
 
-- ✅ **Faz 1 / 1.5** — Prompt-first çekirdek + kalibrasyon.
-- ✅ **Faz 4 / 4.5** — Hibrit motor (Hunspell tespiti + Gemini düzeltme/yargı).
-- ✅ **Faz 3 — Uzun belge işleme (tamamlandı):**
-  - **Girdi:** `.docx` → eksiksiz temiz metin çıkarma (`docx2python`). Gövde
-    paragraflarının yanı sıra **tablo hücreleri, metin kutuları/şekiller,
-    üst/altbilgiler ve dipnot/sonnotlar** belge sırasını koruyarak okunur;
-    böylece atlanan metin minimuma iner. Görsel içindeki yazı (OCR) kapsam
-    dışıdır ama `ExtractionReport` ile kaç görselin okunamadığı kullanıcıya
-    bildirilir (sessiz veri kaybı yok). PDF sonraki bir faza bırakıldı: çok
-    sütunlu düzen + araya giren görsel metni bozar, güvenilir yol Word kaynaktır.
-    *Yalnız temiz metin elde etmek için; biçim/şablon kontrolü değil.*
-  - **Deterministik parçalama (`chunk.py`):** **paragraf bazlı** — boş satırla
-    ayrılmış bloklar atomik kabul edilir, cümle asla ortadan kesilmez; paragraflar
-    bir karakter bütçesine (`max_chars`) kadar gruplanır. **Bütçeyi tek başına aşan
-    paragraf cümle sınırından** (kısaltma/sayı/baş-harf korumalı Türkçe regex)
-    parçalanır; güvenli bölünemeyen tek cümle son çare olarak bütün kalır. Bölme
-    deterministik koddur (AI değil). *Hiyerarşik (bölüm/başlık `1.4`, `3.2`
-    farkındalıklı) bölme sonraki bir iyileştirmedir.*
-    - *Bilinçli kapsam dışı:* **token-tabanlı bütçe** (Gemini token sayımı ağ ister
-      → air-gap'i bozar; karakter bütçesi 1M token penceresine göre zaten küçük) ve
-      **chunk overlap** (offset+dedup mimarisinde mükerrer bulgu üretir; paragraf-ötesi
-      bağlam zaten bütün-belge tutarlılık geçişiyle karşılanır).
-  - **Kademeli analiz — kontrol bazları:** her kontrol kendi en küçük yeterli
-    biriminde değerlendirilir (`analyzer.py`):
-    - Yazım / Türkçe karakter → **kelime** (Hunspell, yerel geçiş).
-    - Noktalama / anlatım bozukluğu / dil bilgisi / bağlamsal/yapısal imla →
-      **cümle** (yerel geçiş).
-    - Ton / üslup → **paragraf** (ton geçişi).
-    - Terim/birim tutarlılığı → **bütün belge** (tutarlılık geçişi).
-    Yani analiz tek seferde değil, bu bazlara göre **kademeli geçişlerle** yürür;
-    parça-içi offsetler kaynağa geri taşınır (rebasing) ve her geçişin bulguları
-    en sonda tek listede birleşir + tekilleştirilir (`merge_findings`, `_dedup`).
-    *Parçalar `CONCURRENCY` kadar eşzamanlı işlenir (LLM çağrıları ağ-bağımlı;
-    paralellik süreyi kısaltır). Çıktı parçaların işlenme sırasından bağımsızdır:
-    `_finalize` deterministik sıralayıp tekilleştirir, böylece sonuç birebir
-    aynı kalır. `CONCURRENCY=1` tamamen sıralı (eski) davranıştır.*
-  - **Belge-geneli tutarlılık geçişi:** bir terimin/birimin ifadesi belgenin her
-    yerinde aynı mı? Parçalamanın göremediği, bütünü tarayan ek geçiş (yeni
-    `tutarlilik` ekseni).
-  - **Canlı ilerleme (`progress.py`):** her adım bir `ProgressEvent` yayar; CLI'da
-    `stderr`'e, web panelinde SSE ile akar.
-  - *Not:* Parçalama yalnız AI kontrolleri (noktalama, anlatım, dil bilgisi, ton)
-    içindir; Hunspell deterministik olduğu için belge boyutundan etkilenmez.
-- ⏸️ **Faz 2 — RAG:** kural dökümanı büyüyünce `RetrievalRulesProvider`. (Gerçek
-  büyük döküman gelince; küçük dökümanda gereksiz.)
-- 🔒 **Faz 8 — Self-host / air-gap:** yerel LLM (vLLM) + yerel embedding, telemetri
-  kapalı, pinli bağımlılıkların iç ağa mirror'lanması.
+## 8. Ortam Değişkenleri (`.env`)
+
+| Değişken | Varsayılan | Açıklama |
+|---|---|---|
+| `GEMINI_API_KEY` | *(zorunlu)* | Gemini API anahtarı. Repoda yok; her makinede elle girilir. |
+| `MODEL_ID` | `gemini-2.5-flash-lite` | Gemini modeli. Daha güçlü sonuç için `-flash`/`-pro`. |
+| `TEMPERATURE` | `0` | Tutarlılık için 0 (yine de tam deterministik değildir — §14). |
+| `CONCURRENCY` | `6` | Eşzamanlı işlenecek parça sayısı. `1` → tamamen sıralı. |
+| `DICT_PATH` | `dicts/tr_TR` | Hunspell sözlük taban yolu (uzantısız). |
+| `RULES_PATH` | *(boş)* | Harici kural dosyası; boşsa paketteki `rules/rules.md`. |
+| `LANGSMITH_TRACING` | `false` | Air-gap hijyeni: telemetri kapalı kalmalı. |
+| `GOOGLE_GENAI_TRANSPORT` | *(boş)* | Gemini taşıma katmanı: `rest \| grpc \| grpc_asyncio`. Kurumsal ağda gRPC (HTTP/2) engelliyse `rest`. |
+| `EVAL_DELAY_SEC` | `13` | Yalnız `run_eval.py`; çağrılar arası gecikme (ücretsiz kota). Ücretli katmanda `0`. |
+| `PORT` | `8765` | *(web)* Panel portu. |
+| `HISTORY_DIR` | `./history` | *(web)* Analiz geçmişi kayıt klasörü. |
+
+## 9. Kural Dökümanı & Özelleştirme
+
+**Davranış / Bilgi ayrımı:** [prompt.py](src/dilanaliz/prompt.py) yalnız modelin
+*davranışını* tutar; *kurallar* `RulesProvider` üzerinden ayrı gelir
+([rules/rules.md](src/dilanaliz/rules/rules.md)). Kural değiştirmek için **kod
+değişmez** — `rules.md`'yi düzenle veya `.env`'de `RULES_PATH` ile kendi
+kurumsal kural dökümanını göster.
+
+Her bulgu mümkünse bir `rule_id` taşır:
+
+- **İmla:** `IMLA-DE-DA`, `IMLA-KI`, `IMLA-MI`, `IMLA-BITISIK`, `IMLA-AYRI`,
+  `IMLA-YALNIZ`, `IMLA-YANLIS`, `IMLA-HERKES`, `IMLA-HERSEY`, `IMLA-YABANCI`,
+  `IMLA-SAAT`, `IMLA-KESME`, `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`,
+  `IMLA-NOKTALAMA`, `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
+- **Dil bilgisi:** `GRAMER-OZNE-YUKLEM`, `GRAMER-TAMLAMA`, `GRAMER-ANLATIM`,
+  `GRAMER-CATI`, `GRAMER-EK-FIIL`, `GRAMER-TEKRAR`, `GRAMER-BOLUNMUS-KELIME`.
+- **Ton:** `TON-RESMI`, `TON-NEZAKET`, `TON-HITAP-TUTARLILIK`, `TON-ACIKLIK`,
+  `TON-KLISE`.
+- **Tutarlılık:** belge-geneli terim/birim/kısaltma çakışması (`tutarlilik`).
+
+> `RulesProvider` soyutlaması ileride **RAG** (metne göre ilgili kuralı getirme)
+> yolunun geçeceği yerdir; bugün `StaticRulesProvider` tüm dökümanı verir.
+
+## 10. Web Paneli Özellikleri
+
+[web/server.py](web/server.py) (stdlib `http.server` + SSE) +
+[web/index.html](web/index.html).
+
+- **Girdi:** `.docx` sürükle-bırak **veya** metin yapıştır.
+- **Canlı ilerleme:** SSE ile adım adım; **parça ızgarası** paralel işlemeyi
+  görselleştirir (her hücre bir parça, aynı anda işlenenler görünür).
+- **İki sütun sonuç:** solda bulgularla vurgulanmış kaynak metin, sağda
+  eksen-bazlı bulgu kartları.
+- **Bulgu gruplama:** aynı bulgu belgede kaç kez geçerse geçsin tek kartta
+  toplanır; her *occurrence*'a tıklayarak metinde gezinilir (uzun belgede raporu
+  okunur tutar).
+- **Log / geçmiş paneli:** önceki analizler diske kaydedilir; tıklayınca **token
+  harcamadan** diskten yeniden görüntülenir, silinebilir.
+- **Güvenlik:** yalnız `127.0.0.1`'e bağlanır; `GEMINI_API_KEY` sunucuda kalır,
+  tarayıcıya gönderilmez; harici CDN/font/script yok (%100 yerel).
+
+**Uçlar:** `GET /`, `GET /logo.png`, `POST /upload`, `GET /stream?job=<id>`,
+`GET /history`, `GET /history/get?id=<id>`, `POST /history/delete?id=<id>`.
+
+## 11. Ölçüm & Sonuçlar (Eval) ⭐
+
+Prompt/kural değişiklikleri **sezgiyle değil, ölçülerek** değerlendirilir.
+[eval/golden.jsonl](eval/golden.jsonl) elle etiketli altın settir (30 örnek;
+pozitif bulgular + temiz-metin negatif örnekler; bazıları uzun-belge yolunu
+ölçmek için `mode: document`).
+
+[eval/run_eval.py](eval/run_eval.py) eksen-bazlı **precision/recall** + temiz
+metinde yanlış-pozitif sayısı üretir. Eşleştirme yumuşaktır: tahmin, aynı eksende
+ve alıntısı beklenenle örtüşen (biri diğerini içeren, büyük/küçük harf duyarsız)
+bir beklenene denk gelirse Doğru Pozitif sayılır.
+
+**Son ölçüm — 1 Temmuz 2026** (`last_predictions.json`, 30 örnek):
+
+| Eksen | Precision | Recall | TP | FP | FN |
+|---|---|---|---|---|---|
+| imla | 1.00 | 0.85 | 11 | 0 | 2 |
+| dil_bilgisi | 1.00 | 1.00 | 6 | 0 | 0 |
+| ton | 0.56 | 1.00 | 5 | 4 | 0 |
+| tutarlilik | 1.00 | 1.00 | 1 | 0 | 0 |
+| **GENEL** | **0.85** | **0.92** | 23 | 4 | 2 |
+
+**Temiz metinlerde yanlış-pozitif: 0.**
+
+Okuma: imla/dil bilgisi/tutarlılık precision'ı tam; **ton** ekseni recall'u tam
+ama precision düşük (modelin savunulabilir ama etiketlenmemiş ton bulguları FP
+yazıyor) — kalibrasyon açık nokta. İmla recall'undaki 2 FN, sözlük-geçerli
+bağlamsal hataların bilinçli boşluğudur (§14).
+
+```bash
+EVAL_DELAY_SEC=0 python eval/run_eval.py        # yeniden ölç (API gerekli)
+python eval/compare_parallel.py belge.docx      # sıralı-vs-paralel hız + eşdeğerlik
+```
+
+`compare_parallel.py` iki şeyi doğrular: (1) paralelin hız kazancı, (2) sıralı ve
+paralel çıktının **birebir aynı** olması (belgeyi 3× analiz eder → küçük belgeyle
+çalıştırın).
+
+## 12. Test
+
+```bash
+pytest        # tüm birim testler — API/anahtar GEREKTİRMEZ
+```
+
+LLM çağrıları **sahte model kalıbıyla** (`_FakeModel`, geçiş-farkında
+`_PassFakeStructured`) taklit edilir. Kapsam: analyzer, spell, chunk, extract,
+locate, schema, postprocess, cache, progress, paralel eşdeğerlik, web.
+
+## 13. Proje Yapısı
+
+```
+cli.py                      # CLI girişi (metin/stdin/.docx)
+web/server.py               # Yerel panel (stdlib http.server + SSE)
+web/index.html              # Panel arayüzü
+src/dilanaliz/
+  analyzer.py               # Orkestrasyon: kademeli geçiş, paralel parça, _finalize
+  spell.py                  # Hunspell deterministik imla tespiti
+  extract.py                # .docx → eksiksiz metin (docx2python)
+  chunk.py                  # Deterministik paragraf/cümle parçalama
+  locate.py                 # excerpt → kaynak offset (LLM offset üretmez)
+  postprocess.py            # Birleştir + tekilleştir + noop/bozuk eleme
+  prompt.py                 # Geçiş başına system prompt (davranış)
+  providers/                # LLM sağlayıcı soyutlaması (Gemini → vLLM değişebilir)
+  rules/                    # RulesProvider + rules.md (kurallar koddan ayrı)
+  schema.py                 # Pydantic v2 şemaları
+  cache.py                  # Disk önbelleği (thread-safe)
+  progress.py               # İlerleme olayları (CLI stderr / web SSE)
+  config.py                 # Ortam değişkenleri
+eval/                       # golden.jsonl + run_eval.py + compare_parallel.py
+tests/                      # pytest (sahte model kalıbı; API gerekmez)
+dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü
+```
+
+## 14. Tasarım Kararları & Bilinçli Sınırlar
+
+**Mimari seam'ler** (değiştirirken soyutlamayı koru):
+
+- **Sağlayıcı soyutlaması** — `providers/build_chat_model` bir `BaseChatModel`
+  döndürür; Gemini'yi yerel vLLM ile değiştirmek analyzer'ı etkilemez.
+- **Davranış / Bilgi ayrımı** — davranış `prompt.py`'de, kurallar `rules.md`'de.
+- **Katı JSON çıktı** — `with_structured_output` parse hatasını kaldırır; şema
+  gevşetilmez.
+- **Parçalanamaz tutarlılık** — tüm belgeyi tek çağrıda görür (çapraz-parça
+  çakışmaları için).
+- **Paralel-ama-deterministik** — `_finalize` sıralayıp tekilleştirir; çıktı
+  `CONCURRENCY`'den bağımsızdır.
+
+**Bilinen sınırlar** (bug değil, ölçülmüş boşluk):
+
+- **Model determinizmi yoktur.** Gemini `temperature=0`'da bile aynı metne
+  çağrı-çağrı biraz farklı yanıt verebilir; bu paralellikten değil modelin
+  doğasından.
+- **Bayat önbellek.** Bir kez üretilen (belki eksik) yanıt `.cache/`'e kalıcı
+  yazılır; kod/kural değişse de eski yanıt döner. İlk kontrol: `rm -rf .cache/`.
+- **Sözlük-geçerli bağlamsal hata.** Hunspell morfolojik olarak kurulabilen ama
+  bağlamda yanlış kelimeleri yakalayamaz ("güncelleme" → "günceleme"). Prompt'u
+  genişletmek yanlış-pozitif riskini artırır; bilinçli dokunulmadı.
+- **Çapraz-geçiş çelişkisi.** Aynı ifade farklı geçişlerden (imla + dil bilgisi)
+  iki ayrı öneri alabilir; geçişler birbirini görmez.
+- **Uzun belge tutarlılık ölçeği.** Tutarlılık tek dev çağrıyla çalışır; 50+
+  sayfada çakışmaları kaçırabilir (garanti yok).
+- **OCR/çıkarma gürültüsü.** OCR ürünü girdide İ/I karışması, kelime-içi boşluk
+  gibi bozulmalar sahte bulgu üretir. Temiz dijital `.docx` tercih edilir.
+
+## 15. Yol Haritası
+
+- **Tamamlandı:** prompt-first çekirdek (Faz 1), deterministik imla + Hunspell,
+  `.docx` çıkarma (Faz 3), kademeli geçiş + parçalama, paralel-deterministik
+  yürütme, web paneli + geçmiş.
+- **Bekleyen — RAG:** `RulesProvider` üzerinden metne göre ilgili kuralı getirme
+  (statik döküman yerine); §9'daki soyutlama bu yol için hazır.
+- **Bekleyen — tutarlılık ölçeği:** deterministik terim-indeksi + LLM yargısı
+  (uzun belgede dikkat seyrelmesini gidermek için).
+- **Faz 8 — self-host / air-gap:** Gemini yerine yerel uç (vLLM). `providers/`
+  soyutlaması sayesinde analyzer değişmeden sağlayıcı değişir.
+
+## 16. Katkı / Geliştirme Kuralları
+
+Ayrıntı için [CLAUDE.md](CLAUDE.md). Özet:
+
+- **Türkçe yaz** (kod yorumu, commit, doküman).
+- **Ölçerek karar ver** — prompt/kural değişikliği `eval/` üzerinde öncesi/
+  sonrası karşılaştırılır.
+- **Yanlış-pozitif kritiktir** — temiz metinde hata uydurmayı artıran
+  değişikliklerden kaçın.
+- **Air-gap uyumu** — bağımlılık pinli, telemetri kapalı, gizli dış çağrı yok.
+- **Büyük güncellemeleri raporla** — Ne / Neden / Etki.
+- **Git akışı:** `main` tek doğruluk kaynağı; değişiklik dal + PR üzerinden; ajan
+  kendi PR'ını otomatik merge etmez.
