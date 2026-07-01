@@ -65,11 +65,6 @@ class Analyzer:
         # döndürür; yalnız sistem promptu değişir.
         self._structured = chat_model.with_structured_output(LLMAnalysis)
 
-    @property
-    def speller(self) -> HunspellChecker | None:
-        """`.docx` çıkarma aşamasının (bkz. `extract.py`) da kullandığı sözlük."""
-        return self._speller
-
     def analyze(self, text: str) -> AnalysisResult:
         """Kısa metni TEK parça olarak üç geçişle inceler (chunk'lamadan)."""
         findings: list[Finding] = []
