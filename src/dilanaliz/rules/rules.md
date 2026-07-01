@@ -111,6 +111,23 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   "Sorunu çözdüler". Karışık edilgen kullanımı hatadır.
 - **GRAMER-EK-FIIL** — Kip ve zaman tutarlılığı; ek-fiil ("idi/imiş/ise") doğru
   kullanımı. Aynı cümlede gereksiz zaman kayması hatadır.
+- **GRAMER-TEKRAR** — Ardışık, birebir aynı kelimenin tekrarı çoğunlukla belge
+  çıkarma/kopyalama sırasında oluşan bir kusurdur (örn. "Rx Rx değerine göre",
+  "işlem şekilde şekilde tamamlanır"); bu durumda tekrarı TEK kelimeye indiren
+  bir `dil_bilgisi` bulgusu üret. ANCAK Türkçede zarf ikilemesi MEŞRU bir
+  yapıdır ("yavaş yavaş", "adım adım", "azar azar", "teker teker", "tek tek",
+  "ikişer ikişer" gibi) — cümle anlamlı bir vurgu/derece ikilemesiyse bulgu
+  ÜRETME. Karar, kelimenin kendisine değil CÜMLE BAĞLAMINA (anlamlı bir
+  ikileme mi, yoksa anlamsız/kopuk bir tekrar mı) dayanmalıdır.
+- **GRAMER-BOLUNMUS-KELIME** — Yan yana duran iki kısa kelime, TEK BAŞLARINA
+  geçerli olsalar bile, cümle bağlamında anlamsız durabilir ve birleştirilince
+  anlamlı TEK bir kelime oluşturabilir (örn. "kapı dayım" → aslında
+  "kapıdayım"; "baş vuru formu" → aslında "başvuru formu"). Sözlük bu durumu
+  ayırt edemez (her iki parça da tek başına geçerlidir); yalnız cümlenin
+  anlamına bakarak karar ver. Böyle bir durum tespit edilirse `dil_bilgisi`
+  bulgusu üret, `suggestion` alanına birleşik doğru biçimi yaz. Yan yana duran
+  iki kelime cümlede GERÇEKTEN ayrı ayrı anlamlıysa (örn. "Ali kapıda
+  bekliyordu") bulgu ÜRETME.
 
 ---
 
