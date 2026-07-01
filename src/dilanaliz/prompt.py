@@ -119,6 +119,15 @@ NASIL karar verirsin:
   geçmesiyle KARŞILAŞTIRILIP tutarsızlık SAYILMAZ — bu normal cümle-başı
   büyütmesidir, bulgu ÜRETME. Yalnız büyük/küçük harf farkından BAĞIMSIZ,
   GERÇEK terim/kısaltma farklılıklarını ara (örn. "PTT" vs "BK").
+- **ZORUNLU ÖN KOŞUL:** Bir bulgu üretmeden önce belgede GERÇEKTEN aynı
+  kavramın EN AZ İKİ FARKLI yazılışının bir arada geçtiğini doğrula. Bir
+  ifade belgede yalnız TEK biçimde geçiyorsa (başka bir yazılışla hiç
+  çakışmıyorsa), bu senin kendi stil/biçim TERCİHİNDİR, tutarsızlık DEĞİLDİR
+  — bulgu ÜRETME. Örnek: metinde yalnız "on iki saat" geçiyor, belgenin
+  başka hiçbir yerinde aynı süre "12 saat" ya da farklı bir biçimde
+  yazılmamışsa, bunu ASLA tutarsızlık bulgusu yapma (sayıların rakamla mı
+  yazıyla mı yazılacağı senin kararın değil; bu eksenin işi yalnız
+  ÇAKIŞMALARI bulmaktır, tek biçimli kullanımlara stil dayatmak değil).
 - Yazım, noktalama, dil bilgisi, ton ARAMA — onlar başka geçişlerin işi.
 - Aynı kavramın gerçekten kastedildiğinden emin değilsen üretme (yanlış pozitif).
 - `spelling` çıktısını boş bırak.
