@@ -64,6 +64,17 @@ def test_repair_ignores_normal_sentence_boundaries():
     assert repaired == text
 
 
+def test_repair_merges_across_newline_gap():
+    # Doğrulanmış gerçek kök neden: docx2python, kelime ortasına kaçırılan bir
+    # satır içi kırılmayı (<w:br/>) tek "\n" karakteri olarak çıkarır.
+    speller = _FakeSpeller({"Değ", "değiştirmeyi", "Değiştirmeyi"})
+    text = "Değ\niştirmeyi düğmesi."
+    repaired, n = _repair_broken_words(text, speller)
+    assert n == 1
+    assert "Değiştirmeyi" in repaired
+    assert "\n" not in repaired
+
+
 # --- Gerçek tr_TR sözlüğüyle uçtan uca doğrulama (sözlük yoksa atlanır) -----
 
 _DICT_BASE = "dicts/tr_TR"
@@ -109,6 +120,56 @@ def test_extract_no_repair_without_speller(tmp_path):
     text, report = extract_docx_with_report(path)
     assert "değer lendirme" in text
     assert report.repaired_words == 0
+
+
+def _add_manual_line_break_mid_word(document, left: str, right: str) -> None:
+    """Bir paragrafta LEFT+RIGHT kelimesinin ortasına gerçek bir Word satır içi
+    kırılması (`<w:br/>`, Shift+Enter) enjekte eder — docx2python'un bunu nasıl
+    çıkardığını uçtan uca doğrulamak için (bkz. `_repair_broken_words` docstring'i:
+    bu mekanizma gerçek bir docx ile test edilip doğrulanmıştır)."""
+    from docx.oxml import OxmlElement
+
+    paragraph = document.add_paragraph()
+    left_run = paragraph.add_run(left)
+    left_run._r.append(OxmlElement("w:br"))
+    paragraph.add_run(right)
+
+
+@pytest.mark.skipif(not _has_dict, reason="tr_TR sözlüğü yok")
+def test_extract_repairs_real_manual_line_break_mid_word(tmp_path, real_speller):
+    # Gerçek docx2python davranışıyla uçtan uca: biçimlendirme farkı (kalın,
+    # punto, renk, dil etiketi) TEK BAŞINA sorun YARATMAZ (docx2python düzgün
+    # birleştirir) — yalnız gerçek bir <w:br/> satır içi kırılması sorun yaratır.
+    document = docx.Document()
+    _add_manual_line_break_mid_word(document, "Değ", "iştirmeyi")
+    path = tmp_path / "satir_kirilmasi.docx"
+    document.save(str(path))
+
+    text, report = extract_docx_with_report(path, speller=real_speller)
+    assert "Değiştirmeyi" in text
+    assert "\n" not in text.split("\n\n")[0]
+    assert report.repaired_words == 1
+
+
+@pytest.mark.skipif(not _has_dict, reason="tr_TR sözlüğü yok")
+def test_extract_formatting_differences_alone_do_not_split_word(tmp_path):
+    # Kontrol: yalnız biçimlendirme farkı (kalın/punto/renk) docx2python'da
+    # kelimeyi BÖLMEZ — bu daha önceki (yanlış) kök-neden varsayımının
+    # düzeltilmiş hâlidir; regresyon olarak burada sabitlenir.
+    from docx.shared import Pt, RGBColor
+
+    document = docx.Document()
+    p = document.add_paragraph()
+    r1 = p.add_run("Kapsamadığ")
+    r1.bold = True
+    r1.font.size = Pt(14)
+    r1.font.color.rgb = RGBColor(0xFF, 0, 0)
+    p.add_run("ı")
+    path = tmp_path / "bicim_farki.docx"
+    document.save(str(path))
+
+    text = extract_docx(path)
+    assert text == "Kapsamadığı"
 
 
 def _make_docx(tmp_path, paragraphs):
