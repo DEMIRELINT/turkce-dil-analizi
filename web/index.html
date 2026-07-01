@@ -147,6 +147,7 @@
     padding: 2px 8px; font-size: 12px; color: var(--muted); cursor: pointer;
   }
   .loc-chip:hover { border-color: var(--accent); color: var(--fg); }
+  .loc-chip-diff { border-color: var(--dil_bilgisi); color: var(--fg); font-weight: 600; }
   mark.flash { outline: 2px solid var(--accent); animation: flash-fade 1s ease-out; }
   @keyframes flash-fade { 0% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
 
@@ -375,7 +376,7 @@ function renderResult(payload) {
       if (!groups.has(key)) groups.set(key, { ...f, count: 0, occurrences: [] });
       const g = groups.get(key);
       g.count++;
-      if (f.start != null) g.occurrences.push(f.start);
+      if (f.start != null) g.occurrences.push({ start: f.start, excerpt: f.excerpt, suggestion: f.suggestion });
     }
     const sorted = Array.from(groups.values()).sort((a, b) =>
       (order[a.type] - order[b.type]) || (b.count - a.count) || ((a.start ?? 1e9) - (b.start ?? 1e9)));
@@ -384,8 +385,17 @@ function renderResult(payload) {
       const rule = f.rule_id ? ` · ${esc(f.rule_id)}` : "";
       const sug = f.suggestion ? `<span class="arrow"> → </span><span class="sug">${esc(f.suggestion)}</span>` : "";
       const badge = f.count > 1 ? ` <span class="count-badge">${f.count} yerde</span>` : "";
+      // Occurrence'ın kendi düzeltmesi grup temsilcisinden FARKLIYSA (örn. cümle
+      // başında büyük, içeride küçük harfle düzeltme) bunu çipte açıkça göster —
+      // kompaktlık uğruna hiçbir occurrence'ın doğru düzeltmesi gizlenmesin.
       const details = f.count > 1 ? `<details><summary>Tüm konumları göster</summary>
-        <div class="loc-chips">${f.occurrences.map((start, i) => `<span class="loc-chip" data-jump="${start}">${i + 1}</span>`).join("")}</div>
+        <div class="loc-chips">${f.occurrences.map((o, i) => {
+          const differs = o.excerpt !== f.excerpt || o.suggestion !== f.suggestion;
+          const label = differs ? `${i + 1}. ${esc(o.excerpt)} → ${esc(o.suggestion)}` : `${i + 1}`;
+          const cls = differs ? "loc-chip loc-chip-diff" : "loc-chip";
+          const title = differs ? "" : ` title="${esc(o.excerpt)} → ${esc(o.suggestion)}"`;
+          return `<span class="${cls}" data-jump="${o.start}"${title}>${label}</span>`;
+        }).join("")}</div>
       </details>` : "";
       return `<div class="finding ${f.type}">
         <div class="head"><span class="tag ${f.type}">${TYPE_LABEL[f.type] || f.type}</span>
