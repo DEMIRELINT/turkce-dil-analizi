@@ -48,6 +48,13 @@
   }
   button:disabled { opacity: .5; cursor: default; }
   .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  .ghost-btn {
+    background: var(--panel2); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 14px; font-weight: 600; font-size: 13.5px;
+    cursor: pointer; margin-left: 0;
+  }
+  .ghost-btn:hover { border-color: var(--accent); }
+  #newAnalysisBar { margin-bottom: 16px; }
 
   /* Belge okuma notu (kapsam özeti + okunamayan içerik uyarısı) */
   #extractNote { display: none; margin-bottom: 16px; font-size: 13px; }
@@ -102,10 +109,20 @@
   .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
   .chip { border-radius: 99px; padding: 4px 12px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); }
   .chip b { font-weight: 800; }
+
+  /* İki sütunlu sonuç düzeni: solda kaynak metin (%66), sağda bulgular (%33) */
+  .result-split { display: flex; gap: 20px; align-items: flex-start; }
+  .source-pane { flex: 2; min-width: 0; }
+  .findings-pane { flex: 1; min-width: 0; max-height: calc(100vh - 220px); overflow-y: auto; }
+  @media (max-width: 900px) {
+    .result-split { flex-direction: column; }
+    .findings-pane { max-height: none; width: 100%; }
+  }
+
   .source {
     background: var(--panel2); border: 1px solid var(--line); border-radius: 10px;
-    padding: 14px 16px; white-space: pre-wrap; word-break: break-word; margin-bottom: 18px;
-    max-height: 320px; overflow: auto; font-size: 14.5px;
+    padding: 14px 16px; white-space: pre-wrap; word-break: break-word;
+    max-height: calc(100vh - 220px); overflow: auto; font-size: 14.5px;
   }
   mark { border-radius: 4px; padding: 0 2px; color: #0a0c10; font-weight: 600; cursor: help; }
   mark.imla { background: var(--imla); }
@@ -120,6 +137,9 @@
   .finding.dil_bilgisi { border-left-color: var(--dil_bilgisi); }
   .finding.ton { border-left-color: var(--ton); }
   .finding.tutarlilik { border-left-color: var(--tutarlilik); }
+  /* Tıklanabilir bulgu kartları/satırları: her occurrence kaynak metne kaydırır. */
+  [data-jump] { cursor: pointer; }
+  .finding[data-jump]:hover, .finding .head[data-jump]:hover { outline: 1px solid var(--accent); }
   .finding .head { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
   .tag { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; color: #0a0c10; }
   .tag.imla { background: var(--imla); }
@@ -134,20 +154,25 @@
   .empty { color: var(--ok); font-weight: 600; }
   .err { color: var(--imla); font-weight: 600; }
 
-  /* Toplulaştırılmış bulgu: tekrar rozeti + genişletilebilir konum çipleri */
+  /* Toplulaştırılmış bulgu: tekrar rozeti + genişletilebilir konum listesi */
   .finding .count-badge {
     background: var(--panel); border: 1px solid var(--line); border-radius: 99px;
     padding: 2px 10px; font-size: 11.5px; font-weight: 700; color: var(--muted);
   }
   .finding details { margin-top: 8px; }
   .finding summary { cursor: pointer; color: var(--accent); font-size: 12.5px; user-select: none; }
-  .loc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .loc-chip {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
-    padding: 2px 8px; font-size: 12px; color: var(--muted); cursor: pointer;
+  .loc-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .loc-row {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 6px 10px; font-size: 12.5px; color: var(--fg);
   }
-  .loc-chip:hover { border-color: var(--accent); color: var(--fg); }
-  .loc-chip-diff { border-color: var(--dil_bilgisi); color: var(--fg); font-weight: 600; }
+  .loc-row:hover { border-color: var(--accent); }
+  .loc-row b { color: var(--muted); font-weight: 700; margin-right: 6px; }
+  .loc-row .arrow { color: var(--muted); }
+  .loc-row .sug { color: var(--accent2); font-weight: 650; }
+
+  /* Log paneli açılıp kapanır */
+  .log-collapsed aside#logPanel { display: none; }
   mark.flash { outline: 2px solid var(--accent); animation: flash-fade 1s ease-out; }
   @keyframes flash-fade { 0% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
 
@@ -194,6 +219,7 @@
 </head>
 <body>
 <header>
+  <button id="logToggle" class="ghost-btn" title="Log panelini aç/kapat">📜 Log</button>
   <img class="logo" src="/logo.png" alt="Türkçe Dil Analizi" onerror="this.replaceWith(Object.assign(document.createElement('h1'),{textContent:'Türkçe Dil Analizi'}))">
   <span class="sub">Dokümanda Türkçe Kullanımı ve Uyumluluk Analizi Sistemi</span>
 </header>
@@ -205,7 +231,7 @@
 </aside>
 
 <main>
-  <div class="card">
+  <div class="card" id="inputCard">
     <textarea id="text" placeholder="Analiz edilecek metni buraya yapıştırın ya da aşağıdan bir .docx seçin…"></textarea>
     <div class="row">
       <label class="file">
@@ -216,6 +242,10 @@
       <button id="run">Analiz Et</button>
     </div>
     <div class="hint">Belge ve metin sunucuda işlenir; analiz adımları aşağıda canlı akar. (Yalnız 127.0.0.1)</div>
+  </div>
+
+  <div id="newAnalysisBar" style="display:none;">
+    <button id="newAnalysisBtn" class="ghost-btn">+ Yeni Metin/Belge Analiz Et</button>
   </div>
 
   <div id="extractNote"></div>
@@ -229,8 +259,10 @@
 
   <div class="card" id="resultCard">
     <div class="summary" id="summary"></div>
-    <div class="source" id="source"></div>
-    <div id="findings"></div>
+    <div class="result-split">
+      <div class="source-pane"><div class="source" id="source"></div></div>
+      <div class="findings-pane"><div id="findings"></div></div>
+    </div>
   </div>
 </main>
 </div>
@@ -255,9 +287,23 @@ function resetProgress() {
   $("progHead").textContent = "";
   progState = { total: 0, done: 0, run: 0 };
   $("barFill").style.width = "0";
+  $("inputCard").style.display = "none";
+  $("newAnalysisBar").style.display = "none";
   $("progressCard").style.display = "block";
   $("resultCard").style.display = "none";
   $("extractNote").style.display = "none"; $("extractNote").innerHTML = "";
+}
+
+// Sonuç/geçmiş gösterilirken giriş kartı yerine "yeni analiz" çubuğu görünür.
+function showResultsView() {
+  $("inputCard").style.display = "none";
+  $("newAnalysisBar").style.display = "block";
+}
+function showInputView() {
+  $("resultCard").style.display = "none";
+  $("newAnalysisBar").style.display = "none";
+  $("inputCard").style.display = "block";
+  $("text").value = ""; $("file").value = ""; $("fileName").textContent = "";
 }
 
 // Üstteki canlı özet + ilerleme çubuğu (parçalar çubuğun %92'sini, kalanı
@@ -360,7 +406,8 @@ function renderResult(payload) {
 
   // Bulgu kartları: aynı (tip + alıntı + öneri) tekrarları TEK kartta toplanır
   // (bkz. plan — "hacim/tekrar" sorunu), konum bilgisi hiçbiri KAYBOLMADAN
-  // genişletilebilir konum çipleri olarak korunur.
+  // genişletilebilir bir konum listesi olarak korunur. HER kart (tekil olsun
+  // grup olsun) tıklanabilir: kaynak metindeki ilgili yere kaydırıp vurgular.
   if (!findings.length) {
     $("findings").innerHTML = '<div class="empty">✓ Hiç bulgu yok — metin temiz görünüyor.</div>';
   } else {
@@ -385,19 +432,18 @@ function renderResult(payload) {
       const rule = f.rule_id ? ` · ${esc(f.rule_id)}` : "";
       const sug = f.suggestion ? `<span class="arrow"> → </span><span class="sug">${esc(f.suggestion)}</span>` : "";
       const badge = f.count > 1 ? ` <span class="count-badge">${f.count} yerde</span>` : "";
-      // Occurrence'ın kendi düzeltmesi grup temsilcisinden FARKLIYSA (örn. cümle
-      // başında büyük, içeride küçük harfle düzeltme) bunu çipte açıkça göster —
-      // kompaktlık uğruna hiçbir occurrence'ın doğru düzeltmesi gizlenmesin.
-      const details = f.count > 1 ? `<details><summary>Tüm konumları göster</summary>
-        <div class="loc-chips">${f.occurrences.map((o, i) => {
-          const differs = o.excerpt !== f.excerpt || o.suggestion !== f.suggestion;
-          const label = differs ? `${i + 1}. ${esc(o.excerpt)} → ${esc(o.suggestion)}` : `${i + 1}`;
-          const cls = differs ? "loc-chip loc-chip-diff" : "loc-chip";
-          const title = differs ? "" : ` title="${esc(o.excerpt)} → ${esc(o.suggestion)}"`;
-          return `<span class="${cls}" data-jump="${o.start}"${title}>${label}</span>`;
-        }).join("")}</div>
+      const firstStart = f.occurrences.length ? f.occurrences[0].start : f.start;
+      // Tek bulgulu kart: doğrudan kendi konumuna tıklanabilir. Gruplu kart:
+      // başlık ilk occurrence'a atlar, "Tüm konumları göster" tam listeyi açar
+      // — her satır KENDİ excerpt→suggestion çiftini HER ZAMAN gösterir (temsilciyle
+      // aynı olsun ya da farklı olsun), tutarlı ve tıklanabilir tam-genişlik blok.
+      const headJump = firstStart != null ? ` data-jump="${firstStart}"` : "";
+      const details = f.count > 1 ? `<details><summary>Tüm konumları göster (${f.count})</summary>
+        <div class="loc-rows">${f.occurrences.map((o, i) =>
+          `<div class="loc-row" data-jump="${o.start}"><b>${i + 1}.</b>${esc(o.excerpt)}<span class="arrow"> → </span><span class="sug">${esc(o.suggestion)}</span></div>`
+        ).join("")}</div>
       </details>` : "";
-      return `<div class="finding ${f.type}">
+      return `<div class="finding ${f.type}"${headJump}>
         <div class="head"><span class="tag ${f.type}">${TYPE_LABEL[f.type] || f.type}</span>
           <span class="excerpt">${esc(f.excerpt)}</span>${sug}${badge}</div>
         <div class="exp">${esc(f.explanation)}</div>
@@ -407,6 +453,7 @@ function renderResult(payload) {
     }).join("");
   }
   $("resultCard").style.display = "block";
+  showResultsView();
 }
 
 // Bir konum çipine tıklanınca kaynak metindeki ilgili <mark>'a kaydır + vurgula.
@@ -521,6 +568,14 @@ $("file").addEventListener("change", () => {
   $("fileName").textContent = f ? f.name : "";
   if (f) $("text").value = "";
 });
+
+// Log paneli açılıp kapanır (basit göster/gizle, animasyonsuz).
+$("logToggle").addEventListener("click", () => {
+  document.body.classList.toggle("log-collapsed");
+});
+
+// Sonuç ekranından "yeni analiz" akışına dönüş.
+$("newAnalysisBtn").addEventListener("click", showInputView);
 
 loadHistory();  // sayfa açılışında geçmiş kayıtları getir
 </script>
