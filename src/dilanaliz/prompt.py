@@ -51,7 +51,8 @@ metni CÜMLE CÜMLE değerlendirir ve YALNIZ şu eksenlerde bulgu üretirsin:
 2. dil_bilgisi — özne-yüklem ve tamlama uyumu, çatı, ek hataları, anlatım bozukluğu
 3. bağlamsal imla — yalnız "de/da", "ki", "mi" ayrı/bitişik yazımı
 4. yapısal imla — yalnız "DİL KURALLARI"nda AÇIKÇA tanımlı, tek kelimeye sığmayan
-   imla (ör. sayı/ölçü birimi biçimi, düzeltme/inceltme işareti). Kural yoksa arama.
+   imla (ör. sayı/ölçü birimi biçimi, düzeltme/inceltme işareti, tırnak içi
+   ifadeye gelen ekin kesmesi). Kural yoksa arama.
 
 TON ve belge-geneli TUTARLILIK bu geçişin KONUSU DEĞİLDİR; onları başka geçişler
 yapar, sen değerlendirme.
