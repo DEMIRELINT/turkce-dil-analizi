@@ -364,10 +364,14 @@ function renderResult(payload) {
     $("findings").innerHTML = '<div class="empty">✓ Hiç bulgu yok — metin temiz görünüyor.</div>';
   } else {
     const order = { imla: 0, dil_bilgisi: 1, ton: 2, tutarlilik: 3 };
-    const normKey = (s) => (s || "").trim().replace(/\s+/g, " ");
+    // Türkçe-duyarlı küçültme ("tr" locale): yalnız cümle-başı büyütmesi
+    // yüzünden farklı görünen aynı bulguları (örn. "Herşey"/"herşey") aynı
+    // grupta toplamak için. Kartta GÖSTERİLEN metin hâlâ orijinal kalır;
+    // bu yalnız gruplama KARARINDA kullanılır.
+    const normKey = (s) => (s || "").trim().replace(/\s+/g, " ").toLocaleLowerCase("tr");
     const groups = new Map();
     for (const f of findings) {
-      const key = `${f.type} ${normKey(f.excerpt)} ${normKey(f.suggestion)}`;
+      const key = `${f.type}|${normKey(f.excerpt)}|${normKey(f.suggestion)}`;
       if (!groups.has(key)) groups.set(key, { ...f, count: 0, occurrences: [] });
       const g = groups.get(key);
       g.count++;
