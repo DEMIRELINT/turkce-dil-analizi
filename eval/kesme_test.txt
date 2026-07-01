@@ -1,0 +1,33 @@
+1. Kurulum
+
+Telsizi kullanmaya başlamadan önce pil bölmesini açın ve pilleri doğru kutuplarda yerleştirin. 'Programlama Modu'na geçmek için ayarlar düğmesine üç saniye basılı tutun. Kurulum tamamlandığında cihaz varsayılan olarak Kapalı'dır.
+
+2. Teknik Özellikler
+
+Cihaz 400-470 MHz frekans bandında çalışır ve azami 5 W çıkış gücüne sahiptir. Pil kapasitesi 2000 mAh olup tam şarjla yaklaşık on iki saat kesintisiz kullanım sağlar. Anten, standart SMA konektör ile bağlanır ve gerektiğinde yüksek kazançlı modellerle değiştirilebilir. Cihazın çalışma sıcaklığı aralığı eksi yirmi derece ile artı elli derece arasındadır; bu aralığın dışında performans düşebilir. Su ve toza karşı IP54 koruma sınıfına sahiptir, ancak suya tam daldırmaya karşı dayanıklı değildir.
+
+Kanal hafızası doksan altı kanala kadar programlanabilir; her kanal için ayrı ayrı ton kodu, güç seviyesi ve tarama önceliği tanımlanabilir. Ekran, güneş ışığında dahi okunabilirliği artıran yüksek kontrastlı bir panel kullanır. Tuş takımı arka aydınlatmalı olup karanlık ortamlarda kullanım kolaylığı sağlar. Cihazın gövdesi darbeye dayanıklı polikarbonat malzemeden üretilmiştir ve bir metreden düşmelere karşı test edilmiştir.
+
+3. Şarj ve Batarya Bakımı
+
+Bataryayı ilk kullanımdan önce tam olarak şarj etmeniz önerilir. Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla kullanılmalıdır; uyumsuz şarj cihazları bataryaya kalıcı hasar verebilir. Uzun süreli depolama öncesinde bataryanın yaklaşık yüzde elli seviyesinde şarjlı bırakılması, batarya ömrünü uzatır. Aşırı ısınma durumunda cihaz otomatik olarak şarjı keser ve kullanıcıyı ekran üzerinden bilgilendirir.
+
+4. Anten ve Sinyal Kalitesi
+
+Sinyal kalitesini artırmak için cihazın dik tutulması ve metal yüzeylerden uzak konumlandırılması önerilir. Kapalı alanlarda sinyal zayıflaması normal bir durumdur; bu gibi durumlarda tekrarlayıcı (röle) kullanımı değerlendirilebilir. Anten kablosunun hasar görmesi durumunda sinyal kaybı yaşanabilir; bu nedenle anten periyodik olarak gözle kontrol edilmelidir.
+
+5. Aksesuarlar
+
+Cihazla birlikte standart bir kemer klipsi, el kayışı ve masaüstü şarj yuvası verilir. Opsiyonel aksesuarlar arasında yüksek kapasiteli batarya, deri kılıf, harici hoparlör-mikrofon ve araç şarj kablosu bulunur. Tüm aksesuarlar, cihazın orijinal model numarasıyla uyumlu olacak şekilde seçilmelidir; farklı model numaralarına ait aksesuarların kullanılması bağlantı sorunlarına yol açabilir. Harici hoparlör-mikrofon kullanılırken cihazın yan portundaki kauçuk kapağın tam olarak kapatıldığından emin olunmalıdır, aksi hâlde toz ve nem girişi yaşanabilir.
+
+6. Garanti ve Servis Koşulları
+
+Cihaz, satın alma tarihinden itibaren iki yıl süreyle üretim hatalarına karşı garanti kapsamındadır. Garanti, kullanıcı hatasından kaynaklanan hasarları, düşme veya darbe sonucu oluşan kırılmaları ve yetkisiz servis müdahalelerini kapsamaz. Servis talebi oluşturmadan önce cihazın seri numarasının okunaklı olduğundan emin olunmalıdır; seri numarası okunamayan cihazlar için garanti işlemleri gecikebilir. Servise gönderilen cihazlarla birlikte satın alma belgesinin bir kopyasının da iletilmesi gerekmektedir.
+
+7. Yazılım Güncellemeleri
+
+Cihaz yazılımı, üreticinin resmî internet sitesinden indirilebilen bir bilgisayar uygulaması aracılığıyla güncellenir. Güncelleme sırasında cihazın bataryasının en az yüzde elli seviyesinde olması ve işlem tamamlanana kadar USB bağlantısının kesilmemesi önemlidir. Güncelleme sırasında elektrik kesintisi yaşanması durumunda cihaz yeniden başlatılamayabilir; böyle bir durumda yetkili servisle iletişime geçilmelidir. Her yeni yazılım sürümüyle birlikte kanal kapasitesi, pil ömrü göstergesi hassasiyeti ve arayüz dili seçenekleri gibi özellikler iyileştirilebilir.
+
+8. Bakım
+
+Bakım işlemi bittikten sonra cihaz yeniden Kapalı'dır konumuna getirilmelidir. "Bakım Modu"na geçmek için aynı düğmeyi kullanın.
