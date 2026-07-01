@@ -1,0 +1,23 @@
+1. Kurulum
+
+Telsizi kullanmaya başlamadan önce pil bölmesini açın ve pilleri doğru kutuplarda yerleştirin. Anten ünitesini cihazın üst kısmındaki girişe takın. Cihazın çalışma frekansı fabrika ayarlarında 446 Khz olarak programlanmıştır. Kurulum tamamlandıktan sonra güç düğmesine basarak cihazı açın.
+
+2. Kanal ve Frekans Ayarı
+
+Kanal seçmek için kanal düğmesini çevirin. Frekans 400-470 Khz bandında çalışır. Otomatik tarama sırasında yanlız uygun frekanslar listelenir. Ayarları kaydetmek için onay düğmesine basın.
+
+3. Kullanım
+
+Konuşmak için PTT düğmesine basılı tutun ve konuşun. Karşı taraftan gelen sinyal 450 Khz civarında algılanabilir. Herşey doğru ayarlandıysa ekranda yeşil ışık yanar. Sinyal zayıfsa anten yönünü değiştirin.
+
+4. Bakım
+
+Cihazı temizlemeden önce güç düğmesini kapatın. Pil kapağını açmadan önce cihazı kapatın. Nemli bir bezle dış yüzeyi silin, yanlız su ile doğrudan temas ettirmeyin. Bakım sonrası herşey eski hâline getirilmelidir.
+
+5. Garanti ve Servis
+
+Garanti kapsamındaki bir arıza durumunda servis formunu doldurup üreticiye hemen gönderin. Fatura fotokopisini de forma ekleyip gönderin. Servis talebiniz iletildikten sonra herşey 15 iş günü içinde sonuçlanır. Servis raporu yanlız yetkili teknisyen tarafından imzalanmalıdır. İkinci bir arıza tespit edilirse formu tekrar doldurup gönderin.
+
+6. Sorun Giderme
+
+Cihaz açılmıyorsa pilleri kontrol edin ve yeniden takın. Sinyal alınamıyorsa frekansı 460 Khz olarak yeniden ayarlayın. Sorun devam ederse yanlız yetkili serviste çözüm aranmalıdır.
