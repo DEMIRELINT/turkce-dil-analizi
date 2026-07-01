@@ -125,7 +125,12 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   yapıdır ("yavaş yavaş", "adım adım", "azar azar", "teker teker", "tek tek",
   "ikişer ikişer" gibi) — cümle anlamlı bir vurgu/derece ikilemesiyse bulgu
   ÜRETME. Karar, kelimenin kendisine değil CÜMLE BAĞLAMINA (anlamlı bir
-  ikileme mi, yoksa anlamsız/kopuk bir tekrar mı) dayanmalıdır.
+  ikileme mi, yoksa anlamsız/kopuk bir tekrar mı) dayanmalıdır. Ancak "yanıp
+  yanıp sönmeye" gibi bir kullanım MEŞRU ikileme DEĞİLDİR — burada tek fiil
+  "yanıp sönmek" sabit bir deyim/eylemdir, kelimenin ikinci kez tekrarı
+  anlamsızdır (doğrusu: "yanıp sönmeye"). Karar kriteri: tekrarlanan kelime
+  BAĞIMSIZ bir zarf/sıfat mı (ikileme, meşru) yoksa sabit bir deyim/fiilin
+  PARÇASI mı (tekrar hatalı)?
 - **GRAMER-BOLUNMUS-KELIME** — Yan yana duran iki kısa kelime, TEK BAŞLARINA
   geçerli olsalar bile, cümle bağlamında anlamsız durabilir ve birleştirilince
   anlamlı TEK bir kelime oluşturabilir (örn. "kapı dayım" → aslında
@@ -173,3 +178,19 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   yerine açık ve doğrudan ifade tercih edilir.
 - **TON-KLISE** — Aşırı/gereksiz klişe ve doldurma ifadelerden ("malumunuz olduğu
   üzere işbu vesileyle...") kaçınılması; sadelik tercih edilir.
+
+---
+
+## Bilinen Sınırlar
+
+Bu bölüm bilinçli olarak ÇÖZÜLMEYEN, ölçülmüş boşlukları belgeler — kural
+genişletmesi burada YAPILMAZ (bkz. `eval/golden.jsonl`'deki ilgili FN örneği).
+
+- **Sözlük-geçerli ama bağlamda yanlış teknik terim** — Hunspell'in ek-tabanlı
+  morfolojik analizi, anlamca yanlış olsa da GEÇERLİ bir sözcük kuruluşuna
+  sahip yazım hatalarını yakalayamaz (örn. "güncelleme" yerine yanlışlıkla
+  yazılan "günceleme" — "günce"+"-le"+"-me" olarak morfolojik açıdan geçerli
+  sayılır). Bunu yakalamak için prompt'u "sözlükte geçerli ama bağlamda şüpheli
+  kelimeleri de sorgula" yönünde genişletmek yanlış-pozitif riskini
+  (geçerli teknik terimleri gereksiz sorgulama) belirsiz biçimde artırabilir;
+  bu yüzden şimdilik genişletilmiyor.

@@ -37,6 +37,19 @@ def test_real_correction_kept():
     assert is_noop_suggestion("yanlız", "yalnız") is False
 
 
+def test_nfc_nfd_diff_is_noop():
+    # "resmî" iki farklı Unicode biçiminde gelebilir: NFC (tek kod noktası "î")
+    # ve NFD ("i" + bileşik inceltme işareti). Görsel olarak aynıdır ama
+    # normalize edilmeden karşılaştırılırsa eşit sayılmaz — bu yüzden LLM
+    # alıntı/öneriyi farklı biçimde üretirse gerçek bir no-op kaçabilir.
+    import unicodedata
+
+    nfc = unicodedata.normalize("NFC", "resmî")
+    nfd = unicodedata.normalize("NFD", "resmî")
+    assert nfc != nfd  # ön koşul: gerçekten farklı bayt dizileri
+    assert is_noop_suggestion(nfc, nfd) is True
+
+
 def test_drop_filters_only_noops():
     result = AnalysisResult(
         findings=[

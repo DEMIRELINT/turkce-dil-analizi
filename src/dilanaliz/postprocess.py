@@ -11,6 +11,8 @@ KORUNUR, çünkü "yalnız mı" → "yalnız mı?" gerçek bir düzeltmedir.
 
 from __future__ import annotations
 
+import unicodedata
+
 from .schema import AnalysisResult, Finding
 
 # Türkçe alfabede bulunmayan harfler. Öneride bunlar varken ALINTIDA yoksa, öneri
@@ -19,7 +21,10 @@ _NON_TURKISH = set("qwxQWX")
 
 
 def _norm(s: str) -> str:
-    return " ".join(s.split())
+    # NFC normalizasyonu: Türkçe "î/â/ê" gibi harfler tek kod noktası (NFC)
+    # veya harf+bileşik-işaret (NFD) olarak gelebilir; ikisi görsel olarak
+    # aynıdır ama normalize edilmeden karşılaştırılırsa eşit sayılmaz.
+    return " ".join(unicodedata.normalize("NFC", s).split())
 
 
 def is_noop_suggestion(excerpt: str, suggestion: str) -> bool:

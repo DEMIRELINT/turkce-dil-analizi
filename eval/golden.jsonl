@@ -26,3 +26,5 @@
 {"id": "imla-kesme-cift-tirnak-fazladan-1", "text": "\"Kanal Ayarları\"'na gidin.", "expected": [{"type": "imla", "excerpt": "\"Kanal Ayarları\"'na"}]}
 {"id": "tutarlilik-tekil-sayi-1", "text": "Cihaz on iki saat kesintisiz çalışabilir.", "expected": []}
 {"id": "tutarlilik-cakisma-1", "text": "RX (Alım) düğmesine basıldığında cihaz sinyal almaya başlar. Sinyal alımı RX (Alım) göstergesinde yeşil ışıkla belirtilir. İşlem bittiğinde RX (Alıcı) düğmesine tekrar basılması gerekir.", "expected": [{"type": "tutarlilik", "excerpt": "RX (Alıcı)"}]}
+{"id": "gramer-tekrar-3", "text": "Cihazın ekranı yanıp yanıp sönmeye devam ediyorsa güç kaynağı kontrol edilmelidir.", "expected": [{"type": "dil_bilgisi", "excerpt": "yanıp yanıp"}]}
+{"id": "imla-baglamsal-gunceleme-1", "text": "Yazılımın günceleme dosyası üreticinin web sitesinden indirilebilir.", "expected": [{"type": "imla", "excerpt": "günceleme"}]}

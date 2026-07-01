@@ -1,0 +1,45 @@
+1. Kurulum ve İlk Ayarlar
+
+Cihazı kutusundan çıkarın ve arka kapaktaki vida ile pil bölmesini açın. Pilleri, kutuplarına dikkat ederek yerleştirin ve kapağı yerine oturana kadar bastırın. Cihazı ilk kez açtığınızda ekranda dil seçim menüsü görüntülenir; istediğiniz dili seçip onaylayın. Kurulum sırasında Bluetooth eşleştirmesi de yapılabilir; bu adım isteğe bağlıdır.
+
+2. Ekran ve Genel Kullanım
+
+Cihazın ekranı, güneş ışığı altında da rahatlıkla okunabilir; ancak parlaklık ayarını yükseltmeniz önerilir. Kullanıcı el kitabında ki bilgiler, kutudaki bilgilerle örtüşür; farklılık varsa kutudaki bilgi esas alınmalıdır. Yazılımın günceleme dosyası üreticinin web sitesinden indirilebilir.
+
+3. Yazılım ve Aksesuarlar
+
+Cihazınızın yazılımı güncel mi diye kontrol etmek için ayarlar menüsüne girin. Güncelleme öncesinde birkaç dakikanızı ayırarak bataryanın yeterli şarja sahip olduğundan emin olun. Orjinal aksesuarlar dışında bir şarj cihazı kullanılması, garantinin geçersiz kalmasına yol açabilir. Herhangi bir arıza durumunda yetkili servise başvurulmalıdır.
+
+4. Modlar ve Kurumsal Bilgiler
+
+'Ayarlar Modu'na girdikten sonra istediğiniz dili seçebilirsiniz. Menü seçenekleri Türkçe ve İngilizce olarak sunulur. Cihaz, üretici firma olan Acme Telekomünikasyon A.Ş.nin resmî web sitesinden güncellenebilir. Teknik destek ekibi, Ahmet Demirin yönettiği bölümde çalışmaktadır.
+
+5. Teknik Özellikler
+
+Cihazın çalışma frekansı 400-470 Mhz aralığındadır ve çıkış gücü azami 5W'tır. Pilin tam dolu olduğu durumlarda cihaz yaklaşık olarak tam on iki saat boyunca kesintisiz çalışabilir. Kullanıcı, cihazı uzun süre kullanmadığında bataryanın hala yeterli şarja sahip olup olmadığını kontrol etmelidir.
+
+6. Bakım ve Genel Davranış
+
+Ekrandaki simgeler, cihazın durumunu gösterirler. Pil bölme kapağı sıkıca kapatılmalıdır, aksi halde nem girişi yaşanabilir. Kullanıcı arızayı bildirdikten sonra, sorun teknik ekip tarafından değerlendirilir ve kısa sürede çözer. Buna karşılık, cihazın arıza kaydı teknik ekip tarafından oluşturulur ve müşteriye bilgi verilir.
+
+7. Arıza Bildirimi ve Sık Karşılaşılan Durumlar
+
+Teknisyen arızayı geçen hafta tespit etti ve parçayı bugün değiştirecekti. Cihazın ekranı yanıp yanıp sönmeye devam ediyorsa güç kaynağı kontrol edilmelidir. Kullanıcı, formu doldurduktan sonra ilgili birime baş vurdu. Teknisyen, saha ziyaretinde kapı önünde bekledi ve içeri davet edilmesini bekledi.
+
+8. Hesap ve Güvenlik
+
+Hesabınıza giriş yapmak için kullanıcı adınızı ve şifrenizi girmeniz gerekir. Şifrenizi unutmanız durumunda "Parolamı Unuttum" bağlantısına tıklayarak yeni bir parola oluşturabilirsiniz. Güvenlik nedeniyle şifrenizi üç ayda bir değiştirmeniz önerilir. Hesap güvenliği için kullanıcı adı, şifre, ve PIN kodu birlikte kullanılır. Ek sorularınız için SSS bölümüne göz atabilir ya da FAQ sayfamızı ziyaret edebilirsiniz. Cihazın ilk kurulumunda ayrıca dört haneli bir PIN kodu talep edilir.
+
+9. Genel Uyarılar
+
+Herşey doğru şekilde bağlandığında cihaz kısa bir onay sesi verir; herkez bu sesi duyduğunda kurulumun tamamlandığından emin olabilir. Cihazın saatler ayarı, bulunduğunuz bölgeye göre otomatik güncellenir. Kabloların yanlız orijinal kutudan çıkanlarla değiştirilmesi tavsiye edilir; aksi halde bağlantı sorunları yaşanabilir.
+
+10. Bakım Ekibine Not
+
+Ek olarak, bakım ekibine kısa bir hatırlatma:
+
+Sayın Mehmet Bey, geçen haftaki arıza raporunu henüz almadım, lütfen en kısa sürede gönder. Ayrıca, malumunuz olduğu üzere işbu vesileyle şirket politikası gereği tüm raporların ay sonuna kadar teslim edilmesi gerekmektedir. Bu konuda naber, ne zaman yetiştirebilirsin?
+
+11. Kapanış
+
+Kılavuzun bundan sonraki bölümlerinde, olası arızalar ve çözüm önerileri ele alınmaktadır. Bir sorunla karşılaşırsanız, önce bu bölümdeki adımları uygulayın; sorun devam ediyor mu diye kontrol edin ve gerekirse yetkili servisle iletişime geçin. Bu kılavuzda yer alan bilgiler önceden haber verilmeksizin değiştirilebilir.
