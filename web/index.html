@@ -172,22 +172,37 @@
   .loc-row .sug { color: var(--accent2); font-weight: 650; }
 
   /* Log paneli açılıp kapanır */
-  .log-collapsed aside#logPanel { display: none; }
   mark.flash { outline: 2px solid var(--accent); animation: flash-fade 1s ease-out; }
   @keyframes flash-fade { 0% { outline-color: var(--accent); } 100% { outline-color: transparent; } }
 
-  /* Düzen: solda log paneli + sağda içerik */
+  /* Düzen: solda açılıp-kapanır log paneli + küçük ok düğmesi + sağda içerik */
   .layout { display: flex; align-items: flex-start; }
   aside#logPanel {
     width: 280px; flex: none; align-self: stretch;
     border-right: 1px solid var(--line); background: var(--panel);
-    position: sticky; top: 0; max-height: 100vh; overflow-y: auto;
+    position: sticky; top: 0; max-height: 100vh; overflow-y: auto; overflow-x: hidden;
     padding: 16px 14px;
+    transition: width .2s ease, padding .2s ease, opacity .15s ease;
+  }
+  .log-collapsed aside#logPanel {
+    width: 0; padding: 16px 0; border-right: 0; opacity: 0; pointer-events: none;
   }
   aside#logPanel h2 {
     font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 12px;
-    text-transform: uppercase; letter-spacing: .04em;
+    text-transform: uppercase; letter-spacing: .04em; white-space: nowrap;
   }
+  /* Küçük, modern açma/kapama oku — panelin sağ kenarında sabit durur. */
+  #logToggle {
+    flex: none; align-self: stretch; width: 18px; margin: 0;
+    background: var(--panel); border: 1px solid var(--line); border-left: 0;
+    border-radius: 0 8px 8px 0; color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; line-height: 1; padding: 0;
+    position: sticky; top: 0; max-height: 100vh;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  #logToggle:hover { color: var(--fg); border-color: var(--accent); }
+  .log-collapsed #logToggle { border-left: 1px solid var(--line); border-radius: 8px; }
   .log-empty { color: var(--muted); font-size: 13px; }
   .log-item {
     border: 1px solid var(--line); background: var(--panel2); border-radius: 10px;
@@ -214,12 +229,16 @@
       width: 100%; position: static; max-height: 240px;
       border-right: 0; border-bottom: 1px solid var(--line);
     }
+    .log-collapsed aside#logPanel { width: 100%; max-height: 0; padding: 0; opacity: 0; }
+    #logToggle {
+      width: 100%; height: 22px; border-radius: 0; border: 0;
+      border-bottom: 1px solid var(--line); position: static; max-height: none;
+    }
   }
 </style>
 </head>
 <body>
 <header>
-  <button id="logToggle" class="ghost-btn" title="Log panelini aç/kapat">📜 Log</button>
   <img class="logo" src="/logo.png" alt="Türkçe Dil Analizi" onerror="this.replaceWith(Object.assign(document.createElement('h1'),{textContent:'Türkçe Dil Analizi'}))">
   <span class="sub">Dokümanda Türkçe Kullanımı ve Uyumluluk Analizi Sistemi</span>
 </header>
@@ -229,6 +248,7 @@
   <h2>Log — Geçmiş Analizler</h2>
   <div id="logList"><div class="log-empty">Henüz kayıt yok.</div></div>
 </aside>
+<button id="logToggle" title="Log panelini aç/kapat">‹</button>
 
 <main>
   <div class="card" id="inputCard">
@@ -569,9 +589,10 @@ $("file").addEventListener("change", () => {
   if (f) $("text").value = "";
 });
 
-// Log paneli açılıp kapanır (basit göster/gizle, animasyonsuz).
+// Log paneli açılıp kapanır; ok yönü duruma göre değişir (‹ açık, › kapalı).
 $("logToggle").addEventListener("click", () => {
-  document.body.classList.toggle("log-collapsed");
+  const collapsed = document.body.classList.toggle("log-collapsed");
+  $("logToggle").textContent = collapsed ? "›" : "‹";
 });
 
 // Sonuç ekranından "yeni analiz" akışına dönüş.
