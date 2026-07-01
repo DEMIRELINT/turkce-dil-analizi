@@ -239,9 +239,16 @@ class Analyzer:
         - Gemini bu adaya dair karar vermediyse: tespit kaybolmasın diye Hunspell
           bulgusu kendi (zayıf) önerisiyle korunur (fallback).
         """
+        # İKİ ayrı geçiş: önce TÜM tam eşleşmeler kaydedilir, SONRA casefold
+        # fallback'i yalnız boş kalan anahtarlar için eklenir. Tek geçişte
+        # (tam eşleşme + casefold aynı anda) yapılırsa, örn. "Herşey" önce
+        # işlenince onun casefold'u ("herşey") kendi asıl kararı ("herşey"
+        # adayının kararı) sırası gelmeden ÖNCE işgal eder — o zaman "herşey"
+        # candidate'ı yanlışlıkla "Herşey"in kararını (büyük harfli) alır.
         by_word: dict[str, LLMSpellingDecision] = {}
         for d in decisions:
             by_word.setdefault(d.word, d)
+        for d in decisions:
             by_word.setdefault(d.word.casefold(), d)
 
         resolved: list[Finding] = []
