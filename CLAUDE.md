@@ -80,7 +80,7 @@ src/dilanaliz/
   config.py                 # Ortam değişkenleri / yapılandırma
 web/
   server.py                 # Yerel panel sunucusu (stdlib http.server + SSE; docx yükle)
-  index.html                # Panel arayüzü (canlı parça ızgarası, iki sütun, gruplama)
+  index.html                # Panel arayüzü (canlı parça ızgarası, iki sütun, gruplama; rapor indir/kopyala — ajan-dostu Markdown)
 tests/                      # pytest birim testleri (API gerektirmez; sahte model kalıbı)
 eval/
   golden.jsonl              # Elle etiketli altın set (pozitif + temiz-metin negatif örnekler)

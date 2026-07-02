@@ -106,6 +106,7 @@
 
   /* Sonuç */
   #resultCard { display: none; }
+  .result-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
   .chip { border-radius: 99px; padding: 4px 12px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); }
   .chip b { font-weight: 800; }
@@ -278,6 +279,10 @@
   </div>
 
   <div class="card" id="resultCard">
+    <div class="result-toolbar" id="resultToolbar">
+      <button id="downloadBtn" class="ghost-btn" title="Sonuçları ajan-dostu Markdown dosyası olarak indir">⬇ Raporu indir (.md)</button>
+      <button id="copyBtn" class="ghost-btn" title="Raporu panoya kopyala (ajana yapıştırmak için)">📋 Kopyala</button>
+    </div>
     <div class="summary" id="summary"></div>
     <div class="result-split">
       <div class="source-pane"><div class="source" id="source"></div></div>
@@ -399,7 +404,10 @@ function onProgress(ev) {
 }
 
 // --- Sonuç ----------------------------------------------------------------
+let lastPayload = null;   // indir/kopyala için en son gösterilen sonuç (canlı ya da geçmiş)
+
 function renderResult(payload) {
+  lastPayload = payload;
   document.querySelectorAll(".step.active").forEach((s) => s.classList.add("done"));
   $("barFill").style.width = "100%";
   const source = payload.source;
@@ -487,6 +495,97 @@ $("findings").addEventListener("click", (e) => {
   mark.classList.add("flash");
   setTimeout(() => mark.classList.remove("flash"), 1000);
 });
+
+// --- Ajan-dostu rapor (indir / kopyala) ----------------------------------
+// Sonuçları (kaynak metin + bulgular) yapılandırılmış Markdown'a çevirir; amaç
+// tüm çıktıyı bir yapay-zekâ ajanına tek parça yapıştırmayı kolaylaştırmak.
+// Tamamen istemci-tarafı: veri zaten `lastPayload` içinde, sunucuya gitmez.
+
+// Offset'ten 1-tabanlı satır numarası (start'tan önceki '\n' sayısı + 1).
+function findingLine(source, start) {
+  if (start == null) return null;
+  let line = 1;
+  for (let i = 0; i < start && i < source.length; i++) if (source[i] === "\n") line++;
+  return line;
+}
+
+function buildReport(payload) {
+  const source = payload.source || "";
+  const findings = (payload.result && payload.result.findings) || [];
+
+  const counts = {}; TYPES.forEach((t) => counts[t] = 0);
+  findings.forEach((f) => { if (counts[f.type] !== undefined) counts[f.type]++; });
+
+  const stamp = new Date().toISOString().slice(0, 19).replace("T", " ");
+  let out = "# Türkçe Dil Analizi Raporu\n\n";
+  out += `- Tarih: ${stamp}\n`;
+  const dist = TYPES.filter((t) => counts[t]).map((t) => `${TYPE_LABEL[t]} ${counts[t]}`);
+  out += `- Toplam bulgu: ${findings.length}` + (dist.length ? ` (${dist.join(", ")})` : "") + "\n\n";
+
+  if (!findings.length) {
+    out += "Hiç bulgu yok — metin temiz görünüyor.\n\n";
+  } else {
+    out += "## Bulgular\n\n";
+    for (const t of TYPES) {
+      const group = findings.filter((f) => f.type === t)
+        .sort((a, b) => (a.start ?? 1e9) - (b.start ?? 1e9));
+      if (!group.length) continue;
+      out += `### ${TYPE_LABEL[t]} (${group.length})\n\n`;
+      group.forEach((f, i) => {
+        const sug = f.suggestion ? ` → ${f.suggestion}` : "";
+        out += `${i + 1}. "${f.excerpt}"${sug}\n`;
+        if (f.explanation) out += `   - Açıklama: ${f.explanation}\n`;
+        const meta = [];
+        if (f.rule_id) meta.push(f.rule_id);
+        if (f.confidence != null) meta.push(`güven %${Math.round(f.confidence * 100)}`);
+        if (meta.length) out += `   - ${meta.join(" · ")}\n`;
+        if (f.start != null) {
+          const ln = findingLine(source, f.start);
+          out += `   - Konum: karakter ${f.start}–${f.end}` + (ln ? ` (satır ${ln})` : "") + "\n";
+        }
+        out += "\n";
+      });
+    }
+  }
+
+  out += "## Kaynak Metin\n\n```\n" + source + "\n```\n";
+  return out;
+}
+
+function flashBtn(btn, msg) {
+  const old = btn.textContent;
+  btn.textContent = msg;
+  setTimeout(() => { btn.textContent = old; }, 1500);
+}
+
+function downloadReport() {
+  if (!lastPayload) return;
+  const blob = new Blob([buildReport(lastPayload)], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+  a.href = url; a.download = `dil-analizi-${stamp}.md`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function copyReport() {
+  if (!lastPayload) return;
+  const md = buildReport(lastPayload);
+  try {
+    await navigator.clipboard.writeText(md);       // 127.0.0.1 güvenli bağlam → çalışır
+  } catch (e) {                                     // eski tarayıcı / izin yoksa yedek
+    const ta = document.createElement("textarea");
+    ta.value = md; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    try { document.execCommand("copy"); } catch (_) {}
+    ta.remove();
+  }
+  flashBtn($("copyBtn"), "✓ Kopyalandı");
+}
+
+$("downloadBtn").addEventListener("click", downloadReport);
+$("copyBtn").addEventListener("click", copyReport);
 
 // --- Log (geçmiş analizler) ----------------------------------------------
 let activeLogId = null;
