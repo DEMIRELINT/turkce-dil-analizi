@@ -51,6 +51,14 @@ from .schema import AnalysisResult, Finding, FindingType, LLMAnalysis, LLMSpelli
 from .spell import HunspellChecker, match_case
 
 
+class LLMCallError(RuntimeError):
+    """LLM çağrısı zaman aşımına uğradığında veya retry'lar tükendiğinde fırlatılır.
+
+    Orijinal istisnayı sarmalar; kullanıcıya CLI/web sınırında anlaşılır bir
+    mesaj göstermek içindir (ham stack trace yerine).
+    """
+
+
 class Analyzer:
     """Metin analiz motoru (çok geçişli)."""
 
@@ -316,9 +324,16 @@ class Analyzer:
             if hit is not None:
                 return LLMAnalysis.model_validate_json(hit)
 
-        raw: LLMAnalysis = self._structured.invoke(
-            [SystemMessage(content=system_prompt), HumanMessage(content=user_message)]
-        )
+        try:
+            raw: LLMAnalysis = self._structured.invoke(
+                [SystemMessage(content=system_prompt), HumanMessage(content=user_message)]
+            )
+        except Exception as exc:  # noqa: BLE001 — kullanıcıya okunur hata göster
+            raise LLMCallError(
+                f"Gemini API'ye ulaşılamadı (zaman aşımı veya bağlantı hatası): {exc}. "
+                "Bağlantıyı kontrol edin; kurumsal ağdaysanız "
+                "GOOGLE_GENAI_TRANSPORT=rest deneyin."
+            ) from exc
 
         if self._cache is not None:
             self._cache.set(key, raw.model_dump_json())

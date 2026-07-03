@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import sys
 
-from dilanaliz.analyzer import build_default_analyzer
+from dilanaliz.analyzer import LLMCallError, build_default_analyzer
 
 
 def _read_input(argv: list[str]) -> tuple[str, list | None]:
@@ -54,7 +54,11 @@ def main() -> None:
     # davranış `analyze` ile aynıdır. İlerleme stderr'e akar (terminalde görünür),
     # JSON sonucu stdout'a yazılır. .docx girdisinde blok türü haritası (spans)
     # tablo/başlık kaynaklı yapay bulguları süzer.
-    result = analyzer.analyze_document(text, progress=_stderr_progress, spans=spans)
+    try:
+        result = analyzer.analyze_document(text, progress=_stderr_progress, spans=spans)
+    except LLMCallError as exc:
+        print(f"Hata: {exc}", file=sys.stderr)
+        raise SystemExit(1) from exc
     print(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
 
 

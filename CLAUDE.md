@@ -160,6 +160,7 @@ python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 | `RULES_PATH` | *(boş)* | Harici kural dosyası; boşsa paketteki `rules/rules.md` kullanılır. |
 | `LANGSMITH_TRACING` | `false` | Air-gap hijyeni: telemetri kapalı kalmalı. |
 | `GOOGLE_GENAI_TRANSPORT` | *(boş)* | Opsiyonel Gemini REST taşıma anahtarı (gRPC yerine REST). |
+| `LLM_TIMEOUT_SEC` | `60` | Tek LLM çağrısı için üst zaman aşımı (sn). Bağlantı yarıda tıkanırsa çağrı asılı kalmasın diye. `0`/boş → sınırsız (istemci varsayılanı). |
 | `EVAL_DELAY_SEC` | `13` | Yalnız `eval/run_eval.py`'de çağrılar arası gecikme; ücretli katmanda `0`. |
 | `EVAL_FILTER` | *(boş)* | Yalnız `eval/run_eval.py`'de: virgülle ayrılmış id/id-ön-eki listesi (örn. `imla-yabanci,temiz`) — yalnız eşleşen örnekleri çalıştırır. Ücretli API'de küçük kural değişikliklerinde tam 53 örneği göndermemek için; tam koşu yalnız büyük kilometre taşlarında (Faz sonu, PR öncesi) önerilir. |
 
@@ -222,6 +223,15 @@ koru:
   ürettirme — bağlamdan habersiz sözlük önerisi kopuk parçalara uydurma üretir.
 - **Air-gap uyumu** — bağımlılıklar pinli; telemetri kapalı; gizli dış çağrı
   ekleme. `docx2python`, Hunspell ve web paneli (stdlib) dahil her şey yereldir.
+- **LLM çağrısı: zaman aşımı + anlaşılır hata** — `providers/gemini.py`
+  istemciye `LLM_TIMEOUT_SEC` (varsayılan 60sn) geçer; geçici ağ hataları
+  kütüphanenin kendi retry'ı (`max_retries=6`, backoff'lu) ile otomatik
+  denenir. Retry'lar tükenince/timeout'ta `analyzer._invoke_cached` hatayı
+  yakalayıp `LLMCallError` olarak (kısa Türkçe açıklamayla) yeniden fırlatır;
+  CLI (`cli.py`) bunu yakalayıp tek satır mesajla çıkar, web paneli
+  (`server.py`'deki genel `except Exception`) mesajı olduğu gibi SSE'ye basar.
+  Bir parçanın çağrısı kalıcı başarısız olursa TÜM analiz durur (bilinçli —
+  bkz. Bilinen Sınırlar); bu davranışı sessiz-atlamaya çevirme.
 
 ---
 
@@ -384,6 +394,12 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
   kullanımı tek TEK değil belge-geneli tek özet bulguyla raporlanır (N ≥ 3).
   Tablo hücresindeki bir yazım hatası bu yüzden raporlanmayabilir (bilinçli
   takas — tablo verisi düzyazı değildir).
+- **Bir parçanın LLM çağrısı kalıcı başarısız olursa TÜM analiz durur.**
+  `LLM_TIMEOUT_SEC` + kütüphane retry'ı geçici hataları çözer ve hata mesajı
+  artık anlaşılır (`LLMCallError`); ama paralel/sıralı hiçbir yol tek bir
+  parçayı "atla, diğerlerine devam et" şeklinde esnetmez — bilinçli tercih
+  (sessiz eksik sonuç, yanlış-pozitif kadar tehlikeli olan yanlış-negatif/
+  eksik rapor riski taşır). Kalıcı hata → kullanıcı net mesajla tekrar dener.
 
 ---
 

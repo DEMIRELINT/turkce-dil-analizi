@@ -33,6 +33,17 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_float(name: str, default: float) -> float:
+    """Ondalık ortam değişkeni; tanımsız/geçersizse default'a düşer."""
+    val = os.getenv(name)
+    if val is None or not val.strip():
+        return default
+    try:
+        return float(val.strip())
+    except ValueError:
+        return default
+
+
 @dataclass(frozen=True)
 class Settings:
     """Çalışma zamanı ayarları."""
@@ -49,6 +60,11 @@ class Settings:
     # çıktı birebir aynı kalır (temperature=0 + önbellek deterministik).
     # CONCURRENCY=1 → tamamen sıralı (eski) davranış: eval/hata ayıklama/karşılaştırma.
     max_workers: int
+    # Tek bir LLM çağrısı için üst zaman aşımı (saniye). Kütüphane varsayılan
+    # retry'ları (max_retries=6, backoff'lu) buna kadar dener; None → sınırsız
+    # (istemci varsayılanı) — kurumsal ağda bağlantı yarıda tıkanırsa çağrı
+    # asılı kalmasın diye None DEĞİL, makul bir varsayılan (60s) kullanılır.
+    llm_timeout_sec: float | None
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -67,6 +83,9 @@ class Settings:
         # kullanılır. Kurumsal ağlarda grpc/HTTP2 trafiği sessizce engellenebiliyorsa
         # "rest" ile REST/HTTP1.1'e zorlanabilir (bkz. GOOGLE_GENAI_TRANSPORT).
         genai_transport = os.getenv("GOOGLE_GENAI_TRANSPORT", "").strip() or None
+        # 0 veya boş → None (kütüphane varsayılanına düş, sınırsız).
+        timeout_sec = _env_float("LLM_TIMEOUT_SEC", 60.0)
+        llm_timeout_sec = timeout_sec if timeout_sec > 0 else None
         return cls(
             gemini_api_key=api_key,
             model_id=os.getenv("MODEL_ID", "gemini-2.5-flash-lite").strip(),
@@ -76,4 +95,5 @@ class Settings:
             dict_path=dict_path,
             max_workers=max_workers,
             genai_transport=genai_transport,
+            llm_timeout_sec=llm_timeout_sec,
         )

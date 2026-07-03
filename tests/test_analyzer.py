@@ -1,6 +1,8 @@
 """Analyzer'ın aday→düzeltme birleştirme mantığı (API gerektirmez)."""
 
-from dilanaliz.analyzer import Analyzer
+import pytest
+
+from dilanaliz.analyzer import Analyzer, LLMCallError
 from dilanaliz.prompt import build_user_message
 from dilanaliz.schema import (
     Finding,
@@ -91,6 +93,30 @@ def test_casefold_variants_each_get_their_own_correction():
     assert out[0].suggestion == "Her şey"  # cümle başı → büyük harf korunur
     assert out[1].suggestion == "her şey"  # cümle içi → küçük harf, GÖLGELENMEMELİ
     assert out[2].suggestion == "her şey"
+
+
+class _BrokenModel:
+    """`invoke` her çağrıda patlayan sahte model — hata sarmalamayı test eder."""
+
+    def with_structured_output(self, schema):  # noqa: ARG002
+        return self
+
+    def invoke(self, messages):  # noqa: ARG002
+        raise TimeoutError("bağlantı zaman aşımına uğradı")
+
+
+def test_invoke_cached_wraps_transient_errors_in_llm_call_error():
+    analyzer = Analyzer(
+        chat_model=_BrokenModel(),
+        rules_provider=_FakeRules(),
+        model_id="test-model",
+        cache=None,
+        speller=None,
+    )
+    with pytest.raises(LLMCallError) as exc_info:
+        analyzer._invoke_cached("SYSTEM", "USER")
+    assert "bağlantı zaman aşımına uğradı" in str(exc_info.value)
+    assert "GOOGLE_GENAI_TRANSPORT" in str(exc_info.value)
 
 
 def test_user_message_lists_candidates():
