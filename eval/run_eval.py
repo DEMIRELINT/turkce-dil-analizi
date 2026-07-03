@@ -7,6 +7,12 @@ Eşleştirme: bir tahmin, aynı eksende (type) ve alıntısı beklenen alıntıy
 örtüşen (biri diğerini içeren, büyük/küçük harf duyarsız) bir beklenen bulguya
 denk geliyorsa Doğru Pozitif (TP) sayılır. Artan tahminler FP, eşleşmeyen
 beklenenler FN'dir. TEMİZ metinlerdeki tüm tahminler FP'dir (yanlış pozitif).
+
+Kısmi/ucuz koşu: EVAL_FILTER ortam değişkeniyle yalnız belirli id'leri (veya
+id ön eklerini) çalıştır — ücretli API'de her küçük kural değişikliğinde
+53 örneğin tamamını göndermemek için. Tam koşu yalnız büyük kilometre
+taşlarında (bir Faz'ın sonu, PR öncesi) önerilir.
+    EVAL_FILTER=imla-yabanci,temiz EVAL_DELAY_SEC=0 python eval/run_eval.py
 """
 
 from __future__ import annotations
@@ -78,6 +84,13 @@ def main() -> None:
     delay = float(os.getenv("EVAL_DELAY_SEC", "13"))
 
     examples = [json.loads(line) for line in GOLDEN.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    filt = os.getenv("EVAL_FILTER", "").strip()
+    if filt:
+        prefixes = [p.strip() for p in filt.split(",") if p.strip()]
+        examples = [ex for ex in examples if any(ex["id"] == p or ex["id"].startswith(p) for p in prefixes)]
+        print(f"[EVAL_FILTER={filt!r}] {len(examples)} örnek seçildi (tam set 53).")
+
     dump: list[dict] = []
     processed = 0
     aborted = False

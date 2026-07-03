@@ -124,6 +124,9 @@ pytest
 # Ölçüm (altın set — API gerektirir)
 EVAL_DELAY_SEC=0 python eval/run_eval.py
 
+# Ucuz kısmi ölçüm (yalnız ilgili id/ön-ekler — küçük kural değişikliklerinde)
+EVAL_FILTER=imla-yabanci,temiz EVAL_DELAY_SEC=0 python eval/run_eval.py
+
 # Sıralı vs paralel karşılaştırma (hız + eşdeğerlik; API gerektirir)
 python eval/compare_parallel.py belge.docx  # küçük belgeyle: belgeyi 3× analiz eder
 
@@ -158,6 +161,7 @@ python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 | `LANGSMITH_TRACING` | `false` | Air-gap hijyeni: telemetri kapalı kalmalı. |
 | `GOOGLE_GENAI_TRANSPORT` | *(boş)* | Opsiyonel Gemini REST taşıma anahtarı (gRPC yerine REST). |
 | `EVAL_DELAY_SEC` | `13` | Yalnız `eval/run_eval.py`'de çağrılar arası gecikme; ücretli katmanda `0`. |
+| `EVAL_FILTER` | *(boş)* | Yalnız `eval/run_eval.py`'de: virgülle ayrılmış id/id-ön-eki listesi (örn. `imla-yabanci,temiz`) — yalnız eşleşen örnekleri çalıştırır. Ücretli API'de küçük kural değişikliklerinde tam 53 örneği göndermemek için; tam koşu yalnız büyük kilometre taşlarında (Faz sonu, PR öncesi) önerilir. |
 
 ---
 
