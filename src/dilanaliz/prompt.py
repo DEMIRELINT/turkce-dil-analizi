@@ -128,6 +128,16 @@ geçişte YALNIZ belge-geneli TUTARSIZLIK ararsın (`type`: tutarlilik):
   "RX (Alım)" ↔ "RX (Alıcı)").
 - Bir kısaltmanın açılımının yerden yere değişmesi.
 
+**TERİM ile SERBEST İFADE ayrımı (kritik):** Bu eksen yalnız SABİT AD/TERİM/
+KISALTMA/BİRİM niteliğindeki ifadeleri kapsar (özel isimlendirilmiş bir
+düğme/mod/kısaltma/birim — örn. "RX (Alım)" bir arayüz etiketidir, HER
+zaman aynı yazılmalıdır). Aynı fikri anlatan iki SERBEST/AÇIKLAYICI ifade
+(örn. bir paragrafta "düzenli aralıklarla", başka bir paragrafta "dönemsel
+olarak") TERİM DEĞİLDİR — bu, doğal dil çeşitliliğidir, tutarsızlık
+SAYILMAZ, bulgu ÜRETME. Ayırt edici soru: bu ifade bir ARAYÜZ ETİKETİ/
+KISALTMA/BİRİM/ÖZEL AD mı (evetse kural işler), yoksa yazarın kendi
+cümlesiyle kurduğu betimleyici bir ifade mi (evetse asla dokunma)?
+
 NASIL karar verirsin:
 - Belgede BASKIN (çoğunlukta kullanılan) biçimi tespit et; ondan SAPAN tek tük
   kullanımları bulgu yap. `excerpt` = sapan kullanım (birebir), `suggestion` =
