@@ -62,7 +62,10 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 - **IMLA-YABANCI** — Sık yanlış yazılan alıntı sözcükler: "şoför" (şöför değil),
   "orijinal" (orjinal değil), "egzoz" (egzos değil), "espri" (espiri değil),
   "kontrol" (kontrol/kontörl karışıklığı), "makine" (makina tartışmalı, TDK
-  "makine"), "sürpriz" (süpriz değil), "yanlış"/"laboratuvar" (laboratuar değil).
+  "makine"), "sürpriz" (süpriz değil), "yanlış"/"laboratuvar" (laboratuar değil),
+  "aksesuar" (aksesuvar değil), "antrenman" (antreman değil), "lisans" (lizans
+  değil), "performans" (perfomans değil), "konfigürasyon" (konfigrasyon değil),
+  "adaptör" (adaptor/adapter değil).
 - **IMLA-SAAT** — "saat" → "saatler" (saatlar değil); ünlü uyumu istisnası.
 
 ### A4. Kesme işareti

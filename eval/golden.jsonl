@@ -49,3 +49,5 @@
 {"id": "imla-duzeltme-3", "text": "Halam bize hafta sonu ziyarete geldi.", "expected": []}
 {"id": "imla-noktalama-1", "text": "Toplantıya elma, armut ve üzüm getirdik.", "expected": []}
 {"id": "imla-noktalama-2", "text": "Toplantıya elma, armut, ve üzüm getirdik.", "expected": [{"type": "imla", "excerpt": "armut, ve üzüm"}]}
+{"id": "imla-yabanci-3", "text": "Cihazın antrenman modu başarıyla etkinleştirildi.", "expected": []}
+{"id": "imla-yabanci-4", "text": "Cihazın antreman modu başarıyla etkinleştirildi.", "expected": [{"type": "imla", "excerpt": "antreman"}]}
