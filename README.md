@@ -239,6 +239,7 @@ docx yükleyip veya metin yapıştırıp canlı ilerlemeyle analiz eder (bkz. §
 | `LANGSMITH_TRACING` | `false` | Air-gap hijyeni: telemetri kapalı kalmalı. |
 | `GOOGLE_GENAI_TRANSPORT` | *(boş)* | Gemini taşıma katmanı: `rest \| grpc \| grpc_asyncio`. Kurumsal ağda gRPC (HTTP/2) engelliyse `rest`. |
 | `EVAL_DELAY_SEC` | `13` | Yalnız `run_eval.py`; çağrılar arası gecikme (ücretsiz kota). Ücretli katmanda `0`. |
+| `EVAL_FILTER` | *(boş)* | Yalnız `run_eval.py`; virgülle ayrılmış id/id-ön-eki listesi (örn. `imla-yabanci,temiz`) — küçük kural değişikliklerinde tam altın seti göndermeden ucuz kısmi ölçüm. |
 | `PORT` | `8765` | *(web)* Panel portu. |
 | `HISTORY_DIR` | `./history` | *(web)* Analiz geçmişi kayıt klasörü. |
 
@@ -253,9 +254,10 @@ kurumsal kural dökümanını göster.
 Her bulgu mümkünse bir `rule_id` taşır:
 
 - **İmla:** `IMLA-DE-DA`, `IMLA-KI`, `IMLA-MI`, `IMLA-BITISIK`, `IMLA-AYRI`,
-  `IMLA-YALNIZ`, `IMLA-YANLIS`, `IMLA-HERKES`, `IMLA-HERSEY`, `IMLA-YABANCI`,
-  `IMLA-SAAT`, `IMLA-KESME`, `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`,
-  `IMLA-NOKTALAMA`, `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
+  `IMLA-BAGLAMSAL-KARISTIRMA`, `IMLA-YALNIZ`, `IMLA-YANLIS`, `IMLA-HERKES`,
+  `IMLA-HERSEY`, `IMLA-YABANCI`, `IMLA-SAAT`, `IMLA-KESME`,
+  `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`, `IMLA-NOKTALAMA`,
+  `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
 - **Dil bilgisi:** `GRAMER-OZNE-YUKLEM`, `GRAMER-TAMLAMA`, `GRAMER-ANLATIM`,
   `GRAMER-CATI`, `GRAMER-EK-FIIL`, `GRAMER-TEKRAR`, `GRAMER-BOLUNMUS-KELIME`.
 - **Ton:** `TON-RESMI`, `TON-NEZAKET`, `TON-HITAP-TUTARLILIK`, `TON-ACIKLIK`,
@@ -368,6 +370,11 @@ dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü
 - **Davranış / Bilgi ayrımı** — davranış `prompt.py`'de, kurallar `rules.md`'de.
 - **Katı JSON çıktı** — `with_structured_output` parse hatasını kaldırır; şema
   gevşetilmez.
+- **Konumlanamayan bulgu sessizce elenir** — `locate.py` bir alıntıyı kaynakta
+  bulamazsa offseti `None` bırakır; `postprocess.drop_unlocated_findings`
+  bunu `_finalize`'da eler. Bu genelde LLM'in `rules.md`'deki bir "Yanlış:"
+  örneğini analiz edilen metnin DOĞRU yazılmış hâliyle karıştırıp var
+  olmayan bir alıntı üretmesini (halüsinasyon) engeller.
 - **Parçalanamaz tutarlılık** — tüm belgeyi tek çağrıda görür (çapraz-parça
   çakışmaları için).
 - **Paralel-ama-deterministik** — `_finalize` sıralayıp tekilleştirir; çıktı
@@ -381,8 +388,10 @@ dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü
 - **Bayat önbellek.** Bir kez üretilen (belki eksik) yanıt `.cache/`'e kalıcı
   yazılır; kod/kural değişse de eski yanıt döner. İlk kontrol: `rm -rf .cache/`.
 - **Sözlük-geçerli bağlamsal hata.** Hunspell morfolojik olarak kurulabilen ama
-  bağlamda yanlış kelimeleri yakalayamaz ("güncelleme" → "günceleme"). Prompt'u
-  genişletmek yanlış-pozitif riskini artırır; bilinçli dokunulmadı.
+  bağlamda yanlış kelimeleri GENEL olarak yakalayamaz. Prompt'u genel olarak
+  genişletmek yanlış-pozitif riskini artırır; genel taramaya dokunulmadı.
+  Dar bir istisna var: `IMLA-BAGLAMSAL-KARISTIRMA` yalnız iki ölçülmüş çift
+  için (güncelleme/günceleme, yarın/yarin) bu sınırı kapalı liste olarak deler.
 - **Çapraz-geçiş çelişkisi.** Aynı ifade farklı geçişlerden (imla + dil bilgisi)
   iki ayrı öneri alabilir; geçişler birbirini görmez.
 - **Uzun belge tutarlılık ölçeği.** Tutarlılık tek dev çağrıyla çalışır; 50+
