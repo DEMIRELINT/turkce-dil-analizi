@@ -51,3 +51,7 @@
 {"id": "imla-noktalama-2", "text": "Toplantıya elma, armut, ve üzüm getirdik.", "expected": [{"type": "imla", "excerpt": "armut, ve üzüm"}]}
 {"id": "imla-yabanci-3", "text": "Cihazın antrenman modu başarıyla etkinleştirildi.", "expected": []}
 {"id": "imla-yabanci-4", "text": "Cihazın antreman modu başarıyla etkinleştirildi.", "expected": [{"type": "imla", "excerpt": "antreman"}]}
+{"id": "imla-bitisik-5", "text": "Şehir merkezinde yeni bir gökdelen inşa edildi.", "expected": []}
+{"id": "imla-bitisik-6", "text": "Şehir merkezinde yeni bir gök delen inşa edildi.", "expected": [{"type": "imla", "excerpt": "gök delen"}]}
+{"id": "imla-ayri-1", "text": "Döner sermaye işletmesi yeni bir hesap açtı.", "expected": []}
+{"id": "imla-ayri-2", "text": "Dönersermaye işletmesi yeni bir hesap açtı.", "expected": [{"type": "imla", "excerpt": "Dönersermaye"}]}

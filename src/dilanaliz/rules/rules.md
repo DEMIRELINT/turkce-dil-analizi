@@ -49,8 +49,14 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
     DEĞİL → doğrusu zaten ayrı olan "fark etmek" bu listeye dahil değildir
     (yalnız yukarıdaki 10 kelime bu kuralın kapsamındadır — listede
     olmayan "etmek/olmak" bileşiği için bulgu üretme).
+  - **Sıfat-fiil ekiyle (-an/-en, -r/-ar/-er/-ır/-ir, -maz/-mez) kurulan
+    kalıplaşmış birleşik kelimeler:** gökdelen, cankurtaran, dalgakıran,
+    basınçölçer. Doğru: "gökdelen inşaatı". Yanlış: "gök delen inşaatı".
 - **IMLA-AYRI** — Ayrı yazılır: "her şey", "hiç kimse", "pek çok", "ya da",
   "bir şey", "bir an". Doğru: "her şey hazır", "ya da". Yanlış: "herşey", "yada".
+  Ayrıca sıfat-fiil ekiyle kurulan sıfat tamlaması yapısındaki şu kalıplar da
+  ayrı yazılır: "döner sermaye", "yeter sayı", "tükenmez kalem". Doğru:
+  "döner sermaye işletmesi". Yanlış: "dönersermaye işletmesi".
 
 ### A3. Sık karışan / yanlış yazılan sözcükler
 
