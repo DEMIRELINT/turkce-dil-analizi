@@ -65,3 +65,8 @@
 {"id": "gramer-sayi-1", "text": "Sisteme üç kullanıcı tanımlandı.", "expected": []}
 {"id": "gramer-sayi-2", "text": "Sisteme üç kullanıcılar tanımlandı.", "expected": [{"type": "dil_bilgisi", "excerpt": "üç kullanıcılar"}]}
 {"id": "gramer-sayi-3", "text": "Kullanıcılar sisteme başarıyla tanımlandı.", "expected": []}
+{"id": "tutarlilik-birim-1", "text": "Cihaz 446 kHz frekansında çalışır. Alıcı devresi 446 kHz bandını tarar. Vericinin 446 Khz değerinde sabit kalması gerekir.", "expected": [{"type": "tutarlilik", "excerpt": "Khz"}]}
+{"id": "tutarlilik-acilim-1", "text": "Sistemde GPS (Küresel Konumlama Sistemi) modülü bulunur. GPS sinyali zayıfsa cihaz uyarı verir. GPS (Genel Konumlandırma Sistemi) modülünün güncel olduğundan emin olun.", "expected": [{"type": "tutarlilik", "excerpt": "GPS (Genel Konumlandırma Sistemi)"}]}
+{"id": "tutarlilik-acilim-zor-1", "text": "Sistemde GPS modülü bulunur. GPS sinyali zayıfsa cihaz uyarı verir. Genel Konumlandırma Sistemi modülünün güncel olduğundan emin olun.", "expected": [{"type": "tutarlilik", "excerpt": "Genel Konumlandırma Sistemi"}]}
+{"id": "tutarlilik-serbest-ifade-temiz-1", "text": "Bakım ekipleri düzenli aralıklarla saha kontrolü yapar. Elde edilen bulgular dönemsel olarak yönetime raporlanır.", "expected": []}
+{"id": "tutarlilik-buyukharf-temiz-1", "text": "Sunucu her gece otomatik olarak yeniden başlatılır. Bakım penceresi dışında sunucu kapatılmaz.", "expected": []}
