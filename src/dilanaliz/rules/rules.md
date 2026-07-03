@@ -38,6 +38,17 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 - **IMLA-BITISIK** — Bitişik yazılır: "hiçbir", "herhangi", "birçok", "birkaç",
   "biraz", "çünkü", "hiçkimse" DEĞİL → "hiç kimse" (ayrı). Doğru: "birkaç kişi".
   Yanlış: "bir kaç kişi", "her hangi".
+  Ayrıca aşağıdaki iki TDK grubu da bitişik yazılır (ayrı yazılmışsa hata):
+  - **Ses düşmesine uğrayan birleşik kelimeler:** kaynana, kaynata, nasıl,
+    niçin, pazartesi, sütlaç. Doğru: "kaynanam geldi". Yanlış: "kayın anam
+    geldi" (bu birleşik kelimeler için ayrı yazım kullanılmaz).
+  - **"etmek/olmak" ile ses olayına (türeme/düşme/değişme) uğrayan
+    bileşikler:** affetmek, bahsetmek, emretmek, hissetmek, kahrolmak,
+    kaybolmak, reddetmek, sabretmek, seyretmek, zannetmek. Doğru:
+    "teklifi reddettik". Yanlış: "teklifi red ettik", "olayı fark etti"
+    DEĞİL → doğrusu zaten ayrı olan "fark etmek" bu listeye dahil değildir
+    (yalnız yukarıdaki 10 kelime bu kuralın kapsamındadır — listede
+    olmayan "etmek/olmak" bileşiği için bulgu üretme).
 - **IMLA-AYRI** — Ayrı yazılır: "her şey", "hiç kimse", "pek çok", "ya da",
   "bir şey", "bir an". Doğru: "her şey hazır", "ya da". Yanlış: "herşey", "yada".
 
