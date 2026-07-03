@@ -316,6 +316,48 @@ def test_table_only_chunk_skips_llm_passes():
     assert result.findings == []
 
 
+def test_toc_span_findings_are_dropped_but_consistency_kept():
+    # İçindekiler satırına düşen imla/dil bilgisi/ton bulguları elenir (tablo
+    # muamelesi); tutarlılık bulgusu KORUNUR. TOC-only parça LLM'e gitmese de
+    # burada tek parça senaryosuyla süzme katmanı doğrudan test ediliyor.
+    source = "Gerçek bir cümle var.\n\nGüvenlik Bilgileri\t6"
+    spans = _spans_for(source, {"Güvenlik Bilgileri\t6": "icindekiler"})
+    by_pass = {
+        "local": LLMAnalysis(findings=[
+            _llm_finding("Bilgileri", FindingType.IMLA),      # TOC'ta → elenir
+            _llm_finding("cümle", FindingType.DIL_BILGISI),   # düzyazıda → kalır
+        ]),
+        "consistency": LLMAnalysis(findings=[
+            _llm_finding("Güvenlik Bilgileri", FindingType.TUTARLILIK),  # korunur
+        ]),
+    }
+    analyzer = _build_analyzer(by_pass)
+
+    result = analyzer.analyze_document(source, spans=spans)
+
+    assert [f.type for f in result.findings if f.type == FindingType.IMLA] == []
+    assert len([f for f in result.findings if f.type == FindingType.DIL_BILGISI]) == 1
+    assert len([f for f in result.findings if f.type == FindingType.TUTARLILIK]) == 1
+
+
+def test_toc_only_chunk_skips_llm_passes():
+    # Parça tamamen İçindekiler satırlarından oluşuyorsa yerel/ton geçişine
+    # hiç gönderilmez (tablo-only parça ile aynı API tasarrufu yolu).
+    source = "Güvenlik\t5\n\nMikrofon\t9"
+    spans = _spans_for(source, {
+        "Güvenlik\t5": "icindekiler",
+        "Mikrofon\t9": "icindekiler",
+    })
+    by_pass = {"local": LLMAnalysis(findings=[
+        _llm_finding("Güvenlik", FindingType.IMLA)
+    ])}
+    analyzer = _build_analyzer(by_pass)
+
+    result = analyzer.analyze_document(source, spans=spans)
+
+    assert result.findings == []
+
+
 def test_no_spans_means_no_filtering():
     # spans verilmezse (düz metin girdisi) eski davranış: hiçbir süzme yok.
     source = "Cümle.\n\n446.00625"

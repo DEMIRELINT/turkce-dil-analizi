@@ -22,5 +22,9 @@ history/
 # İndirilen sözlük (büyük; README'deki komutla indirilir — repoda tutulmaz)
 dicts/
 
+# Yerel deneme belgeleri (büyük ikili; kaynak belgeler repoya girmez — CLAUDE.md)
+*.docx
+*.pdf
+
 # OS / editör
 .DS_Store

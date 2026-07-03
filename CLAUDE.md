@@ -56,12 +56,13 @@ metin **veya** `.docx` olabilir (`extract.py`); bir **web paneli** (`web/`)
 docx yükleme + canlı ilerleme sunar.
 
 `.docx` çıkarımı **etiketli bloklar** üretir: her blok türüyle işaretlenir
-(`paragraf` / `baslik` / `tablo_hucresi`; `extract_docx_blocks` →
-`BlockSpan`). Analiz bu haritayla yapısal gürültüyü deterministik süzer:
-tablo hücrelerine imla/dil bilgisi/ton bulgusu üretilmez (yalnız tablodan
-oluşan parçalar LLM'e hiç gönderilmez), başlıklarda tekrar/noktalama bulgusu
-elenir, tablodaki ondalık-nokta kullanımı tek tek değil **belge-geneli TEK
-özet bulguyla** raporlanır. Düz metin girdisinde (spans yok) süzme yoktur.
+(`paragraf` / `baslik` / `tablo_hucresi` / `icindekiler`;
+`extract_docx_blocks` → `BlockSpan`). Analiz bu haritayla yapısal gürültüyü
+deterministik süzer: tablo hücrelerine ve İçindekiler (TOC) satırlarına
+imla/dil bilgisi/ton bulgusu üretilmez (yalnız tablo/TOC'tan oluşan parçalar
+LLM'e hiç gönderilmez), başlıklarda tekrar/noktalama bulgusu elenir,
+tablodaki ondalık-nokta kullanımı tek tek değil **belge-geneli TEK özet
+bulguyla** raporlanır. Düz metin girdisinde (spans yok) süzme yoktur.
 
 Detaylı anlatım için [README.md](README.md) dosyasına bakın.
 
@@ -77,7 +78,7 @@ dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü (air-gap: repoda bul
 src/dilanaliz/
   analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, span-farkında süzme, build_default_analyzer)
   spell.py                  # Hunspell deterministik imla TESPİTİ (öneri üretmez; Türkçe İ/I-farkında lookup; 4 harf altı denetlenmez)
-  extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi; satır-içi görsel → [görsel] yer tutucu, tam-satır görsel silinir, ardışık tekrar tekilleştirme)
+  extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi/icindekiler; satır-içi görsel → [görsel] yer tutucu, tam-satır görsel silinir, ardışık tekrar tekilleştirme)
   chunk.py                  # Uzun metni deterministik paragraf parçalarına böler (taşan paragraf cümleye iner)
   progress.py               # Geçiş ilerleme olayları (CLI stderr / web SSE)
   prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı)
@@ -393,7 +394,16 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
   türü imla/dil bilgisi/ton geçişlerinden muaftır; tablodaki ondalık-nokta
   kullanımı tek TEK değil belge-geneli tek özet bulguyla raporlanır (N ≥ 3).
   Tablo hücresindeki bir yazım hatası bu yüzden raporlanmayabilir (bilinçli
-  takas — tablo verisi düzyazı değildir).
+  takas — tablo verisi düzyazı değildir). Gerçek belge ölçümü (60 sayfalık
+  kılavuz): sorun giderme tablolarında ~400 kelimelik gerçek düzyazı da bu
+  muafiyete girer — bilinçli olarak kabul edildi (2026-07-04); ileride
+  ölçümle (eval) yeniden değerlendirilebilir.
+- **İçindekiler (TOC) satırları dil denetimi dışıdır.** `icindekiler` türü
+  (blok deseni: `"Başlık<sekme><sayfa no>"`) tablo hücresiyle aynı muameleyi
+  görür: imla/dil bilgisi/ton geçişlerinden muaf, tutarlılık geçişinde dahil.
+  Gerekçe: TOC, Word'ün ürettiği metindir (başlığın kendisi gövdede zaten
+  denetlenir) ve uzun girdiler satır sonunda kopuk parçalara bölünerek sahte
+  "cümle eksik" bulgusu üretir.
 - **Bir parçanın LLM çağrısı kalıcı başarısız olursa TÜM analiz durur.**
   `LLM_TIMEOUT_SEC` + kütüphane retry'ı geçici hataları çözer ve hata mesajı
   artık anlaşılır (`LLMCallError`); ama paralel/sıralı hiçbir yol tek bir

@@ -106,10 +106,12 @@ class Analyzer:
 
         İsteğe bağlı `spans` (bkz. `extract.extract_docx_blocks`) blok türlerini
         taşır; verilirse yapısal gürültü deterministik olarak süzülür:
-        - tablo hücrelerine düşen imla/dil bilgisi/ton bulguları elenir (tablo
-          verisi düzyazı değildir); tutarlılık bulguları korunur,
-        - yalnız tablo verisi içeren parçalar yerel/ton geçişine hiç gönderilmez
-          (API tasarrufu),
+        - tablo hücrelerine ve İçindekiler (TOC) satırlarına düşen imla/dil
+          bilgisi/ton bulguları elenir (ikisi de düzyazı değildir; TOC üretilmiş
+          metindir, başlığın kendisi gövdede zaten denetlenir); tutarlılık
+          bulguları korunur,
+        - yalnız tablo/İçindekiler verisi içeren parçalar yerel/ton geçişine hiç
+          gönderilmez (API tasarrufu),
         - başlık bloklarındaki tekrar/noktalama bulguları elenir (başlıklar cümle
           noktalaması izlemez; tekrarları da çoğu kez dönüştürme artığıdır),
         - tablodaki ondalık-nokta kullanımı tek tek değil, belge-geneli TEK özet
@@ -124,6 +126,14 @@ class Analyzer:
         """
         table_ranges = [(s.start, s.end) for s in (spans or []) if s.kind == "tablo_hucresi"]
         heading_ranges = [(s.start, s.end) for s in (spans or []) if s.kind == "baslik"]
+        # Tablo + İçindekiler: ikisi de düzyazı denetimi dışı (tek listede, blok
+        # sırası korunur — `_covered_by_ranges` artan sıra bekler). Ondalık
+        # özeti (`_decimal_summary`) ise YALNIZ gerçek tablo aralıklarında
+        # çalışır; TOC sayfa numaraları ondalık veri değildir.
+        drop_ranges = [
+            (s.start, s.end) for s in (spans or [])
+            if s.kind in ("tablo_hucresi", "icindekiler")
+        ]
 
         chunks = chunk_text(text, max_chars=max_chars)
         total = len(chunks)
@@ -145,11 +155,13 @@ class Analyzer:
             # canlı izleyebilir.
             emit_safe(ProgressEvent(
                 "chunk_start", f"Parça {index}/{total} inceleniyor", index, total))
-            if _covered_by_ranges(text, chunk.start, chunk.end, table_ranges):
-                # Parça yalnız tablo verisi: düzyazı denetimi anlamsız, LLM'e
-                # gönderme (tablo değerlerini tutarlılık geçişi zaten görüyor).
+            if _covered_by_ranges(text, chunk.start, chunk.end, drop_ranges):
+                # Parça yalnız tablo/İçindekiler verisi: düzyazı denetimi
+                # anlamsız, LLM'e gönderme (tablo değerlerini tutarlılık geçişi
+                # zaten görüyor; TOC başlıkları gövdede zaten denetleniyor).
                 emit_safe(ProgressEvent(
-                    "chunk_done", f"Parça {index}/{total} tablo verisi — dil denetimi atlandı",
+                    "chunk_done",
+                    f"Parça {index}/{total} tablo/içindekiler verisi — dil denetimi atlandı",
                     index, total))
                 return []
             out = self._chunk_pass(chunk)
@@ -192,8 +204,8 @@ class Analyzer:
             "finalize", "Bulgular birleştiriliyor ve sıralanıyor", total, total))
         # Yapısal süzme + ondalık özeti DETERMİNİSTİK adımlardır ve sıralama/
         # tekilleştirmeden ÖNCE uygulanır → çıktı max_workers'tan bağımsız kalır.
-        if table_ranges or heading_ranges:
-            findings = _drop_structural_noise(findings, table_ranges, heading_ranges)
+        if drop_ranges or heading_ranges:
+            findings = _drop_structural_noise(findings, drop_ranges, heading_ranges)
             findings += _decimal_summary(text, table_ranges)
         result = self._finalize(findings, text)
         emit(progress, ProgressEvent("done", "Analiz tamamlandı", total, total))
@@ -418,20 +430,21 @@ def _overlaps_any(f: Finding, ranges: list[tuple[int, int]]) -> bool:
 
 def _drop_structural_noise(
     findings: list[Finding],
-    table_ranges: list[tuple[int, int]],
+    drop_ranges: list[tuple[int, int]],
     heading_ranges: list[tuple[int, int]],
 ) -> list[Finding]:
-    """Tablo/başlık bloklarına düşen yapay bulguları eler.
+    """Tablo/İçindekiler/başlık bloklarına düşen yapay bulguları eler.
 
-    - Tablo hücresi: imla/dil bilgisi/ton bulguları elenir (tablo verisi düzyazı
-      değildir; ondalıklar `_decimal_summary` ile toplu raporlanır). Tutarlılık
-      bulguları KORUNUR — birim yazımı çakışması (Khz↔kHz) tabloda da geçerli.
+    - Tablo hücresi + İçindekiler satırı (`drop_ranges`): imla/dil bilgisi/ton
+      bulguları elenir (ikisi de düzyazı değildir; ondalıklar `_decimal_summary`
+      ile toplu raporlanır). Tutarlılık bulguları KORUNUR — birim yazımı
+      çakışması (Khz↔kHz) tabloda da geçerli.
     - Başlık: yalnız `_HEADING_NOISE_RULES` bulguları elenir; başlıktaki gerçek
       yazım hatası (örn. "SINIRLIİ") yakalanmaya devam eder.
     """
     out: list[Finding] = []
     for f in findings:
-        if f.type != FindingType.TUTARLILIK and _overlaps_any(f, table_ranges):
+        if f.type != FindingType.TUTARLILIK and _overlaps_any(f, drop_ranges):
             continue
         if f.rule_id in _HEADING_NOISE_RULES and _overlaps_any(f, heading_ranges):
             continue

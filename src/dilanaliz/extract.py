@@ -67,7 +67,14 @@ _IMAGE_MARKER_INLINE = re.compile(r"(?:-{2,}media/[\w.]+(?:-[\w.]+)*)+-{2,}")
 IMAGE_PLACEHOLDER = "[görsel]"
 
 # Blok türü: analiz katmanının denetim kapsamını belirler.
-BlockKind = Literal["paragraf", "baslik", "tablo_hucresi"]
+BlockKind = Literal["paragraf", "baslik", "tablo_hucresi", "icindekiler"]
+
+# İçindekiler (TOC) satırı: "Başlık<sekme><sayfa no>" (örn. "Güvenlik\t5").
+# Word'ün ürettiği TOC girdileri düzyazı değildir; paragraf sanılırsa LLM'e
+# gider ve kopuk satırlar ("aksesuar)\t15" gibi) sahte bulgu üretir. Sekme
+# `_clean_paragraph`'ta korunur (yalnız 2+ boşluk/sekme teklenir), desen
+# sınıflandırmada güvenle kullanılabilir.
+_TOC_LINE = re.compile(r"\t\d{1,3}\s*$")
 
 
 @dataclass(frozen=True)
@@ -143,13 +150,17 @@ def _clean_paragraph(text: str) -> str:
 def _classify(text: str, par: object | None) -> BlockKind:
     """Bloğun türünü belirler.
 
-    Öncelik: (1) docx yapısı — paragraf gerçek bir tablo hücresinde mi
-    (`lineage` içinde 'tbl'); (2) sayı-ağırlıklı kısa blok (PDF'ten çevrilmiş
-    belgelerde tablolar çoğu kez gerçek tablo değil, hücre başına bir "paragraf"
-    olarak gelir — "446.00625", "67.0 Hz" gibi); (3) paragraf stili "Heading*";
+    Öncelik: (0) İçindekiler satırı — "Başlık<sekme><sayfa no>" deseni (TOC
+    girdisi düzyazı değildir, tabloda bile geçse önce bu tanınır); (1) docx
+    yapısı — paragraf gerçek bir tablo hücresinde mi (`lineage` içinde 'tbl');
+    (2) sayı-ağırlıklı kısa blok (PDF'ten çevrilmiş belgelerde tablolar çoğu
+    kez gerçek tablo değil, hücre başına bir "paragraf" olarak gelir —
+    "446.00625", "67.0 Hz" gibi); (3) paragraf stili "Heading*";
     (4) sezgisel yedek — kısa, tamamı büyük harf bloklar başlık sayılır
     (PDF'ten çevrilmiş belgelerde başlıklar çoğu kez stilsizdir).
     """
+    if _TOC_LINE.search(text):
+        return "icindekiler"
     lineage = getattr(par, "lineage", None)
     if lineage and "tbl" in lineage:
         return "tablo_hucresi"

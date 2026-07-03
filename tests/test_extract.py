@@ -226,6 +226,23 @@ def test_blocks_api_classifies_numeric_pseudo_table(tmp_path):
     assert kinds["5. adım burada anlatılır."] == "paragraf"
 
 
+def test_blocks_api_classifies_toc_lines(tmp_path):
+    # İçindekiler satırı ("Başlık<sekme><sayfa no>") düzyazı değildir;
+    # `icindekiler` etiketi alır. Sekmesiz sayılı gerçek cümle paragraf kalır.
+    from dilanaliz.extract import extract_docx_blocks
+
+    path = _make_docx(tmp_path, [
+        "Güvenlik Bilgileri\t6",
+        "aksesuar)\t15",                       # ikiye bölünmüş TOC kırpıntısı
+        "Toplantı saat 10 sularında başladı.",  # sekmesiz sayı → paragraf
+    ])
+    text, spans, _ = extract_docx_blocks(path)
+    kinds = {text[s.start:s.end]: s.kind for s in spans}
+    assert kinds["Güvenlik Bilgileri\t6"] == "icindekiler"
+    assert kinds["aksesuar)\t15"] == "icindekiler"
+    assert kinds["Toplantı saat 10 sularında başladı."] == "paragraf"
+
+
 # --- Dipnot/sonnot: gerçek .docx yerine docx2python'ın kendi iç veri şekliyle -
 # `python-docx` (fixture üreten kütüphane) dipnot/sonnot eklemek için hiçbir
 # genel API sunmuyor (sürüm 1.2.0) — ham OOXML (footnotes part + ilişki +
