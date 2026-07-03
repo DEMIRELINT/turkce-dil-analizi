@@ -221,6 +221,19 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 Bu bölüm bilinçli olarak ÇÖZÜLMEYEN, ölçülmüş boşlukları belgeler — kural
 genişletmesi burada YAPILMAZ (bkz. `eval/golden.jsonl`'deki ilgili FN örneği).
 
+- **Bitişik/ayrı/yabancı kelime kapsamı hâlâ kapalı bir liste** — Faz 1'de
+  (bkz. `eval/tdk_kelime_taslagi.md`) `IMLA-BITISIK`/`IMLA-AYRI`/`IMLA-YABANCI`
+  üç TDK grubuyla (ses düşmesi + etmek/olmak bileşikleri, yabancı kelime
+  çiftleri, sıfat-fiil kalıpları) genişletildi ve her grup `eval/run_eval.py`
+  ile ölçülüp kabul edildi. Ancak bu hâlâ TDK Yazım Kılavuzu'nun TAMAMI
+  değil — yalnız kurumsal metinde olası, ölçülmüş, güvenli bir alt küme.
+  Taslaktaki "ertelenen" gruplar (anlam kayması bitki/hayvan adları, renk
+  adları, yön/konum sözcükleri) yanlış-pozitif riski yüksek olduğu için
+  bilinçli olarak dışarıda bırakıldı. Listede olmayan bir bitişik/ayrı/
+  yabancı-kelime hatası için bulgu üretilmeyebilir — bu, rastgele bir eksik
+  değil, "açıkça tanımlı olmayana hata uydurma" tasarım kararının sonucu.
+  Genişletme yalnız ölçülerek (yeni grup + `golden.jsonl` örneği +
+  öncesi/sonrası precision/recall) yapılmalı.
 - **Sözlük-geçerli ama bağlamda yanlış teknik terim** — Hunspell'in ek-tabanlı
   morfolojik analizi, anlamca yanlış olsa da GEÇERLİ bir sözcük kuruluşuna
   sahip yazım hatalarını yakalayamaz (örn. "güncelleme" yerine yanlışlıkla
