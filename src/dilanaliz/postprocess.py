@@ -71,6 +71,32 @@ def validate_suggestions(result: AnalysisResult) -> AnalysisResult:
     return result
 
 
+def drop_context_satisfied_findings(findings: list[Finding], source: str) -> list[Finding]:
+    """Öneri, alıntının kaynaktaki HEMEN ARDINDAN gelen karakterleriyle zaten
+    karşılanıyorsa eler (bulgu offsetli olmalı — bu yüzden `enrich_with_offsets`
+    SONRASI çağrılmalıdır).
+
+    Örnek: cümle zaten "...sunuyoruz." diye bitmişken, model alıntı sınırını
+    noktadan ÖNCE keser ("sunuyoruz") ve "sunuyoruz." öneririr — nokta
+    kaynakta zaten alıntının hemen ardında duruyor, öneri hiçbir şeyi
+    değiştirmiyor. `is_noop_suggestion` bunu yakalayamaz çünkü yalnız
+    excerpt/suggestion metnini karşılaştırır, kaynak bağlamına bakmaz.
+    """
+    out: list[Finding] = []
+    for f in findings:
+        if (
+            f.start is not None
+            and f.end is not None
+            and f.suggestion.startswith(f.excerpt)
+            and len(f.suggestion) > len(f.excerpt)
+        ):
+            extra = f.suggestion[len(f.excerpt):]
+            if source[f.end : f.end + len(extra)] == extra:
+                continue  # öneri kaynakta zaten var — sahte düzeltme
+        out.append(f)
+    return out
+
+
 def drop_unlocated_findings(findings: list[Finding]) -> list[Finding]:
     """Kaynakta konumlanamayan (start/end=None) bulguları eler.
 

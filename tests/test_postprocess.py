@@ -1,4 +1,5 @@
 from dilanaliz.postprocess import (
+    drop_context_satisfied_findings,
     drop_noop_findings,
     drop_unlocated_findings,
     is_noop_suggestion,
@@ -107,6 +108,30 @@ def test_drop_unlocated_removes_none_offset_findings():
     floating = _f("olmayan alıntı", "düzeltme")  # start/end None
     result = drop_unlocated_findings([located, floating])
     assert result == [located]
+
+
+def test_drop_context_satisfied_removes_already_present_suffix():
+    # "sunuyoruz." zaten kaynakta — model alıntıyı noktadan önce kesip
+    # "eksik nokta" öneriyor; bu sahte bir düzeltme, elenmeli.
+    source = "ilgili belgeyi ekte bilginize sunuyoruz. Saygılarımızla."
+    start = source.index("sunuyoruz")
+    finding = Finding(
+        type=FindingType.IMLA, excerpt="sunuyoruz", explanation="x",
+        suggestion="sunuyoruz.", start=start, end=start + len("sunuyoruz"),
+    )
+    assert drop_context_satisfied_findings([finding], source) == []
+
+
+def test_drop_context_satisfied_keeps_real_correction():
+    # Öneri, alıntı + kaynakta HEMEN ARDINDAN gelenle aynı biçimde eşleşmiyorsa
+    # (gerçek bir eksiklikse) korunmalı — burada virgül kaynakta YOK.
+    source = "Merhaba dünya, hoş geldiniz."
+    start = source.index("Merhaba")
+    finding = Finding(
+        type=FindingType.IMLA, excerpt="Merhaba", explanation="x",
+        suggestion="Merhaba,", start=start, end=start + len("Merhaba"),
+    )
+    assert drop_context_satisfied_findings([finding], source) == [finding]
 
 
 def test_validate_drops_corrupt_suggestion():

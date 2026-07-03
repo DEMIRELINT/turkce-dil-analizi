@@ -186,6 +186,16 @@ koru:
   (halüsinasyon). `locate.py`'nin kendisi None bırakmaya devam eder (yalnız
   konumlama, politika değil); eleme kararı `_finalize`'dadır — yeni bir geçiş
   eklerken bu sözleşmeyi koru.
+- **Bağlamca zaten karşılanmış öneri elenir** — `postprocess.
+  drop_context_satisfied_findings` (`_finalize` içinde, `drop_unlocated_
+  findings`'in hemen ardından çağrılır) alıntının kaynaktaki HEMEN
+  ARDINDAN gelen karakterleriyle önerinin fazladan kısmı birebir aynıysa
+  bulguyu atar (örn. cümle zaten "...sunuyoruz." diye bitmişken, model
+  alıntıyı noktadan önce kesip "sunuyoruz." öneriyor — nokta zaten
+  alıntının hemen ardında var, öneri hiçbir şey değiştirmiyor).
+  `is_noop_suggestion` bunu YAKALAYAMAZ çünkü yalnız excerpt/suggestion
+  metnini karşılaştırır, kaynak bağlamına bakmaz — bu yüzden ayrı bir
+  fonksiyon ve offset (konumlama sonrası) gerektirir.
 - **Kademeli geçiş + parçalama** — orkestrasyon (`analyzer.py`) her kontrolü kendi
   bazında ayrı geçişte çalıştırır; parçalama (`chunk.py`) deterministik koddur.
   Parça-içi offsetler kaynağa geri taşınır (rebasing) — yeni geçiş/baz eklerken
