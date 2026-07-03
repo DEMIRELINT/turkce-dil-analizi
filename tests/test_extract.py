@@ -224,3 +224,43 @@ def test_blocks_api_classifies_numeric_pseudo_table(tmp_path):
     assert kinds["446.00625"] == "tablo_hucresi"
     assert kinds["67.0 Hz"] == "tablo_hucresi"
     assert kinds["5. adım burada anlatılır."] == "paragraf"
+
+
+# --- Dipnot/sonnot: gerçek .docx yerine docx2python'ın kendi iç veri şekliyle -
+# `python-docx` (fixture üreten kütüphane) dipnot/sonnot eklemek için hiçbir
+# genel API sunmuyor (sürüm 1.2.0) — ham OOXML (footnotes part + ilişki +
+# w:footnoteReference run) gerektirir, bu da kırılgan ve bu testin amacına
+# göre aşırı mühendislik olur. Bunun yerine `_blocks_from_section`'ı
+# docx2python'ın KENDİ iç veri şekliyle ([tablo][satır][hücre][paragraf])
+# doğrudan çağırıyoruz — `extract_docx_blocks` dipnot/sonnotu header/footer
+# ile BİREBİR aynı birleştirme yolundan (`extra_blocks`) geçirdiği için
+# (extract.py:262-267), bu + mevcut `test_extract_includes_header_and_footer`
+# birlikte dipnot/sonnot yolunu uçtan uca güvence altına alır.
+#
+# Not: Metin kutusu (textbox) için AYRI bir test YOK — araştırma sonucu:
+# docx2python kaynağında textbox'a özgü hiçbir işleme kodu yok; metin kutusu
+# içeriği docx2python tarafından genel gövde (body) tablo yapısına
+# katlanıyor. extract.py'de textbox'a özel bir kod yolu olmadığından, ayrı
+# bir test gerçek bir boşluğu kapatmaz — mevcut gövde paragrafı testleri
+# zaten bu genel yolu kapsıyor.
+
+def test_blocks_from_section_handles_footnote_shaped_input():
+    from dilanaliz.extract import _blocks_from_section
+
+    # docx2python şekli: [tablo][satır][hücre][paragraf]. Dipnot/sonnot da
+    # aynı iç içe yapıyla gelir (extract.py:257-258).
+    footnote_section = [[[["Dipnot metni burada."]]]]
+    blocks = _blocks_from_section(footnote_section)
+    assert blocks == [("Dipnot metni burada.", "paragraf")]
+
+
+def test_blocks_from_section_handles_multiple_footnote_paragraphs():
+    from dilanaliz.extract import _blocks_from_section
+
+    # İki ayrı dipnot (iki "hücre") + boş bir dipnot paragrafı (atılmalı).
+    footnote_section = [[
+        [["İlk dipnot."]],
+        [["İkinci dipnot.", ""]],
+    ]]
+    blocks = _blocks_from_section(footnote_section)
+    assert blocks == [("İlk dipnot.", "paragraf"), ("İkinci dipnot.", "paragraf")]
