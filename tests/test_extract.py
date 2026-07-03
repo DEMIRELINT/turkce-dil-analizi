@@ -1,6 +1,10 @@
 import pytest
 
-from dilanaliz.extract import extract_docx, extract_docx_with_report
+from dilanaliz.extract import (
+    IMAGE_PLACEHOLDER,
+    extract_docx,
+    extract_docx_with_report,
+)
 
 docx = pytest.importorskip("docx")
 
@@ -114,17 +118,42 @@ def test_report_counts_images_and_warns(tmp_path):
 
 # --- Satır-içi işaretçi temizliği + ardışık tekrar tekilleştirme -------------
 
-def test_inline_image_markers_are_stripped(tmp_path):
-    # PDF'ten çevrilmiş belgelerde işaretçi metne YAPIŞIK gelir; tam-satır
-    # eleme bunu kaçırır — satır-içi temizlik yakalamalı.
+def test_inline_image_markers_become_placeholder(tmp_path):
+    # Cümle İÇİNDE (satır-içi) geçen görsel işaretçisi boşlukla silinmez,
+    # `[görsel]` yer tutucusuna dönüşür — cümle bütünlüğü korunur, LLM görselin
+    # orada olduğunu görür (bkz. prompt.py). "media/" ham işaretçisi kalmamalı.
     path = _make_docx(tmp_path, [
-        "----media/image1.png--------media/image2.png----Alıcı/Verici Telsizler",
         "Metin ----media/image3.png---- ortasında işaretçi.",
     ])
     text = extract_docx(path)
     assert "media/" not in text
+    assert IMAGE_PLACEHOLDER in text
+    assert text == f"Metin {IMAGE_PLACEHOLDER} ortasında işaretçi."
+
+
+def test_leading_inline_image_marker_becomes_placeholder(tmp_path):
+    # İşaretçi metne YAPIŞIK ve zincirli gelebilir; yine `[görsel]` olur,
+    # ardındaki gerçek metin (bitişik olsa da) korunur.
+    path = _make_docx(tmp_path, [
+        "----media/image1.png--------media/image2.png----Alıcı/Verici Telsizler",
+    ])
+    text = extract_docx(path)
+    assert "media/" not in text
+    assert IMAGE_PLACEHOLDER in text
     assert "Alıcı/Verici Telsizler" in text
-    assert "Metin ortasında işaretçi." in text
+
+
+def test_standalone_image_marker_fully_removed_no_placeholder(tmp_path):
+    # TEK-BAŞINA (kendi satırında) bir görsel HÂLÂ tamamen silinir — yer
+    # tutucu BIRAKMADAN. Ayrım korunur: outline görsel LLM'e hiç gitmez.
+    path = _make_docx(tmp_path, [
+        "Gerçek paragraf.",
+        "----media/image9.png----",
+        "İkinci gerçek paragraf.",
+    ])
+    text = extract_docx(path)
+    assert IMAGE_PLACEHOLDER not in text
+    assert text == "Gerçek paragraf.\n\nİkinci gerçek paragraf."
 
 
 def test_consecutive_duplicate_blocks_are_deduped(tmp_path):

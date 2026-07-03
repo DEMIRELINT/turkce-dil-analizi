@@ -77,7 +77,7 @@ dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü (air-gap: repoda bul
 src/dilanaliz/
   analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, span-farkında süzme, build_default_analyzer)
   spell.py                  # Hunspell deterministik imla TESPİTİ (öneri üretmez; Türkçe İ/I-farkında lookup; 4 harf altı denetlenmez)
-  extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi; satır-içi marker temizliği, ardışık tekrar tekilleştirme)
+  extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi; satır-içi görsel → [görsel] yer tutucu, tam-satır görsel silinir, ardışık tekrar tekilleştirme)
   chunk.py                  # Uzun metni deterministik paragraf parçalarına böler (taşan paragraf cümleye iner)
   progress.py               # Geçiş ilerleme olayları (CLI stderr / web SSE)
   prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı)
@@ -371,9 +371,11 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
 - **OCR/çıkarma gürültüsü.** Girdi OCR ürünüyse İ/I karışması, kelime-içi
   boşluk/nokta gibi bozulmalar sahte bulgu üretir ("çöp girer, çöp çıkar").
   Temiz dijital `.docx` tercih edilir. PDF'ten çevrilmiş `.docx`'lerde çıkarma
-  katmanı satır-içi görsel işaretçilerini ve ardışık tekrar başlıkları süzer;
-  ama metin kutusu kırpıntıları (yarım cümleler) metinde kalabilir ve "cümle
-  eksik" bulguları üretebilir — bu belge kalitesinin ürünüdür.
+  katmanı görsel işaretçilerini (tam-satır görsel silinir; cümle içindeki
+  satır-içi görsel `[görsel]` yer tutucusuna dönüşür — LLM bunu yok sayar,
+  cümleyi görsel yerindeymiş gibi değerlendirir) ve ardışık tekrar başlıkları
+  süzer; ama metin kutusu kırpıntıları (yarım cümleler) metinde kalabilir ve
+  "cümle eksik" bulguları üretebilir — bu belge kalitesinin ürünüdür.
 - **4 harften kısa kelimeler imla denetimine girmez.** Kopuk ek parçaları
   ("nde", "nda") sahte bulgu üretmesin diye bilinçli eşik; 1-3 harfli gerçek
   kelime hatası bu katmanda yakalanmaz (bkz. `rules.md` → Bilinen Sınırlar).

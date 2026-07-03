@@ -17,6 +17,12 @@ atlar. 50+ sayfalık kurumsal belgelerde metnin çoğu bu öğelerde olduğundan
 atlanan içeriği minimuma indirmek için `docx2python` kullanılır. Tamamen
 yereldir (ağ erişimi yok → air-gap uyumlu).
 
+Görsel işaretçileri (docx2python'ın gövde akışına koyduğu "----media/...----"
+yer tutucuları) iki türlü işlenir: TEK-BAŞINA (kendi satırında) bir görsel
+tamamen silinir (LLM'e gitmez); cümle İÇİNDE geçen (satır-içi) bir görsel ise
+`[görsel]` yer tutucusuna dönüştürülür — böylece cümle bütünlüğü korunur ve
+görselin yerini tuttuğu belli olur (LLM bunu yok sayar; bkz. `prompt.py`).
+
 Çözülemeyen tek artık: **görsel içindeki yazı** (resim olarak gömülü metin). Bu
 yalnız OCR ile çıkarılır ve kapsam dışıdır; ancak `ExtractionReport` ile kaç
 görsel bulunduğu raporlanır, böylece bu atlama SESSİZ kalmaz, kullanıcıya
@@ -51,6 +57,14 @@ _IMAGE_MARKER = re.compile(r"^-{2,}media/\S+-{2,}$")
 # tirelerini yutar ve ikinci işaretçi sızar. Bu yüzden desen zinciri BÜTÜN
 # olarak yakalar: (tireler + media/dosyaadı) bir+ kez, sonda kapanış tireleri.
 _IMAGE_MARKER_INLINE = re.compile(r"(?:-{2,}media/[\w.]+(?:-[\w.]+)*)+-{2,}")
+
+# Cümle İÇİNDE (satır-içi) geçen görselin bırakacağı nötr yer tutucu. Boşlukla
+# silinseydi cümle anlamsız biçimde kısalır ("şu simge (X) görünürse basın" →
+# "şu simge görünürse basın") ve LLM bunu eksik öge sanabilirdi. Yer tutucu,
+# görselin ORADA olduğunu belli eder; prompt.py (bkz. _SHARED_RULES) LLM'e bunu
+# yok saymasını söyler. TEK-BAŞINA (tam-satır) görsel yer tutucu BIRAKMADAN
+# tamamen silinir — LLM'e hiç gitmez (bkz. _clean_paragraph).
+IMAGE_PLACEHOLDER = "[görsel]"
 
 # Blok türü: analiz katmanının denetim kapsamını belirler.
 BlockKind = Literal["paragraf", "baslik", "tablo_hucresi"]
@@ -107,13 +121,21 @@ class ExtractionReport:
 
 
 def _clean_paragraph(text: str) -> str:
-    """Tek paragraf metnini temizler: görsel işaretçileri (tam-satır VE satır-içi)
-    silinir, işaretçi silinince oluşan çift boşluklar daraltılır."""
+    """Tek paragraf metnini temizler.
+
+    - TEK-BAŞINA (tam-satır) görsel işaretçisi: paragrafın TAMAMI görselse
+      boş döndürülür (`""`) → blok elenir, LLM'e hiç gitmez. Kıracağı bir
+      cümle yoktur.
+    - SATIR-İÇİ görsel işaretçisi (cümlenin içinde geçen): `IMAGE_PLACEHOLDER`
+      (`[görsel]`) ile değiştirilir → cümle bütünlüğü korunur, görselin orada
+      olduğu belli olur (LLM prompt'ta bunu yok saymaya yönlendirilir).
+    - İşaretçi işlenince oluşan art arda boşluklar tekle indirilir.
+    """
     text = text.strip()
     if not text or _IMAGE_MARKER.match(text):
         return ""
-    text = _IMAGE_MARKER_INLINE.sub(" ", text)
-    # İşaretçi silinince kalan art arda boşlukları tekle (satır sonlarına dokunma).
+    text = _IMAGE_MARKER_INLINE.sub(f" {IMAGE_PLACEHOLDER} ", text)
+    # İşaretçi işlenince kalan art arda boşlukları tekle (satır sonlarına dokunma).
     text = re.sub(r"[ \t]{2,}", " ", text).strip()
     return text
 

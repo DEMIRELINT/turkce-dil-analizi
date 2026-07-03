@@ -76,7 +76,10 @@ geçişleri**dir. Uçtan uca boru hattı:
 
 **3.1 Girdi.** Düz metin veya `.docx`. `.docx`'te `extract.py` gövdenin
 yanında tablo, metin kutusu, üst/altbilgi ve dipnotları da çıkarır; okunan/
-okunamayan içeriği bir rapor (`ExtractionReport`) ile bildirir.
+okunamayan içeriği bir rapor (`ExtractionReport`) ile bildirir. Görseller:
+tek başına duran (kendi satırındaki) bir görsel tamamen atılır; cümle
+içinde geçen bir görsel `[görsel]` yer tutucusuna dönüşür (cümle bütünlüğü
+korunur, LLM bunu yok sayar).
 
 **3.2 Parçalama.** [chunk.py](src/dilanaliz/chunk.py) uzun metni **deterministik**
 (AI değil) böler. Birim paragraftır (boş satırla ayrılmış blok), böylece cümle
