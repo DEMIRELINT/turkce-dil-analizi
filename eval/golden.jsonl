@@ -55,3 +55,5 @@
 {"id": "imla-bitisik-6", "text": "Şehir merkezinde yeni bir gök delen inşa edildi.", "expected": [{"type": "imla", "excerpt": "gök delen"}]}
 {"id": "imla-ayri-1", "text": "Döner sermaye işletmesi yeni bir hesap açtı.", "expected": []}
 {"id": "imla-ayri-2", "text": "Dönersermaye işletmesi yeni bir hesap açtı.", "expected": [{"type": "imla", "excerpt": "Dönersermaye"}]}
+{"id": "gramer-tamlama-1", "text": "Belgeler için dosya adı formatını değiştirebilirsiniz.", "expected": []}
+{"id": "gramer-tamlama-2", "text": "Belgeler için dosya ad formatını değiştirebilirsiniz.", "expected": [{"type": "dil_bilgisi", "excerpt": "dosya ad"}]}
