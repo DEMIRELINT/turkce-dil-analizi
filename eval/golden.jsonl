@@ -34,3 +34,18 @@
 {"id": "yapisal-kopuk-parca-1", "text": "Ancak pil takımı saptanmamışsa, telsiz pil türü\n\niçin\n\ndüğmelerini kullanın.", "expected": []}
 {"id": "yapisal-tablo-sayi-1", "text": "Frekans çizelgesi aşağıda verilmiştir.\n\n446.00625\n\n67.0 Hz\n\n446.01875\n\n67.0 Hz", "expected": []}
 {"id": "gramer-bolunmus-uydurma-1", "text": "Ekranın sol üst köşesinde bulunan pil ölçer kalan gücü gösterir.", "expected": []}
+{"id": "imla-mi-1", "text": "Gelecek misin toplantıya?", "expected": []}
+{"id": "imla-mi-2", "text": "Gelecekmisin toplantıya?", "expected": [{"type": "imla", "excerpt": "Gelecekmisin"}]}
+{"id": "imla-bitisik-1", "text": "Teklifi reddettik ve yeni bir öneri sunduk.", "expected": []}
+{"id": "imla-bitisik-2", "text": "Teklifi red ettik ve yeni bir öneri sunduk.", "expected": [{"type": "imla", "excerpt": "red ettik"}]}
+{"id": "imla-yanlis-1", "text": "Verdiğiniz bilgi yanlış çıktı, tekrar kontrol edeceğiz.", "expected": []}
+{"id": "imla-yanlis-2", "text": "Verdiğiniz bilgi yannış çıktı, tekrar kontrol edeceğiz.", "expected": [{"type": "imla", "excerpt": "yannış"}]}
+{"id": "imla-yabanci-1", "text": "Ürünün orijinal kutusu ve faturası saklanmalıdır.", "expected": []}
+{"id": "imla-yabanci-2", "text": "Ürünün orjinal kutusu ve faturası saklanmalıdır.", "expected": [{"type": "imla", "excerpt": "orjinal"}]}
+{"id": "imla-saat-1", "text": "Toplantı saatler ilerledikçe daha da uzadı.", "expected": []}
+{"id": "imla-saat-2", "text": "Toplantı saatlar ilerledikçe daha da uzadı.", "expected": [{"type": "imla", "excerpt": "saatlar"}]}
+{"id": "imla-duzeltme-1", "text": "Telsiz hâlâ açıksa lütfen kapatın.", "expected": []}
+{"id": "imla-duzeltme-2", "text": "Telsiz hala açıksa lütfen kapatın.", "expected": [{"type": "imla", "excerpt": "hala"}]}
+{"id": "imla-duzeltme-3", "text": "Halam bize hafta sonu ziyarete geldi.", "expected": []}
+{"id": "imla-noktalama-1", "text": "Toplantıya elma, armut ve üzüm getirdik.", "expected": []}
+{"id": "imla-noktalama-2", "text": "Toplantıya elma, armut, ve üzüm getirdik.", "expected": [{"type": "imla", "excerpt": "armut, ve üzüm"}]}
