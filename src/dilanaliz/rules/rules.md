@@ -165,7 +165,16 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   durumları işaretle; açık öznesi olan meşru etken cümleleri ("Ekip
   hazırladı ve sundu") çatı hatası SAYMA.
 - **GRAMER-EK-FIIL** — Kip ve zaman tutarlılığı; ek-fiil ("idi/imiş/ise") doğru
-  kullanımı. Aynı cümlede gereksiz zaman kayması hatadır.
+  kullanımı. Aynı cümlede (özellikle bağlaçla bağlı iki eylemde) gereksiz
+  zaman kayması hatadır. Doğru (tutarlı geçmiş zaman): "Toplantı saat 10'da
+  başladı ve katılımcılar konuyu tartıştı." Yanlış (geçmişten şimdiki zamana
+  sebepsiz kayma): "Toplantı saat 10'da başladı ve katılımcılar konuyu
+  tartışıyor." (→ "...tartıştı.") NOT: Genel geçer/her zaman doğru olan bir
+  durumu belirtmek için ikinci eylemin geniş zaman/şimdiki zaman olması
+  MEŞRUDUR (örn. "Cihaz açıldı ve ekranda ana menü görünür." — burada
+  "görünür" davranışı her zaman geçerli bir kural bildirir, hata SAYMA);
+  yalnız TEK SEFERLİK, geçmişte yaşanmış bir olayı anlatan cümlede zaman
+  tutarsızlığı varsa işaretle.
 - **GRAMER-TEKRAR** — Ardışık, birebir aynı kelimenin tekrarı çoğunlukla belge
   çıkarma/kopyalama sırasında oluşan bir kusurdur (örn. "Rx Rx değerine göre",
   "işlem şekilde şekilde tamamlanır"); bu durumda tekrarı TEK kelimeye indiren

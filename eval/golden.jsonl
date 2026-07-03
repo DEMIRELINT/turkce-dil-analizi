@@ -59,3 +59,6 @@
 {"id": "gramer-tamlama-2", "text": "Belgeler için dosya ad formatını değiştirebilirsiniz.", "expected": [{"type": "dil_bilgisi", "excerpt": "dosya ad"}]}
 {"id": "gramer-cati-1", "text": "Rapor hazırlandı ve yönetime sunuldu.", "expected": []}
 {"id": "gramer-cati-2", "text": "Rapor hazırlandı ve yönetime sundular.", "expected": [{"type": "dil_bilgisi", "excerpt": "sundular"}]}
+{"id": "gramer-ekfiil-1", "text": "Toplantı saat 10'da başladı ve katılımcılar konuyu tartıştı.", "expected": []}
+{"id": "gramer-ekfiil-2", "text": "Toplantı saat 10'da başladı ve katılımcılar konuyu tartışıyor.", "expected": [{"type": "dil_bilgisi", "excerpt": "tartışıyor"}]}
+{"id": "gramer-ekfiil-3", "text": "Cihaz açıldı ve ekranda ana menü görünür.", "expected": []}
