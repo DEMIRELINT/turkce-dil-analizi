@@ -155,8 +155,15 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
     tam çelişir), "geri iade etmek", "en optimal".
   - Eksik öge (özne/nesne/tümleç eksikliği), yanlış bağlama.
   - Mantık hatası, sıralama bozukluğu.
-- **GRAMER-CATI** — Çatı (etken/edilgen) uyumsuzluğu. Doğru: "Sorun çözüldü" veya
-  "Sorunu çözdüler". Karışık edilgen kullanımı hatadır.
+- **GRAMER-CATI** — Çatı (etken/edilgen) uyumsuzluğu: bağlı cümlelerde çatı
+  TUTARLI olmalı, ortasında sebepsiz değişmemeli. Doğru (ikisi de edilgen):
+  "Rapor hazırlandı ve yönetime sunuldu." Doğru (ikisi de etken, özne belli):
+  "Ekip raporu hazırladı ve yönetime sundu." Yanlış (edilgenden etkene
+  sebepsiz geçiş — kimin sunduğu belirsizleşir): "Rapor hazırlandı ve
+  yönetime sundular." (→ "...yönetime sunuldu." ya da baştan "Ekip raporu
+  hazırladı ve sundu.") NOT: Yalnız gerçekten karışık/belirsiz özneli
+  durumları işaretle; açık öznesi olan meşru etken cümleleri ("Ekip
+  hazırladı ve sundu") çatı hatası SAYMA.
 - **GRAMER-EK-FIIL** — Kip ve zaman tutarlılığı; ek-fiil ("idi/imiş/ise") doğru
   kullanımı. Aynı cümlede gereksiz zaman kayması hatadır.
 - **GRAMER-TEKRAR** — Ardışık, birebir aynı kelimenin tekrarı çoğunlukla belge

@@ -57,3 +57,5 @@
 {"id": "imla-ayri-2", "text": "Dönersermaye işletmesi yeni bir hesap açtı.", "expected": [{"type": "imla", "excerpt": "Dönersermaye"}]}
 {"id": "gramer-tamlama-1", "text": "Belgeler için dosya adı formatını değiştirebilirsiniz.", "expected": []}
 {"id": "gramer-tamlama-2", "text": "Belgeler için dosya ad formatını değiştirebilirsiniz.", "expected": [{"type": "dil_bilgisi", "excerpt": "dosya ad"}]}
+{"id": "gramer-cati-1", "text": "Rapor hazırlandı ve yönetime sunuldu.", "expected": []}
+{"id": "gramer-cati-2", "text": "Rapor hazırlandı ve yönetime sundular.", "expected": [{"type": "dil_bilgisi", "excerpt": "sundular"}]}
