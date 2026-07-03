@@ -175,6 +175,13 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   "görünür" davranışı her zaman geçerli bir kural bildirir, hata SAYMA);
   yalnız TEK SEFERLİK, geçmişte yaşanmış bir olayı anlatan cümlede zaman
   tutarsızlığı varsa işaretle.
+- **GRAMER-SAYI-UYUM** — Sayı belirteciyle (üç, beş, birkaç, çeşitli, birçok
+  vb.) kullanılan isim ÇOĞUL eki ALMAZ; sayı zaten çokluğu belirtir. Doğru:
+  "üç kullanıcı", "beş çalışan", "birkaç belge". Yanlış: "üç kullanıcılar"
+  (→ "üç kullanıcı"), "beş çalışanlar" (→ "beş çalışan"). NOT: Sayı
+  belirteci OLMADAN kullanılan çoğul tamamen normaldir ("kullanıcılar
+  bilgilendirildi" doğrudur) — yalnız sayı/miktar belirteciyle YAN YANA
+  duran çoğul ekini işaretle.
 - **GRAMER-TEKRAR** — Ardışık, birebir aynı kelimenin tekrarı çoğunlukla belge
   çıkarma/kopyalama sırasında oluşan bir kusurdur (örn. "Rx Rx değerine göre",
   "işlem şekilde şekilde tamamlanır"); bu durumda tekrarı TEK kelimeye indiren

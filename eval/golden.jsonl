@@ -62,3 +62,6 @@
 {"id": "gramer-ekfiil-1", "text": "Toplantı saat 10'da başladı ve katılımcılar konuyu tartıştı.", "expected": []}
 {"id": "gramer-ekfiil-2", "text": "Toplantı saat 10'da başladı ve katılımcılar konuyu tartışıyor.", "expected": [{"type": "dil_bilgisi", "excerpt": "tartışıyor"}]}
 {"id": "gramer-ekfiil-3", "text": "Cihaz açıldı ve ekranda ana menü görünür.", "expected": []}
+{"id": "gramer-sayi-1", "text": "Sisteme üç kullanıcı tanımlandı.", "expected": []}
+{"id": "gramer-sayi-2", "text": "Sisteme üç kullanıcılar tanımlandı.", "expected": [{"type": "dil_bilgisi", "excerpt": "üç kullanıcılar"}]}
+{"id": "gramer-sayi-3", "text": "Kullanıcılar sisteme başarıyla tanımlandı.", "expected": []}
