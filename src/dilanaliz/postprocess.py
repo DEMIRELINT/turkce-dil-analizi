@@ -71,6 +71,18 @@ def validate_suggestions(result: AnalysisResult) -> AnalysisResult:
     return result
 
 
+def drop_unlocated_findings(findings: list[Finding]) -> list[Finding]:
+    """Kaynakta konumlanamayan (start/end=None) bulguları eler.
+
+    `locate.py` bir alıntıyı kaynakta (birebir veya boşluk/tırnak-normalize)
+    bulamazsa offseti None bırakır. Bu, LLM'in kaynakta OLMAYAN bir alıntı
+    ürettiği (genelde DİL KURALLARI'ndaki "Yanlış:" örneğini kaynaktaki DOĞRU
+    yazılmış hâliyle karıştırması) anlamına gelir — kullanıcıya belgede
+    hiç geçmeyen bir "hata"yı düzeltme olarak sunmamak için sessizce atılır.
+    """
+    return [f for f in findings if f.start is not None and f.end is not None]
+
+
 def _spans_overlap(a: Finding, b: Finding) -> bool:
     if None in (a.start, a.end, b.start, b.end):
         return False

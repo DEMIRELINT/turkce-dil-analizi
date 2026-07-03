@@ -29,7 +29,12 @@ from .chunk import DEFAULT_MAX_CHARS, chunk_text
 from .config import Settings
 from .extract import BlockSpan
 from .locate import enrich_with_offsets
-from .postprocess import drop_noop_findings, merge_findings, validate_suggestions
+from .postprocess import (
+    drop_noop_findings,
+    drop_unlocated_findings,
+    merge_findings,
+    validate_suggestions,
+)
 from .progress import ProgressCallback, ProgressEvent, emit
 from .prompt import (
     CONSISTENCY_SYSTEM_PROMPT,
@@ -244,12 +249,13 @@ class Analyzer:
     def _finalize(self, findings: list[Finding], text: str) -> AnalysisResult:
         """Tüm geçişlerin bulgularını sıralar, tekilleştirir ve doğrular.
 
-        ÖNCE deterministik (tam-sıra) sıralama, SONRA tekilleştirme yapılır:
-        böylece hem nihai sıra hem de tekilleştirmede "ilk korunan" kayıt,
-        parçaların paralel işlenme/toplanma sırasından BAĞIMSIZ olur — çıktı
-        `max_workers` değerinden etkilenmez (birebir aynı).
+        ÖNCE konumlanamayan (kaynakta bulunamayan, muhtemelen halüsinasyon)
+        bulgular elenir, SONRA deterministik (tam-sıra) sıralama, SONRA
+        tekilleştirme yapılır: böylece hem nihai sıra hem de tekilleştirmede
+        "ilk korunan" kayıt, parçaların paralel işlenme/toplanma sırasından
+        BAĞIMSIZ olur — çıktı `max_workers` değerinden etkilenmez (birebir aynı).
         """
-        ordered = sorted(findings, key=_sort_key)
+        ordered = sorted(drop_unlocated_findings(findings), key=_sort_key)
         result = AnalysisResult(findings=_dedup(ordered))
         result.model_id = self._model_id
         result.text_len = len(text)

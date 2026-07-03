@@ -60,6 +60,21 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 
 ### A3. Sık karışan / yanlış yazılan sözcükler
 
+- **IMLA-BAGLAMSAL-KARISTIRMA** — Bağlamsal karıştırılabilir kelime çifti
+  (SÖZLÜKTE HER İKİSİ DE geçerli, ama biri cümlede yanlış anlamda kullanılmış
+  olabilir — normal tek-kelime yazım taraması bunu YAKALAYAMAZ, bu yüzden
+  kapalı bir liste olarak burada AÇIKÇA tanımlanır):
+  - "güncelleme" (bir şeyi güncel hâle getirme) ≠ "günceleme" (günlük tutma
+    anlamında nadir/eskil bir kelime). Kurumsal/teknik metinde "günceleme
+    dosyası", "yazılımı günceleme" gibi bir kullanım GENELDE "güncelleme"
+    yanlış yazılmış hâlidir — bağlamdan (yazılım/teknik) NETSE düzelt.
+  - "yarin" (nadir, "yâr"in tamlanan hâli — şiirsel) ≠ "yarın" (ertesi gün).
+    Kurumsal/teknik metinde zaman belirten bir yerde "yarin" GENELDE "yarın"
+    yanlış yazılmış hâlidir (eksik Türkçe karakter: ı→ harfsiz). Bağlam
+    zaman belirtiyorsa düzelt.
+  NOT: Bu liste KAPALI ve kısadır — yalnız yukarıdaki iki çift için geçerlidir,
+  başka sözlük-geçerli kelimeleri bu gerekçeyle sorgulama (bkz. Bilinen
+  Sınırlar → "Sözlük-geçerli ama bağlamda yanlış teknik terim").
 - **IMLA-YALNIZ** — Doğrusu "yalnız"; "yanlız" yanlıştır.
 - **IMLA-YANLIS** — Doğrusu "yanlış"; "yannış", "yalnış" yanlıştır.
 - **IMLA-HERKES** — Doğrusu "herkes"; "herkez" yanlıştır.
@@ -236,12 +251,13 @@ genişletmesi burada YAPILMAZ (bkz. `eval/golden.jsonl`'deki ilgili FN örneği)
   öncesi/sonrası precision/recall) yapılmalı.
 - **Sözlük-geçerli ama bağlamda yanlış teknik terim** — Hunspell'in ek-tabanlı
   morfolojik analizi, anlamca yanlış olsa da GEÇERLİ bir sözcük kuruluşuna
-  sahip yazım hatalarını yakalayamaz (örn. "güncelleme" yerine yanlışlıkla
-  yazılan "günceleme" — "günce"+"-le"+"-me" olarak morfolojik açıdan geçerli
-  sayılır). Bunu yakalamak için prompt'u "sözlükte geçerli ama bağlamda şüpheli
-  kelimeleri de sorgula" yönünde genişletmek yanlış-pozitif riskini
-  (geçerli teknik terimleri gereksiz sorgulama) belirsiz biçimde artırabilir;
-  bu yüzden şimdilik genişletilmiyor.
+  sahip yazım hatalarını genel olarak yakalayamaz. Prompt'u "sözlükte geçerli
+  ama bağlamda şüpheli kelimeleri de sorgula" yönünde GENEL olarak genişletmek
+  yanlış-pozitif riskini (geçerli teknik terimleri gereksiz sorgulama)
+  belirsiz biçimde artırabilir; bu yüzden genel taramaya dokunulmuyor.
+  **Kısmi/dar istisna:** `IMLA-BAGLAMSAL-KARISTIRMA` (yukarıda A3) yalnız İKİ
+  ölçülmüş, yüksek-güven çift için (günceleme/güncelleme, yarin/yarın) bu
+  sınırı kapalı bir liste olarak deler — genel çözüm değil, nokta atışı.
 - **4 harften kısa kelimeler denetlenmez** — Hunspell katmanı 1-3 harflik
   "kelimeleri" atlar: bunlar pratikte hep belge dönüştürmesinden kopan ek
   parçalarıdır ("nde", "nda", "nın") ve sözlük denetimine sokulduklarında

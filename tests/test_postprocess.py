@@ -1,5 +1,6 @@
 from dilanaliz.postprocess import (
     drop_noop_findings,
+    drop_unlocated_findings,
     is_noop_suggestion,
     merge_findings,
     validate_suggestions,
@@ -96,6 +97,16 @@ def test_merge_keeps_unlocated_llm_findings():
     floating = _f("bir şey", "başka şey")  # offset yok
     merged = merge_findings(det, [floating])
     assert floating in merged
+
+
+def test_drop_unlocated_removes_none_offset_findings():
+    # Halüsinasyon savunması: kaynakta bulunamayan (start/end=None) bulgular
+    # _finalize öncesi burada elenir (bkz. merge_findings'in bilerek koruduğu
+    # "floating" bulgular — nihai raporda kalmamalı).
+    located = _span("yanlız", 0)
+    floating = _f("olmayan alıntı", "düzeltme")  # start/end None
+    result = drop_unlocated_findings([located, floating])
+    assert result == [located]
 
 
 def test_validate_drops_corrupt_suggestion():

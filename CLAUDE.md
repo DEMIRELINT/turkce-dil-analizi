@@ -178,6 +178,14 @@ koru:
   etkilememeli.
 - **Katı JSON çıktı** — `with_structured_output` parse hatasını engeller; çıktı
   şeması `schema.py`'dedir, gevşetme.
+- **Konumlanamayan bulgu sessizce elenir** — `postprocess.drop_unlocated_findings`
+  (`_finalize` içinde çağrılır) `locate.py`'nin offset veremediği (kaynakta
+  BİREBİR/normalize bulunamayan) bulguları atar. Bunlar çoğunlukla LLM'in
+  `rules.md`'deki bir "Yanlış:" örneğini analiz edilen metnin DOĞRU yazılmış
+  hâliyle karıştırıp var olmayan bir alıntı üretmesinden kaynaklanır
+  (halüsinasyon). `locate.py`'nin kendisi None bırakmaya devam eder (yalnız
+  konumlama, politika değil); eleme kararı `_finalize`'dadır — yeni bir geçiş
+  eklerken bu sözleşmeyi koru.
 - **Kademeli geçiş + parçalama** — orkestrasyon (`analyzer.py`) her kontrolü kendi
   bazında ayrı geçişte çalıştırır; parçalama (`chunk.py`) deterministik koddur.
   Parça-içi offsetler kaynağa geri taşınır (rebasing) — yeni geçiş/baz eklerken
@@ -373,9 +381,10 @@ Her bulgu mümkünse bir `rule_id` taşır; kuralların tam tanımı
 `src/dilanaliz/rules/rules.md`'dedir.
 
 - **İmla:** `IMLA-DE-DA`, `IMLA-KI`, `IMLA-MI`, `IMLA-BITISIK`, `IMLA-AYRI`,
-  `IMLA-YALNIZ`, `IMLA-YANLIS`, `IMLA-HERKES`, `IMLA-HERSEY`, `IMLA-YABANCI`,
-  `IMLA-SAAT`, `IMLA-KESME`, `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`,
-  `IMLA-NOKTALAMA`, `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
+  `IMLA-BAGLAMSAL-KARISTIRMA`, `IMLA-YALNIZ`, `IMLA-YANLIS`, `IMLA-HERKES`,
+  `IMLA-HERSEY`, `IMLA-YABANCI`, `IMLA-SAAT`, `IMLA-KESME`,
+  `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`, `IMLA-NOKTALAMA`,
+  `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
 - **Dil bilgisi:** `GRAMER-OZNE-YUKLEM`, `GRAMER-TAMLAMA`, `GRAMER-ANLATIM`,
   `GRAMER-CATI`, `GRAMER-EK-FIIL`, `GRAMER-TEKRAR`, `GRAMER-BOLUNMUS-KELIME`.
 - **Ton:** `TON-RESMI`, `TON-NEZAKET`, `TON-HITAP-TUTARLILIK`, `TON-ACIKLIK`,

@@ -30,6 +30,11 @@ _SHARED_RULES = f"""\
   Şüphede kalırsan bulgu ÜRETME.
 - Her bulguda `excerpt`, metinden BİREBİR (harfi harfine) alınmalıdır; metni
   yeniden yazma, kısaltma veya düzeltme. En kısa anlamlı parçayı seç.
+- `excerpt` YALNIZ {TEXT_OPEN}...{TEXT_CLOSE} arasındaki METİNDEN gelir. "DİL
+  KURALLARI" bölümündeki örnek cümlelerden (özellikle "Yanlış:" örnekleri)
+  ASLA alıntı yapma — bir kural örneği, analiz ettiğin metinde birebir
+  geçmiyorsa o örneği görmezden gel. Alıntının metinde GERÇEKTEN birebir
+  geçtiğinden emin olmadan bulgu üretme.
 - `suggestion` mutlaka `excerpt`'ten FARKLI ve geçerli, BİREBİR Türkçe olmalıdır
   (ASCII'leştirme yok: "ç,ş,ğ,ı,ö,ü" harflerini koru; q/w/x kullanma). Düzeltilecek
   bir şey yoksa o bulguyu HİÇ üretme.
@@ -57,6 +62,11 @@ metni CÜMLE CÜMLE değerlendirir ve YALNIZ şu eksenlerde bulgu üretirsin:
 3. bağlamsal imla — yalnız "de/da", "ki", "mi" ayrı/bitişik yazımı
 4. yapısal imla — yalnız "DİL KURALLARI"nda AÇIKÇA tanımlı, tek kelimeye sığmayan
    imla (ör. sayı/ölçü birimi biçimi, düzeltme/inceltme işareti). Kural yoksa arama.
+5. bağlamsal karıştırılabilir kelime çiftleri — YALNIZ "DİL KURALLARI"nda
+   AÇIKÇA bir çift olarak tanımlanmışsa (örn. "günceleme"/"güncelleme"),
+   metinde bu çiftin YANLIŞ biçimi geçip geçmediğini kontrol et; bu, tek
+   istisna dışında SÖZLÜKTE GEÇERLİ kelimelerin genel taramasını YAPMA
+   kuralını bozmaz — yalnız açıkça listelenen çiftler için geçerlidir.
 
 TON ve belge-geneli TUTARLILIK bu geçişin KONUSU DEĞİLDİR; onları başka geçişler
 yapar, sen değerlendirme.
@@ -70,6 +80,9 @@ B) `spelling` — sana "ŞÜPHELİ KELİMELER" listesi verilir (yazım denetçis
 KURALLAR (uyman zorunlu):
 - Genel tek-kelime yazımını ve eksik Türkçe karakteri SEN arama; o iş "ŞÜPHELİ
   KELİMELER" listesi üzerindendir. Kelimeyi büyük harfe çevirmeyi önerme.
+  İSTİSNA: DİL KURALLARI'nda açıkça "bağlamsal karıştırılabilir kelime çifti"
+  olarak tanımlanmış kelimeler bu kısıtlamanın DIŞINDADIR (bkz. madde 5) —
+  bunlar ŞÜPHELİ KELİMELER listesinde olmasa bile kontrol edilir.
 - ŞÜPHELİ KELİMELER için her aday `spelling` kararı: `word`, `is_error`,
   `correction` (hata ise cümleye uygun DOĞRU biçim; değilse boş). Düzeltmeyi
   CÜMLENİN AKIŞINA göre seç (örn. "dosyalari" → "dosyaları"). Geçerli adayda
