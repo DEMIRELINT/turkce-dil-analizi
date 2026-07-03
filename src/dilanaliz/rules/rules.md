@@ -95,6 +95,12 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   (Mhz/mhz değil), "GHz", "W", "kW", "kg", "mm". Sayı ile birim simgesi arasında
   bir boşluk bulunur ("5 W", "12,5 kHz"). Doğru: "12,5 kHz", "136-174 MHz",
   "5 W". Yanlış: "12.5 KHz", "136-174 Mhz", "5W".
+  **İSTİSNA (tablo/çizelge verisi):** Salt sayıdan (± kısa birim simgesi) oluşan
+  tablo/çizelge hücrelerindeki ondalık noktaları TEK TEK işaretleme — bir
+  frekans çizelgesindeki onlarca hücre için ayrı ayrı bulgu üretmek raporu
+  boğar. Bu durum sistem tarafından belge-geneli TEK özet bulgu olarak
+  deterministik raporlanır; senin işin yalnız DÜZYAZI içindeki ondalık/birim
+  hatalarıdır.
 
 ---
 
@@ -131,6 +137,10 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   anlamsızdır (doğrusu: "yanıp sönmeye"). Karar kriteri: tekrarlanan kelime
   BAĞIMSIZ bir zarf/sıfat mı (ikileme, meşru) yoksa sabit bir deyim/fiilin
   PARÇASI mı (tekrar hatalı)?
+  **İSTİSNA (yapısal artık):** BAŞLIK/bölüm adı niteliğindeki bir satırın alt
+  alta iki kez tekrarı ("BAŞLARKEN / BAŞLARKEN" gibi) yazarın hatası değil,
+  belge dönüştürmesinin (PDF→Word, sayfa başlığı) artığıdır — bulgu ÜRETME.
+  Bu kural yalnız CÜMLE İÇİNDEKİ kelime tekrarları içindir.
 - **GRAMER-BOLUNMUS-KELIME** — Yan yana duran iki kısa kelime, TEK BAŞLARINA
   geçerli olsalar bile, cümle bağlamında anlamsız durabilir ve birleştirilince
   anlamlı TEK bir kelime oluşturabilir (örn. "kapı dayım" → aslında
@@ -140,6 +150,11 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   bulgusu üret, `suggestion` alanına birleşik doğru biçimi yaz. Yan yana duran
   iki kelime cümlede GERÇEKTEN ayrı ayrı anlamlıysa (örn. "Ali kapıda
   bekliyordu") bulgu ÜRETME.
+  **SINIR (uydurma birleştirme yasak):** Önerdiğin birleşik biçim, TDK
+  sözlüğünde GERÇEKTEN VAR OLAN tek bir kelime olmalıdır ("kapıdayım" =
+  kapı+da+yım çekimi; "başvuru" sözlükte var). İki kelimenin ayrı yazımı
+  Türkçede ZATEN DOĞRUYSA ("pil ölçer", "veri tabanı" gibi) sözlükte
+  bulunmayan bitişik biçimler ("pilölçer") UYDURMA — böyle öneri ASLA üretme.
 
 ---
 
@@ -194,3 +209,19 @@ genişletmesi burada YAPILMAZ (bkz. `eval/golden.jsonl`'deki ilgili FN örneği)
   kelimeleri de sorgula" yönünde genişletmek yanlış-pozitif riskini
   (geçerli teknik terimleri gereksiz sorgulama) belirsiz biçimde artırabilir;
   bu yüzden şimdilik genişletilmiyor.
+- **4 harften kısa kelimeler denetlenmez** — Hunspell katmanı 1-3 harflik
+  "kelimeleri" atlar: bunlar pratikte hep belge dönüştürmesinden kopan ek
+  parçalarıdır ("nde", "nda", "nın") ve sözlük denetimine sokulduklarında
+  anlamsız bulgular üretirler. Gerçek 1-3 harfli Türkçe kelimelerde yazım
+  hatası kayda değer değildir (bilinçli takas).
+- **Hunspell öneri üretmez (yalnız tespit)** — Sözlük katmanı "sözlükte yok"
+  demekle yetinir; düzeltme önerisi bağlamı gören LLM'den gelir. LLM karar
+  vermezse bulgu "(öneri yok ...)" yer tutucusuyla kalır — bu, bağlamdan
+  habersiz sözlük önerisinin ("nde"→"ned" gibi) uydurmasından iyidir.
+- **PDF-kökenli .docx gürültüsü** — PDF'ten Word'e çevrilmiş belgelerde metin
+  kutusu kırpıntıları (yarım cümleler), satır-içi görsel işaretçileri ve
+  tekrar eden sayfa başlıkları kalır. Çıkarma katmanı bunların çoğunu süzer
+  (satır-içi işaretçi temizliği, ardışık tekrar tekilleştirme, blok türü
+  etiketleme) ama kopuk cümle parçaları metinde kalabilir; bunlara üretilen
+  "cümle eksik" bulguları belge kalitesinin, sistemin değil, ürünüdür.
+  Temiz dijital .docx tercih edilir.

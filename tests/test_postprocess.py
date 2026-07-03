@@ -37,6 +37,18 @@ def test_real_correction_kept():
     assert is_noop_suggestion("yanlız", "yalnız") is False
 
 
+def test_curly_vs_straight_quote_is_noop():
+    # Word "akıllı kesme" (’) üretir, LLM düz kesme (') döndürür; ikisi aynı
+    # işlevi görür — hiçbir şey değiştirmeyen öneri noop sayılıp elenmelidir.
+    assert is_noop_suggestion("ALKALINE’den", "ALKALINE'den") is True
+    assert is_noop_suggestion("“Kanal” ayarı", '"Kanal" ayarı') is True
+
+
+def test_quote_normalization_keeps_real_corrections():
+    # Tırnak normalize edilse de gerçek fark (kesmenin KALDIRILMASI) korunmalı.
+    assert is_noop_suggestion("Pil’i", "Pili") is False
+
+
 def test_nfc_nfd_diff_is_noop():
     # "resmî" iki farklı Unicode biçiminde gelebilir: NFC (tek kod noktası "î")
     # ve NFD ("i" + bileşik inceltme işareti). Görsel olarak aynıdır ama

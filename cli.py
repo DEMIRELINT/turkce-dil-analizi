@@ -14,24 +14,25 @@ import sys
 from dilanaliz.analyzer import build_default_analyzer
 
 
-def _read_input(argv: list[str]) -> str:
+def _read_input(argv: list[str]) -> tuple[str, list | None]:
+    """(metin, blok-span'leri) döner; span'ler yalnız .docx girdisinde vardır."""
     if len(argv) > 1:
         arg = argv[1]
         if arg.lower().endswith(".docx"):
-            from dilanaliz.extract import extract_docx_with_report
+            from dilanaliz.extract import extract_docx_blocks
 
-            text, report = extract_docx_with_report(arg)
+            text, spans, report = extract_docx_blocks(arg)
             # Kapsam özeti + okunamayan içerik uyarıları stderr'e (stdout JSON saf kalsın).
             print(f"  … {report.describe()}", file=sys.stderr)
             for warning in report.warnings:
                 print(f"  ⚠ {warning}", file=sys.stderr)
-            return text
-        return " ".join(argv[1:])
+            return text, spans
+        return " ".join(argv[1:]), None
     data = sys.stdin.read()
     if not data.strip():
         print("Hata: analiz edilecek metin verilmedi.", file=sys.stderr)
         raise SystemExit(2)
-    return data
+    return data, None
 
 
 def _stderr_progress(event) -> None:
@@ -47,12 +48,13 @@ def _stderr_progress(event) -> None:
 
 
 def main() -> None:
-    text = _read_input(sys.argv)
+    text, spans = _read_input(sys.argv)
     analyzer = build_default_analyzer()
     # Uzun belgeleri parçalayarak analiz eder; kısa metinde tek parça olur,
     # davranış `analyze` ile aynıdır. İlerleme stderr'e akar (terminalde görünür),
-    # JSON sonucu stdout'a yazılır.
-    result = analyzer.analyze_document(text, progress=_stderr_progress)
+    # JSON sonucu stdout'a yazılır. .docx girdisinde blok türü haritası (spans)
+    # tablo/başlık kaynaklı yapay bulguları süzer.
+    result = analyzer.analyze_document(text, progress=_stderr_progress, spans=spans)
     print(json.dumps(result.model_dump(mode="json"), ensure_ascii=False, indent=2))
 
 

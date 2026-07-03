@@ -28,3 +28,9 @@
 {"id": "tutarlilik-cakisma-1", "text": "RX (Alım) düğmesine basıldığında cihaz sinyal almaya başlar. Sinyal alımı RX (Alım) göstergesinde yeşil ışıkla belirtilir. İşlem bittiğinde RX (Alıcı) düğmesine tekrar basılması gerekir.", "expected": [{"type": "tutarlilik", "excerpt": "RX (Alıcı)"}]}
 {"id": "gramer-tekrar-3", "text": "Cihazın ekranı yanıp yanıp sönmeye devam ediyorsa güç kaynağı kontrol edilmelidir.", "expected": [{"type": "dil_bilgisi", "excerpt": "yanıp yanıp"}]}
 {"id": "imla-baglamsal-gunceleme-1", "text": "Yazılımın günceleme dosyası üreticinin web sitesinden indirilebilir.", "expected": [{"type": "imla", "excerpt": "günceleme"}]}
+{"id": "imla-buyuk-harf-temiz-1", "text": "TOPLANTI NOTLARI ONAYINIZA SUNULMUŞTUR.", "expected": []}
+{"id": "imla-buyuk-harf-hatali-1", "text": "MENÜ SEÇENEKLERI EKRANDA GÖSTERİLİR.", "expected": [{"type": "imla", "excerpt": "SEÇENEKLERI"}]}
+{"id": "yapisal-tekrar-baslik-1", "text": "PİLLER VE ŞARJ CİHAZLARI\n\nPİLLER VE ŞARJ CİHAZLARI\n\nPil şarj cihazını kullanmadan önce tüm talimatları dikkatlice okuyun.", "expected": []}
+{"id": "yapisal-kopuk-parca-1", "text": "Ancak pil takımı saptanmamışsa, telsiz pil türü\n\niçin\n\ndüğmelerini kullanın.", "expected": []}
+{"id": "yapisal-tablo-sayi-1", "text": "Frekans çizelgesi aşağıda verilmiştir.\n\n446.00625\n\n67.0 Hz\n\n446.01875\n\n67.0 Hz", "expected": []}
+{"id": "gramer-bolunmus-uydurma-1", "text": "Ekranın sol üst köşesinde bulunan pil ölçer kalan gücü gösterir.", "expected": []}

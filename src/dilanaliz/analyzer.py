@@ -16,6 +16,7 @@ ileride (RAG / self-host) bu parçalar değişse de orkestrasyon değişmez.
 
 from __future__ import annotations
 
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -26,6 +27,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from .cache import DiskCache, make_key
 from .chunk import DEFAULT_MAX_CHARS, chunk_text
 from .config import Settings
+from .extract import BlockSpan
 from .locate import enrich_with_offsets
 from .postprocess import drop_noop_findings, merge_findings, validate_suggestions
 from .progress import ProgressCallback, ProgressEvent, emit
@@ -39,8 +41,8 @@ from .prompt import (
 )
 from .providers import build_chat_model
 from .rules import RulesProvider, StaticRulesProvider
-from .schema import AnalysisResult, Finding, LLMAnalysis, LLMSpellingDecision
-from .spell import HunspellChecker
+from .schema import AnalysisResult, Finding, FindingType, LLMAnalysis, LLMSpellingDecision
+from .spell import HunspellChecker, match_case
 
 
 class Analyzer:
@@ -78,6 +80,7 @@ class Analyzer:
         text: str,
         max_chars: int = DEFAULT_MAX_CHARS,
         progress: ProgressCallback | None = None,
+        spans: list[BlockSpan] | None = None,
     ) -> AnalysisResult:
         """Uzun belgeyi kademeli geçişlerle inceler.
 
@@ -87,12 +90,27 @@ class Analyzer:
         İsteğe bağlı `progress` callback'i her adımda bir `ProgressEvent` alır
         (web paneli/CLI canlı geri bildirim için); `None` ise davranış değişmez.
 
+        İsteğe bağlı `spans` (bkz. `extract.extract_docx_blocks`) blok türlerini
+        taşır; verilirse yapısal gürültü deterministik olarak süzülür:
+        - tablo hücrelerine düşen imla/dil bilgisi/ton bulguları elenir (tablo
+          verisi düzyazı değildir); tutarlılık bulguları korunur,
+        - yalnız tablo verisi içeren parçalar yerel/ton geçişine hiç gönderilmez
+          (API tasarrufu),
+        - başlık bloklarındaki tekrar/noktalama bulguları elenir (başlıklar cümle
+          noktalaması izlemez; tekrarları da çoğu kez dönüştürme artığıdır),
+        - tablodaki ondalık-nokta kullanımı tek tek değil, belge-geneli TEK özet
+          bulguyla raporlanır (bkz. `_decimal_summary`).
+        `spans=None` → süzme yok (düz metin girdisi, eski davranış).
+
         Parçalar `max_workers` kadar EŞZAMANLI işlenir (LLM çağrıları ağ-bağımlı;
         paralellik toplam süreyi kısaltır). Çıktı parçaların işlenme sırasından
         BAĞIMSIZ: `_finalize` deterministik sıralayıp tekilleştirir, böylece
         `max_workers` ne olursa olsun sonuç birebir aynıdır. `max_workers == 1`
         tamamen sıralı (eski) davranıştır.
         """
+        table_ranges = [(s.start, s.end) for s in (spans or []) if s.kind == "tablo_hucresi"]
+        heading_ranges = [(s.start, s.end) for s in (spans or []) if s.kind == "baslik"]
+
         chunks = chunk_text(text, max_chars=max_chars)
         total = len(chunks)
         emit(progress, ProgressEvent("chunk", f"Belge {total} parçaya bölündü", 0, total))
@@ -113,6 +131,13 @@ class Analyzer:
             # canlı izleyebilir.
             emit_safe(ProgressEvent(
                 "chunk_start", f"Parça {index}/{total} inceleniyor", index, total))
+            if _covered_by_ranges(text, chunk.start, chunk.end, table_ranges):
+                # Parça yalnız tablo verisi: düzyazı denetimi anlamsız, LLM'e
+                # gönderme (tablo değerlerini tutarlılık geçişi zaten görüyor).
+                emit_safe(ProgressEvent(
+                    "chunk_done", f"Parça {index}/{total} tablo verisi — dil denetimi atlandı",
+                    index, total))
+                return []
             out = self._chunk_pass(chunk)
             emit_safe(ProgressEvent(
                 "chunk_done", f"Parça {index}/{total} tamamlandı", index, total))
@@ -151,6 +176,11 @@ class Analyzer:
 
         emit(progress, ProgressEvent(
             "finalize", "Bulgular birleştiriliyor ve sıralanıyor", total, total))
+        # Yapısal süzme + ondalık özeti DETERMİNİSTİK adımlardır ve sıralama/
+        # tekilleştirmeden ÖNCE uygulanır → çıktı max_workers'tan bağımsız kalır.
+        if table_ranges or heading_ranges:
+            findings = _drop_structural_noise(findings, table_ranges, heading_ranges)
+            findings += _decimal_summary(text, table_ranges)
         result = self._finalize(findings, text)
         emit(progress, ProgressEvent("done", "Analiz tamamlandı", total, total))
         return result
@@ -235,9 +265,12 @@ class Analyzer:
         """Hunspell adaylarını Gemini kararlarıyla birleştirir.
 
         - Gemini "hata değil" dediyse (özel ad/terim) aday elenir.
-        - "hata" + düzeltme verdiyse öneri bağlama uygun olanla güncellenir.
-        - Gemini bu adaya dair karar vermediyse: tespit kaybolmasın diye Hunspell
-          bulgusu kendi (zayıf) önerisiyle korunur (fallback).
+        - "hata" + düzeltme verdiyse öneri, alıntının harf düzenine (case)
+          giydirilerek uygulanır ("SEÇENEKLERI" → "SEÇENEKLERİ", "seçenekleri"
+          değil).
+        - Gemini bu adaya dair karar vermediyse: tespit kaybolmasın diye bulgu
+          "öneri yok" yer tutucusuyla korunur (Hunspell artık kendi önerisini
+          ÜRETMEZ — bkz. spell.py görev ayrımı).
         """
         # İKİ ayrı geçiş: önce TÜM tam eşleşmeler kaydedilir, SONRA casefold
         # fallback'i yalnız boş kalan anahtarlar için eklenir. Tek geçişte
@@ -255,12 +288,13 @@ class Analyzer:
         for c in candidates:
             d = by_word.get(c.excerpt) or by_word.get(c.excerpt.casefold())
             if d is None:
-                resolved.append(c)  # fallback: tespiti koru
+                resolved.append(c)  # fallback: tespiti koru (öneri yer tutucu kalır)
                 continue
             if not d.is_error:
                 continue  # Gemini: geçerli kullanım, ele
-            if d.correction.strip():
-                c.suggestion = d.correction.strip()
+            correction = d.correction.strip()
+            if correction:
+                c.suggestion = match_case(c.excerpt, correction)
             resolved.append(c)
         return resolved
 
@@ -310,6 +344,105 @@ def _dedup(findings: list[Finding]) -> list[Finding]:
         seen.add(key)
         out.append(f)
     return out
+
+
+# --- Yapısal süzme (etiketli bloklar) ----------------------------------------
+# Bu adımlar tamamen deterministiktir (LLM yok): extract'ın blok türü haritasına
+# dayanarak tablo/başlık kaynaklı yapay bulguları eler ve tablo ondalıklarını
+# tek özet bulguya indirir. Hepsi _finalize'ın sıralama/tekilleştirmesinden ÖNCE
+# çalışır; determinizm sözleşmesi korunur.
+
+# Tablo hücresinde ondalık NOKTA kullanımı (örn. "446.00625").
+_DECIMAL_DOT = re.compile(r"\d+\.\d+")
+
+# Başlıklarda elenecek yapısal kural kimlikleri: başlık cümle noktalaması
+# izlemez; ardışık başlık tekrarı da yazarın değil dönüştürmenin ürünüdür.
+_HEADING_NOISE_RULES = frozenset({"GRAMER-TEKRAR", "IMLA-NOKTALAMA"})
+
+
+def _covered_by_ranges(
+    text: str, start: int, end: int, ranges: list[tuple[int, int]]
+) -> bool:
+    """`text[start:end]`'in boşluk-dışı TAMAMI verilen aralıklar içinde mi?
+
+    Parçalar blokları "\\n\\n" ayıraçlarıyla birlikte kapsar; ayıraçlar boşluk
+    olduğundan yalnız tablo bloklarından oluşan bir parça True döner.
+    """
+    if not ranges:
+        return False
+    pos = start
+    for r_start, r_end in ranges:  # aralıklar blok sırasında (artan) gelir
+        if r_end <= pos:
+            continue
+        if r_start >= end:
+            break
+        if text[pos:min(r_start, end)].strip():
+            return False  # aralık öncesinde tablo-dışı içerik var
+        pos = max(pos, r_end)
+        if pos >= end:
+            return True
+    return not text[pos:end].strip()
+
+
+def _overlaps_any(f: Finding, ranges: list[tuple[int, int]]) -> bool:
+    if f.start is None or f.end is None:
+        return False
+    return any(f.start < r_end and r_start < f.end for r_start, r_end in ranges)
+
+
+def _drop_structural_noise(
+    findings: list[Finding],
+    table_ranges: list[tuple[int, int]],
+    heading_ranges: list[tuple[int, int]],
+) -> list[Finding]:
+    """Tablo/başlık bloklarına düşen yapay bulguları eler.
+
+    - Tablo hücresi: imla/dil bilgisi/ton bulguları elenir (tablo verisi düzyazı
+      değildir; ondalıklar `_decimal_summary` ile toplu raporlanır). Tutarlılık
+      bulguları KORUNUR — birim yazımı çakışması (Khz↔kHz) tabloda da geçerli.
+    - Başlık: yalnız `_HEADING_NOISE_RULES` bulguları elenir; başlıktaki gerçek
+      yazım hatası (örn. "SINIRLIİ") yakalanmaya devam eder.
+    """
+    out: list[Finding] = []
+    for f in findings:
+        if f.type != FindingType.TUTARLILIK and _overlaps_any(f, table_ranges):
+            continue
+        if f.rule_id in _HEADING_NOISE_RULES and _overlaps_any(f, heading_ranges):
+            continue
+        out.append(f)
+    return out
+
+
+def _decimal_summary(text: str, table_ranges: list[tuple[int, int]]) -> list[Finding]:
+    """Tablo bloklarındaki ondalık-nokta kullanımını TEK özet bulguya indirir.
+
+    Kural (IMLA-BIRIM) ondalık ayracın virgül olmasını ister; ama bir frekans
+    çizelgesindeki her hücre için ayrı bulgu üretmek raporu boğar (60 sayfalık
+    denemede 40 bulgu). N ≥ 3 ise tek `tutarlilik` bulgusu üretilir; N < 3 ise
+    hiç üretilmez (tek tük değer düzyazı geçişinin işi).
+    """
+    hits: list[tuple[int, int, str]] = []
+    for r_start, r_end in table_ranges:
+        for m in _DECIMAL_DOT.finditer(text, r_start, r_end):
+            hits.append((m.start(), m.end(), m.group(0)))
+    if len(hits) < 3:
+        return []
+    first_start, first_end, first_text = hits[0]
+    return [
+        Finding(
+            type=FindingType.TUTARLILIK,
+            excerpt=first_text,
+            explanation=(
+                f"Belge genelinde tablo değerlerinde ondalık ayraç olarak nokta "
+                f"kullanılmış ({len(hits)} yerde); TDK'ya göre ondalık ayraç "
+                f"virgüldür. Tek tek işaretlemek yerine toplu bildirilmiştir."
+            ),
+            suggestion=first_text.replace(".", ","),
+            rule_id="IMLA-BIRIM",
+            start=first_start,
+            end=first_end,
+        )
+    ]
 
 
 def build_default_analyzer(

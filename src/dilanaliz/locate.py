@@ -24,17 +24,40 @@ def _exact_matches(source: str, excerpt: str) -> list[tuple[int, int]]:
     return spans
 
 
+# Tırnak/kesme eşdeğer sınıfları: kaynak Word "akıllı tırnak" (’ “ ”) taşır,
+# LLM excerpt'i çoğu kez düz ASCII (' ") döndürür. Eşleştirmede iki biçim de
+# aynı sayılmalı; yoksa bulgu haksız yere "konumsuz" kalır.
+_QUOTE_CLASSES = {
+    "'": "['’‘‚ʼ]", "’": "['’‘‚ʼ]", "‘": "['’‘‚ʼ]", "‚": "['’‘‚ʼ]", "ʼ": "['’‘‚ʼ]",
+    '"': '["“”„]', "“": '["“”„]', "”": '["“”„]', "„": '["“”„]',
+}
+
+
 def _normalized_matches(source: str, excerpt: str) -> list[tuple[int, int]]:
-    """Boşluk farklarını tolere ederek eşleştirir (\\s+ esnek)."""
-    tokens = excerpt.split()
-    if not tokens:
+    """Boşluk VE tırnak-biçimi farklarını tolere ederek eşleştirir.
+
+    Boşluk dizileri `\\s+` ile esnek; tırnak/kesme karakterleri eşdeğer
+    sınıfıyla ([’'] gibi) aranır. Kalan karakterler birebirdir.
+    """
+    excerpt = excerpt.strip()
+    if not excerpt:
         return []
-    pattern = r"\s+".join(re.escape(tok) for tok in tokens)
+    parts: list[str] = []
+    in_space = False
+    for ch in excerpt:
+        if ch.isspace():
+            if not in_space:
+                parts.append(r"\s+")
+                in_space = True
+            continue
+        in_space = False
+        parts.append(_QUOTE_CLASSES.get(ch) or re.escape(ch))
+    pattern = "".join(parts)
     return [(m.start(), m.end()) for m in re.finditer(pattern, source)]
 
 
 def find_spans(source: str, excerpt: str) -> list[tuple[int, int]]:
-    """Önce birebir, yoksa boşluk-normalize eşleşmeleri döndürür."""
+    """Önce birebir, yoksa boşluk/tırnak-normalize eşleşmeleri döndürür."""
     spans = _exact_matches(source, excerpt)
     if spans:
         return spans

@@ -42,7 +42,9 @@ sorun için *gerekçe + düzeltme önerisi* üreten hibrit bir sistem. Sistem
 gerektiren işi yapay zekâya** bırakmak.
 
 - **Tespit (deterministik):** Hunspell (`spylls`, saf-Python) + tr_TR sözlük —
-  yazım hatalarını sıfır halüsinasyonla, kesin offset ile bulur.
+  yazım hatalarını sıfır halüsinasyonla, kesin offset ile bulur. **Yalnız
+  tespit eder, öneri ÜRETMEZ** — öneri her zaman bağlamı gören LLM'den gelir;
+  LLM karar vermezse bulgu "(öneri yok ...)" yer tutucusuyla kalır.
 - **Düzeltme + yargı (LLM):** Gemini — bağlama göre düzeltme önerir, dil bilgisi
   ve tonu analiz eder, özel adları eler.
 
@@ -52,6 +54,14 @@ belgede tutarlılık** geçişi. Uzun belge önce deterministik olarak parçalan
 (`chunk.py`); parça-içi offsetler kaynağa geri taşınır (rebasing). Girdi düz
 metin **veya** `.docx` olabilir (`extract.py`); bir **web paneli** (`web/`)
 docx yükleme + canlı ilerleme sunar.
+
+`.docx` çıkarımı **etiketli bloklar** üretir: her blok türüyle işaretlenir
+(`paragraf` / `baslik` / `tablo_hucresi`; `extract_docx_blocks` →
+`BlockSpan`). Analiz bu haritayla yapısal gürültüyü deterministik süzer:
+tablo hücrelerine imla/dil bilgisi/ton bulgusu üretilmez (yalnız tablodan
+oluşan parçalar LLM'e hiç gönderilmez), başlıklarda tekrar/noktalama bulgusu
+elenir, tablodaki ondalık-nokta kullanımı tek tek değil **belge-geneli TEK
+özet bulguyla** raporlanır. Düz metin girdisinde (spans yok) süzme yoktur.
 
 Detaylı anlatım için [README.md](README.md) dosyasına bakın.
 
@@ -65,9 +75,9 @@ pyproject.toml              # Bağımlılıklar (pinli, air-gap uyumlu)
 .env.example                # Örnek ortam değişkenleri (kopyala → .env)
 dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü (air-gap: repoda bulundurulur)
 src/dilanaliz/
-  analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, build_default_analyzer)
-  spell.py                  # Hunspell tabanlı deterministik imla tespiti
-  extract.py                # .docx → eksiksiz metin (docx2python; tablo/dipnot dahil)
+  analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, span-farkında süzme, build_default_analyzer)
+  spell.py                  # Hunspell deterministik imla TESPİTİ (öneri üretmez; Türkçe İ/I-farkında lookup; 4 harf altı denetlenmez)
+  extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi; satır-içi marker temizliği, ardışık tekrar tekilleştirme)
   chunk.py                  # Uzun metni deterministik paragraf parçalarına böler (taşan paragraf cümleye iner)
   progress.py               # Geçiş ilerleme olayları (CLI stderr / web SSE)
   prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı)
@@ -177,6 +187,17 @@ koru:
 - **Belge-geneli tutarlılık parçalanamaz** — tutarlılık geçişi (terim/kısaltma
   çakışması) BÜTÜN metni tek çağrıda görür. Parçalarsan "AI"↔"Artificial
   Intelligence" gibi çapraz-parça çakışmaları göremez (kör nokta geri gelir).
+- **Etiketli blok sözleşmesi** — `extract_docx_blocks` blok türü haritası
+  (`BlockSpan`) döndürür; offsetler birleşik metinle birebir hizalıdır
+  (`text[s.start:s.end]` bloğun kendisi). `analyzer.analyze_document(spans=...)`
+  bu haritayla yapısal süzme yapar; süzme `_finalize` sıralamasından ÖNCE ve
+  tamamen deterministiktir. Yeni blok türü/süzme kuralı eklerken bu hizalamayı
+  ve determinizmi koru. Tutarlılık bulguları tablo aralıklarında da KORUNUR
+  (birim çakışması tabloda geçerli) — bunu süzmeye dahil etme.
+- **Hunspell yalnız tespitçidir** — `spell.py` öneri üretmez (`suggest()`
+  çağrısı bilinçli kaldırıldı); öneri `_resolve_spelling`'de LLM'den gelir ve
+  alıntının harf düzenine giydirilir (`match_case`). Hunspell'e yeniden öneri
+  ürettirme — bağlamdan habersiz sözlük önerisi kopuk parçalara uydurma üretir.
 - **Air-gap uyumu** — bağımlılıklar pinli; telemetri kapalı; gizli dış çağrı
   ekleme. `docx2python`, Hunspell ve web paneli (stdlib) dahil her şey yereldir.
 
@@ -327,7 +348,18 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
   garantisi yoktur. (Gelecek: deterministik terim-indeksi + LLM yargısı.)
 - **OCR/çıkarma gürültüsü.** Girdi OCR ürünüyse İ/I karışması, kelime-içi
   boşluk/nokta gibi bozulmalar sahte bulgu üretir ("çöp girer, çöp çıkar").
-  Temiz dijital `.docx` tercih edilir.
+  Temiz dijital `.docx` tercih edilir. PDF'ten çevrilmiş `.docx`'lerde çıkarma
+  katmanı satır-içi görsel işaretçilerini ve ardışık tekrar başlıkları süzer;
+  ama metin kutusu kırpıntıları (yarım cümleler) metinde kalabilir ve "cümle
+  eksik" bulguları üretebilir — bu belge kalitesinin ürünüdür.
+- **4 harften kısa kelimeler imla denetimine girmez.** Kopuk ek parçaları
+  ("nde", "nda") sahte bulgu üretmesin diye bilinçli eşik; 1-3 harfli gerçek
+  kelime hatası bu katmanda yakalanmaz (bkz. `rules.md` → Bilinen Sınırlar).
+- **Tablo verisi dil denetimi dışıdır.** Etiketli bloklarda `tablo_hucresi`
+  türü imla/dil bilgisi/ton geçişlerinden muaftır; tablodaki ondalık-nokta
+  kullanımı tek TEK değil belge-geneli tek özet bulguyla raporlanır (N ≥ 3).
+  Tablo hücresindeki bir yazım hatası bu yüzden raporlanmayabilir (bilinçli
+  takas — tablo verisi düzyazı değildir).
 
 ---
 

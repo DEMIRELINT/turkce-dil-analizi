@@ -47,6 +47,16 @@ def test_overlapping_different_excerpts_both_located():
     assert result.findings[1].end == 47
 
 
+def test_quote_variant_match():
+    # Kaynak "akıllı kesme" (’) taşır, LLM alıntısı düz kesme (') döndürür;
+    # eşleştirme tırnak biçiminden bağımsız olmalı (yoksa bulgu konumsuz kalır).
+    source = "Telsizi “Tarama Modu”na alın; Pil’i çıkarmayın."
+    spans = find_spans(source, "Pil'i")
+    assert spans and source[spans[0][0]:spans[0][1]] == "Pil’i"
+    spans2 = find_spans(source, '"Tarama Modu"na')
+    assert spans2 and source[spans2[0][0]:spans2[0][1]] == "“Tarama Modu”na"
+
+
 def test_unlocatable_excerpt_left_none():
     source = "tertemiz bir cümle"
     result = AnalysisResult(findings=[_finding("olmayan alıntı")])

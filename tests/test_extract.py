@@ -110,3 +110,88 @@ def test_report_counts_images_and_warns(tmp_path):
     # Görsel yer tutucu işaretçisi analiz metnine sızmamalı.
     assert "media/" not in text
     assert "Görselli belge." in text
+
+
+# --- Satır-içi işaretçi temizliği + ardışık tekrar tekilleştirme -------------
+
+def test_inline_image_markers_are_stripped(tmp_path):
+    # PDF'ten çevrilmiş belgelerde işaretçi metne YAPIŞIK gelir; tam-satır
+    # eleme bunu kaçırır — satır-içi temizlik yakalamalı.
+    path = _make_docx(tmp_path, [
+        "----media/image1.png--------media/image2.png----Alıcı/Verici Telsizler",
+        "Metin ----media/image3.png---- ortasında işaretçi.",
+    ])
+    text = extract_docx(path)
+    assert "media/" not in text
+    assert "Alıcı/Verici Telsizler" in text
+    assert "Metin ortasında işaretçi." in text
+
+
+def test_consecutive_duplicate_blocks_are_deduped(tmp_path):
+    # Sayfa başlığı artıkları gövdeye art arda iki kez düşer; teke inmeli.
+    path = _make_docx(tmp_path, ["BAŞLARKEN", "BAŞLARKEN", "Gerçek metin.", "BAŞLARKEN"])
+    text = extract_docx(path)
+    assert text.count("BAŞLARKEN") == 2  # ardışık ikili teke indi; uzaktaki korundu
+
+
+# --- Etiketli blok API'si (extract_docx_blocks) ------------------------------
+
+def test_blocks_api_spans_match_text(tmp_path):
+    from dilanaliz.extract import extract_docx_blocks
+
+    path = _make_docx(tmp_path, ["Birinci paragraf.", "İkinci paragraf."])
+    text, spans, report = extract_docx_blocks(path)
+    assert len(spans) == 2
+    for s in spans:
+        # Offset sözleşmesi: text[s.start:s.end] bloğun kendisidir.
+        assert text[s.start:s.end].strip() == text[s.start:s.end]
+    assert text[spans[0].start:spans[0].end] == "Birinci paragraf."
+    assert report.paragraphs == 2
+
+
+def test_blocks_api_classifies_table_cells(tmp_path):
+    from dilanaliz.extract import extract_docx_blocks
+
+    document = docx.Document()
+    document.add_paragraph("Gövde paragrafı burada uzunca yazılmış.")
+    table = document.add_table(rows=1, cols=2)
+    table.cell(0, 0).text = "Hücre metni bir"
+    table.cell(0, 1).text = "Hücre metni iki"
+    path = tmp_path / "tablo.docx"
+    document.save(str(path))
+
+    text, spans, _ = extract_docx_blocks(path)
+    kinds = {text[s.start:s.end]: s.kind for s in spans}
+    assert kinds["Gövde paragrafı burada uzunca yazılmış."] == "paragraf"
+    assert kinds["Hücre metni bir"] == "tablo_hucresi"
+    assert kinds["Hücre metni iki"] == "tablo_hucresi"
+
+
+def test_blocks_api_classifies_headings(tmp_path):
+    from dilanaliz.extract import extract_docx_blocks
+
+    document = docx.Document()
+    document.add_heading("Stil ile başlık", level=1)          # stilden yakalanır
+    document.add_paragraph("PİLLER VE ŞARJ CİHAZLARI")        # sezgisel: tamamı büyük
+    document.add_paragraph("Normal bir cümle geliyor burada.")
+    path = tmp_path / "baslik.docx"
+    document.save(str(path))
+
+    text, spans, _ = extract_docx_blocks(path)
+    kinds = {text[s.start:s.end]: s.kind for s in spans}
+    assert kinds["Stil ile başlık"] == "baslik"
+    assert kinds["PİLLER VE ŞARJ CİHAZLARI"] == "baslik"
+    assert kinds["Normal bir cümle geliyor burada."] == "paragraf"
+
+
+def test_blocks_api_classifies_numeric_pseudo_table(tmp_path):
+    # PDF→Word dönüşümünde tablolar çoğu kez gerçek tablo değildir; salt
+    # sayı(+birim) paragrafı tablo verisi sayılmalı, gerçek metin sayılmamalı.
+    from dilanaliz.extract import extract_docx_blocks
+
+    path = _make_docx(tmp_path, ["446.00625", "67.0 Hz", "5. adım burada anlatılır."])
+    text, spans, _ = extract_docx_blocks(path)
+    kinds = {text[s.start:s.end]: s.kind for s in spans}
+    assert kinds["446.00625"] == "tablo_hucresi"
+    assert kinds["67.0 Hz"] == "tablo_hucresi"
+    assert kinds["5. adım burada anlatılır."] == "paragraf"

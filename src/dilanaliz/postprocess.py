@@ -19,12 +19,23 @@ from .schema import AnalysisResult, Finding
 # büyük olasılıkla bozulmuştur (örn. "birçok" → "birchoq") → güvenilmez sayılır.
 _NON_TURKISH = set("qwxQWX")
 
+# Tırnak/kesme eşdeğerlikleri: Word "akıllı tırnak" üretir (’ “ ”), LLM çoğu kez
+# düz ASCII döndürür (' "). İkisi görsel olarak aynı işlevi görür; normalize
+# edilmeden karşılaştırılırsa "ALKALINE'den" → "ALKALINE’den" gibi hiçbir şey
+# değiştirmeyen öneriler noop sayılmaz ve rapora sızar.
+_QUOTE_TRANS = str.maketrans({
+    "’": "'", "‘": "'", "‚": "'", "ʼ": "'",
+    "“": '"', "”": '"', "„": '"',
+})
+
 
 def _norm(s: str) -> str:
     # NFC normalizasyonu: Türkçe "î/â/ê" gibi harfler tek kod noktası (NFC)
     # veya harf+bileşik-işaret (NFD) olarak gelebilir; ikisi görsel olarak
     # aynıdır ama normalize edilmeden karşılaştırılırsa eşit sayılmaz.
-    return " ".join(unicodedata.normalize("NFC", s).split())
+    # Tırnak çeşitleri de tek biçime indirilir (yukarıya bak).
+    s = unicodedata.normalize("NFC", s).translate(_QUOTE_TRANS)
+    return " ".join(s.split())
 
 
 def is_noop_suggestion(excerpt: str, suggestion: str) -> bool:

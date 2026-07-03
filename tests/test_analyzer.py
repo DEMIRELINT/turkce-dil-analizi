@@ -40,19 +40,36 @@ def test_valid_word_is_dropped():
     assert out == []  # özel ad → elendi
 
 
-def test_missing_decision_falls_back_to_hunspell():
-    cands = [_candidate("yanlız", 0, suggestion="yalnız")]
+def test_missing_decision_keeps_detection_with_placeholder():
+    # Hunspell artık kendi önerisini üretmez; LLM karar vermezse tespit
+    # "öneri yok" yer tutucusuyla korunur (uydurma öneri gösterilmez).
+    from dilanaliz.spell import NO_SUGGESTION
+
+    cands = [_candidate("yanlız", 0, suggestion=NO_SUGGESTION)]
     out = Analyzer._resolve_spelling(cands, [])  # Gemini karar vermedi
     assert len(out) == 1
-    assert out[0].suggestion == "yalnız"  # tespit korundu
+    assert out[0].suggestion == NO_SUGGESTION  # tespit korundu, öneri uydurulmadı
 
 
 def test_error_without_correction_keeps_existing_suggestion():
-    cands = [_candidate("herkez", 0, suggestion="herke")]
+    from dilanaliz.spell import NO_SUGGESTION
+
+    cands = [_candidate("herkez", 0, suggestion=NO_SUGGESTION)]
     decisions = [LLMSpellingDecision(word="herkez", is_error=True, correction="")]
     out = Analyzer._resolve_spelling(cands, decisions)
     assert len(out) == 1
-    assert out[0].suggestion == "herke"  # boş düzeltme → mevcut öneri kalır
+    assert out[0].suggestion == NO_SUGGESTION  # boş düzeltme → yer tutucu kalır
+
+
+def test_correction_is_dressed_in_excerpt_case():
+    # LLM düzeltmesi küçük harfle gelse de alıntı TAMAMI BÜYÜK ise öneri de
+    # Türkçe kurala göre büyütülür (İ/I doğru): "SEÇENEKLERI" → "SEÇENEKLERİ".
+    cands = [_candidate("SEÇENEKLERI", 0)]
+    decisions = [
+        LLMSpellingDecision(word="SEÇENEKLERI", is_error=True, correction="seçenekleri")
+    ]
+    out = Analyzer._resolve_spelling(cands, decisions)
+    assert out[0].suggestion == "SEÇENEKLERİ"  # noktalı büyük İ — "SEÇENEKLERI" değil
 
 
 def test_casefold_variants_each_get_their_own_correction():
@@ -181,3 +198,104 @@ def test_analyze_document_empty_when_all_passes_empty():
     result = analyzer.analyze_document("Kısa tek paragraf.")
     assert result.findings == []
     assert result.text_len == len("Kısa tek paragraf.")
+
+
+# --- Etiketli blok (span) farkında süzme ---------------------------------------
+
+from dilanaliz.extract import BlockSpan  # noqa: E402
+
+
+def _spans_for(source: str, kinds: dict[str, str]) -> list[BlockSpan]:
+    """Bloğu metnine göre türleyen yardımcı: kinds = {blok metni: tür}."""
+    spans: list[BlockSpan] = []
+    offset = 0
+    for block in source.split("\n\n"):
+        spans.append(BlockSpan(offset, offset + len(block), kinds.get(block, "paragraf")))
+        offset += len(block) + 2
+    return spans
+
+
+def test_table_span_findings_are_dropped_and_summarized():
+    # Tablo hücrelerindeki imla bulguları elenir; 3+ ondalık nokta TEK
+    # tutarlılık özetine iner. Düzyazı bulgusu korunur.
+    source = "Gerçek bir cümle var.\n\n446.00625\n\n446.01875\n\n446.03125"
+    spans = _spans_for(source, {
+        "446.00625": "tablo_hucresi",
+        "446.01875": "tablo_hucresi",
+        "446.03125": "tablo_hucresi",
+    })
+    by_pass = {"local": LLMAnalysis(findings=[
+        _llm_finding("446.00625", FindingType.IMLA),   # tabloda → elenir
+        _llm_finding("cümle", FindingType.DIL_BILGISI),  # düzyazıda → kalır
+    ])}
+    analyzer = _build_analyzer(by_pass)
+
+    result = analyzer.analyze_document(source, spans=spans)
+
+    imla = [f for f in result.findings if f.type == FindingType.IMLA]
+    assert imla == []  # tablo hücresindeki tek tek imla bulgusu yok
+    summary = [f for f in result.findings if f.type == FindingType.TUTARLILIK]
+    assert len(summary) == 1
+    assert "3 yerde" in summary[0].explanation
+    assert summary[0].suggestion == "446,00625"
+    kept = [f for f in result.findings if f.type == FindingType.DIL_BILGISI]
+    assert len(kept) == 1  # düzyazı bulgusu süzmeden etkilenmedi
+
+
+def test_fewer_than_three_decimals_produce_no_summary():
+    source = "Cümle.\n\n12.5"
+    spans = _spans_for(source, {"12.5": "tablo_hucresi"})
+    analyzer = _build_analyzer({})
+    result = analyzer.analyze_document(source, spans=spans)
+    assert result.findings == []  # 1 ondalık < 3 → özet üretilmez
+
+
+def test_heading_span_drops_only_structural_rules():
+    # Başlıkta GRAMER-TEKRAR/IMLA-NOKTALAMA elenir; başka bulgular kalır.
+    source = "BAŞLIK SATIRI\n\nNormal cümle burada."
+    spans = _spans_for(source, {"BAŞLIK SATIRI": "baslik"})
+    tekrar = LLMFinding(
+        type=FindingType.DIL_BILGISI, excerpt="BAŞLIK SATIRI",
+        explanation="x", suggestion="BAŞLIK", rule_id="GRAMER-TEKRAR",
+    )
+    gercek = LLMFinding(
+        type=FindingType.DIL_BILGISI, excerpt="Normal cümle",
+        explanation="x", suggestion="düzeltme", rule_id="GRAMER-ANLATIM",
+    )
+    analyzer = _build_analyzer({"local": LLMAnalysis(findings=[tekrar, gercek])})
+
+    result = analyzer.analyze_document(source, spans=spans)
+
+    rule_ids = [f.rule_id for f in result.findings]
+    assert "GRAMER-TEKRAR" not in rule_ids  # başlık tekrarı elendi
+    assert "GRAMER-ANLATIM" in rule_ids     # gerçek bulgu korundu
+
+
+def test_table_only_chunk_skips_llm_passes():
+    # Parça tamamen tablo verisiyse yerel/ton geçişine hiç gönderilmez:
+    # sahte model bulgu döndürse bile sonuçta görünmemeli.
+    source = "446.00625\n\n446.01875"
+    spans = _spans_for(source, {
+        "446.00625": "tablo_hucresi",
+        "446.01875": "tablo_hucresi",
+    })
+    by_pass = {"local": LLMAnalysis(findings=[
+        _llm_finding("446.00625", FindingType.IMLA)
+    ])}
+    analyzer = _build_analyzer(by_pass)
+
+    result = analyzer.analyze_document(source, spans=spans)
+
+    # 2 ondalık < 3 → özet de yok; sonuç tamamen boş.
+    assert result.findings == []
+
+
+def test_no_spans_means_no_filtering():
+    # spans verilmezse (düz metin girdisi) eski davranış: hiçbir süzme yok.
+    source = "Cümle.\n\n446.00625"
+    by_pass = {"local": LLMAnalysis(findings=[
+        _llm_finding("446.00625", FindingType.IMLA)
+    ])}
+    analyzer = _build_analyzer(by_pass)
+    result = analyzer.analyze_document(source)
+    assert [f.excerpt for f in result.findings] == ["446.00625"]
