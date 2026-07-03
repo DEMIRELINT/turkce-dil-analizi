@@ -386,7 +386,8 @@ Her bulgu mümkünse bir `rule_id` taşır; kuralların tam tanımı
   `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`, `IMLA-NOKTALAMA`,
   `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
 - **Dil bilgisi:** `GRAMER-OZNE-YUKLEM`, `GRAMER-TAMLAMA`, `GRAMER-ANLATIM`,
-  `GRAMER-CATI`, `GRAMER-EK-FIIL`, `GRAMER-TEKRAR`, `GRAMER-BOLUNMUS-KELIME`.
+  `GRAMER-CATI`, `GRAMER-EK-FIIL`, `GRAMER-SAYI-UYUM`, `GRAMER-TEKRAR`,
+  `GRAMER-BOLUNMUS-KELIME`.
 - **Ton:** `TON-RESMI`, `TON-NEZAKET`, `TON-HITAP-TUTARLILIK`, `TON-ACIKLIK`,
   `TON-KLISE`.
 - **Tutarlılık:** belge-geneli terim/birim/kısaltma çakışması (`tutarlilik`).
