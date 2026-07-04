@@ -75,3 +75,7 @@
 {"id": "imla-noktalama-zarffiil-temiz-1", "text": "Kapıyı açarak içeri girdi.", "expected": []}
 {"id": "imla-noktalama-icin-temiz-1", "text": "Yaralanma riskini azaltmak için, yalnızca onaylı pilleri şarj edin.", "expected": []}
 {"id": "imla-noktalama-liste-temiz-1", "text": "Kurulum için CPS, yuvalı şarj cihazı ve programlama kablosuna ihtiyacınız olacak.", "expected": []}
+{"id": "imla-kesme-urun-temiz-1", "text": "Kaynak Telsizde onay sesi duyulduktan sonra işlem tamamlanır.", "expected": []}
+{"id": "imla-kesme-rakam-1", "text": "Ayrıntılı çizim sayfa 21'daki tabloda yer almaktadır.", "expected": [{"type": "imla", "excerpt": "21'daki"}]}
+{"id": "imla-kisaltma-1", "text": "Yükleniciyle yapılan görüşmede TDK'nın son teslim tarihi netleşti.", "expected": [{"type": "imla", "excerpt": "TDK'nın"}]}
+{"id": "imla-sira-sayi-1", "text": "Ayrıntılar 8.'inci maddede yer almaktadır.", "expected": [{"type": "imla", "excerpt": "8.'inci"}]}

@@ -275,11 +275,11 @@ motor ve kaynağı farklıdır:
 |---|---|---|
 | **İmla — kelime düzeyi** | Hunspell (sözlük) | TDK sözlüğü (`tr_TR.dic`) |
 | **İmla — bağlamsal** (de/da, ki, mi, bitişik/ayrı, kesme, noktalama, birim) | LLM (`rules.md` A bölümü) | **TDK Yazım Kılavuzu** |
-| **Dil bilgisi** (özne-yüklem, tamlama, çatı, anlatım bozukluğu) | LLM (`rules.md` B bölümü) | Genel Türkçe dil bilgisi (TDK'nın Yazım Kılavuzu'nun **kapsamı dışında** — kılavuz "nasıl yazılır" der, "cümle doğru mu kurulmuş" demez) |
-| **Ton/üslup** | LLM (`rules.md` C bölümü) | Kurumsal yazışma normları (TDK'nın konusu değil) |
-| **Tutarlılık** | LLM (belge-geneli, ayrı geçiş) | Redaksiyon pratiği (TDK'nın konusu değil) |
+| **Dil bilgisi** (özne-yüklem, tamlama, çatı, anlatım bozukluğu) | LLM (`rules.md` B bölümü) | Genel Türkçe dil bilgisi (TDK'nin Yazım Kılavuzu'nun **kapsamı dışında** — kılavuz "nasıl yazılır" der, "cümle doğru mu kurulmuş" demez) |
+| **Ton/üslup** | LLM (`rules.md` C bölümü) | Kurumsal yazışma normları (TDK'nin konusu değil) |
+| **Tutarlılık** | LLM (belge-geneli, ayrı geçiş) | Redaksiyon pratiği (TDK'nin konusu değil) |
 
-Yalnız **"İmla — bağlamsal"** satırı TDK'nın Yazım Kılavuzu'na doğrudan
+Yalnız **"İmla — bağlamsal"** satırı TDK'nin Yazım Kılavuzu'na doğrudan
 bağlanabilir (kaynak: [tdk.gov.tr/icerik/yazim-kurallari](https://tdk.gov.tr/kategori/icerik/yazim-kurallari/)) —
 çünkü Hunspell'in kelime-sözlüğü ile çözemediği, ama yine de "TDK ne diyor"
 sorusuna kesin cevabı olan tek eksen budur (bkz. §3.4). Diğer üç eksen farklı
@@ -296,9 +296,9 @@ Her bulgu mümkünse bir `rule_id` taşır:
 
 - **İmla:** `IMLA-DE-DA`, `IMLA-KI`, `IMLA-MI`, `IMLA-BITISIK`, `IMLA-AYRI`,
   `IMLA-BAGLAMSAL-KARISTIRMA`, `IMLA-YALNIZ`, `IMLA-YANLIS`, `IMLA-HERKES`,
-  `IMLA-HERSEY`, `IMLA-YABANCI`, `IMLA-SAAT`, `IMLA-KESME`,
-  `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`, `IMLA-NOKTALAMA`,
-  `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
+  `IMLA-HERSEY`, `IMLA-YABANCI`, `IMLA-SAAT`, `IMLA-KESME`, `IMLA-KISALTMA`,
+  `IMLA-SIRA-SAYI`, `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`,
+  `IMLA-NOKTALAMA`, `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
 - **Dil bilgisi:** `GRAMER-OZNE-YUKLEM`, `GRAMER-TAMLAMA`, `GRAMER-ANLATIM`,
   `GRAMER-CATI`, `GRAMER-EK-FIIL`, `GRAMER-SAYI-UYUM`, `GRAMER-TEKRAR`,
   `GRAMER-BOLUNMUS-KELIME`.

@@ -105,6 +105,51 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   (kapanış tırnağının yanına GEREKSİZ bir kesme/tırnak daha eklenmiş —
   böyle yan yana iki kesme/tırnak İŞARETİ ASLA ÜRETME, bu bozuk bir
   öneridir).**
+  **Özel ad OLMAYANA kesme EKLETME** (TDK Kesme İşareti — kural yalnız özel
+  adlara gelen ekler içindir): ürün/parça SINIFI adları ("kaynak telsiz",
+  "standart pil", "yuvalı şarj aleti") özel ad değildir — büyük harfle
+  yazılmış olsalar bile bunlara gelen eke kesme işareti EKLEMEYİ önerme
+  ("Kaynak Telsizde" doğrudur; "Kaynak Telsiz'de" önerisi YANLIŞTIR). Kesme
+  yalnız gerçek özel adlara (kişi, yer, kurum, marka: "Motorola'nın") ve
+  tırnaklı/rakamlı biçimlere uygulanır.
+  **Rakamla biten sayıya gelen ek, TDK Kesme İşareti'nin "Sayılara getirilen
+  ekleri ayırmak için konur" maddesine göre sayının OKUNUŞUNA uyar** (TDK'nin
+  kendi örneği: "1985'te, 8'inci madde, 2'nci kat"): "21'deki" (yirmi bir →
+  -deki), "446'dan" (dört yüz kırk altı → -dan), "0'a" (sıfır → -a). Yanlış:
+  "21'daki", "446'den".
+
+### A5. Kısaltmalar ve sıra sayıları
+
+- **IMLA-KISALTMA** — Kısaltmaya gelen ek, TDK Kısaltmalar sayfasındaki üç
+  kurala göre belirlenir:
+  1. **Küçük harfli kısaltma** → açılımın (kelimenin) okunuşu esas alınır:
+     "cm'yi" (santimetreyi), "kg'dan" (kilogramdan).
+  2. **Büyük harfli, HARF HARF okunan kısaltma** → kısaltmanın SON HARFİNİN
+     okunuşu esas alınır (TDK'nin kendi örnekleri): "TBMM'nin", "TDK'nin",
+     "BM'de", "ABD'de", "TV'ye", "THY'de", "TRT'den", "TL'nin", "BDT'ye".
+     Sık yapılan hata: kısaltmanın son harfi ince okunuyorsa (K, T, S, L gibi
+     çoğu ünsüz harfin adı incedir: "ke, te, se, le") ek de İNCE olmalı —
+     "TDK'nın" YANLIŞTIR, doğrusu "TDK'nin"dir (TDK'nin kendi resmî örneği).
+  3. **Büyük harfli ama KELİME GİBİ okunan kısaltma** (NATO, UNESCO, ASELSAN,
+     BOTAŞ gibi) → kısaltmanın kelime-okunuşu esas alınır: "NATO'dan",
+     "UNESCO'ya", "ASELSAN'da", "BOTAŞ'ın".
+  Karar, kısaltmanın belgede/konuşmada harf harf mi yoksa tek kelime gibi mi
+  okunduğuna bağlıdır — emin değilsen (kısaltmanın okunuş biçimi belgeden
+  anlaşılmıyorsa) bulgu üretme. Aynı kısaltmanın belgede farklı ek
+  biçimleriyle gezmesi (aynı kısaltma bir yerde 2. kuralla bir yerde 3.
+  kuralla çekimlenmiş) tutarsızlıktır — baskın biçimi öner.
+  **Noktalı kısaltmaya (bkz., örn., vb., Alm., İng.) gelen ek KESMESİZ
+  yazılır** (TDK'nin kendi örneği): "vb.leri", "Alm.dan", "İng.yi". Yaygın
+  noktalı kısaltmalar: "bkz.", "örn.", "vb.", "vs.".
+- **IMLA-SIRA-SAYI** — Sıra sayısı rakamla gösterilirken YA rakamdan sonra
+  nokta konur YA DA rakamdan sonra kesme işaretiyle derece eki yazılır —
+  **ikisi birden ASLA kullanılmaz** (TDK Sayıların Yazılışı md. 9 UYARI:
+  "Sıra sayıları ekle gösterildiklerinde rakamdan sonra sadece kesme işareti
+  ve ek yazılır, ayrıca nokta konmaz"). Yanlış: "8.'inci", "2.'nci" → Doğru:
+  "8'inci" (ya da yalnız "8."), "2'nci" (ya da yalnız "2."). NOT: Bu kural
+  yalnız NET bozuk (nokta + kesme+ek birlikte) kalıplar içindir; "sıra
+  sayısı nokta ile mi kesme+ek ile mi yazılmalı" tarzı stil tercihine
+  karışma — TDK ikisine de izin verir, yalnız KARIŞTIRILMASINI yasaklar.
 
 ### A6. Düzeltme işareti ve Türkçe karakter
 
@@ -133,14 +178,14 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
     sonra virgül konmaz** (TDK Virgül md. 13 UYARI — bu kural YALNIZ zarf-fiil
     içindir, başka yapıları kapsamaz). Yanlış: "Kapıyı açarak, içeri girdi."
     → Doğru: "Kapıyı açarak içeri girdi." ANCAK art arda BİRDEN FAZLA
-    zarf-fiil varsa aralarına virgül konur (TDK md. 13 asıl madde, TDK'nın
+    zarf-fiil varsa aralarına virgül konur (TDK md. 13 asıl madde, TDK'nin
     kendi örneği): "Ancak yemekte bir karara varıp, arkadaşına dikkatli
     dikkatli bakarak konuştu." NOT (temkinli istisna — Sülükçü 2018'in
     TDK'ya önerdiği düzeltmeyle uyumlu): Virgülün kaldırılması cümlede anlam
     karışıklığı yaratacaksa (uzun/iç içe cümlede hangi öğenin neyi
     nitelediği belirsizleşiyorsa) virgülü kaldırmayı önerme.
   - **"İçin" edatı bu kuralın KAPSAMI DIŞINDADIR** — edat, zarf-fiil
-    değildir; TDK'nın virgül kurallarında "için"e özgü bir madde YOKTUR.
+    değildir; TDK'nin virgül kurallarında "için"e özgü bir madde YOKTUR.
     "X yapmak için," gibi yapılardaki virgüle dair bulgu ÜRETME (ne ekleme
     ne kaldırma) — kaynağı belirsiz bir alanda sessiz kalmak doğrusu.
   - **LİSTE VİRGÜLÜNE DOKUNMA** (TDK Virgül md. 1): Cümle başındaki öğe bir
@@ -188,7 +233,10 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 - **GRAMER-ANLATIM** — Anlatım bozuklukları (en yüksek yanlış-pozitif riski; yalnız
   AÇIK durumlarda işaretle):
   - Gereksiz sözcük / anlamca çelişki: "yaklaşık olarak tam on kişi" (yaklaşık +
-    tam çelişir), "geri iade etmek", "en optimal".
+    tam çelişir), "geri iade etmek", "en optimal". "vb." zaten "ve benzeri"
+    demektir; "vb. gibi" veya "vs. gibi" bu yüzden FAZLALIKTIR — doğrusu
+    yalnız "vb." ya da yalnız "gibi"dir (örn. "pil türü, VOX seviyesi vs.
+    gibi özellikler" → "...VOX seviyesi vb. özellikler").
   - Eksik öge (özne/nesne/tümleç eksikliği), yanlış bağlama.
   - Mantık hatası, sıralama bozukluğu.
 - **GRAMER-CATI** — Çatı (etken/edilgen) uyumsuzluğu: bağlı cümlelerde çatı
