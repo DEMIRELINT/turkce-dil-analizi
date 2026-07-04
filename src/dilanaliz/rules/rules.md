@@ -248,6 +248,13 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   hazırladı ve sundu.") NOT: Yalnız gerçekten karışık/belirsiz özneli
   durumları işaretle; açık öznesi olan meşru etken cümleleri ("Ekip
   hazırladı ve sundu") çatı hatası SAYMA.
+  **İkinci kalıp — belirtme ekli nesne + edilgen yüklem:** Edilgen yüklem
+  ("-nabilir", "-ndı", "-nmıştır") belirtme ekli ("-i/-ı/-u/-ü") nesneyle
+  kullanılamaz; ya nesne yalın hâle döner ya yüklem etkene. Yanlış:
+  "Telsizleri CPS kullanarak programlanabilir." → Doğru: "Telsizler CPS
+  kullanılarak programlanabilir." (ya da "Telsizleri CPS kullanarak
+  programlayabilirsiniz."). Bu kalıp çeviri metinlerde sık görülür; cümlede
+  "-i ekli nesne + edilgen çekim" birlikteyse işaretle.
 - **GRAMER-EK-FIIL** — Kip ve zaman tutarlılığı; ek-fiil ("idi/imiş/ise") doğru
   kullanımı. Aynı cümlede (özellikle bağlaçla bağlı iki eylemde) gereksiz
   zaman kayması hatadır. Doğru (tutarlı geçmiş zaman): "Toplantı saat 10'da

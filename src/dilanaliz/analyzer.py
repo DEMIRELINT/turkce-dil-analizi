@@ -31,6 +31,7 @@ from .extract import BlockSpan
 from .locate import enrich_with_offsets
 from .postprocess import (
     drop_context_satisfied_findings,
+    drop_cross_pass_duplicates,
     drop_noop_findings,
     drop_unlocated_findings,
     merge_findings,
@@ -280,6 +281,10 @@ class Analyzer:
         """
         located = drop_unlocated_findings(findings)
         located = drop_context_satisfied_findings(located, text)
+        # Çapraz-geçiş tip-kopyası: aynı konum+alıntı iki geçişten iki tiple
+        # gelirse (imla > dil_bilgisi > ton önceliğiyle) teke iner. Sıralamadan
+        # ÖNCE ve deterministik — determinizm sözleşmesi korunur.
+        located = drop_cross_pass_duplicates(located)
         ordered = sorted(located, key=_sort_key)
         result = AnalysisResult(findings=_dedup(ordered))
         result.model_id = self._model_id

@@ -434,8 +434,9 @@ dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü
   genişletmek yanlış-pozitif riskini artırır; genel taramaya dokunulmadı.
   Dar bir istisna var: `IMLA-BAGLAMSAL-KARISTIRMA` yalnız iki ölçülmüş çift
   için (güncelleme/günceleme, yarın/yarin) bu sınırı kapalı liste olarak deler.
-- **Çapraz-geçiş çelişkisi.** Aynı ifade farklı geçişlerden (imla + dil bilgisi)
-  iki ayrı öneri alabilir; geçişler birbirini görmez.
+- **Çapraz-geçiş çelişkisi (daraltıldı).** Geçişler birbirini görmez; ancak
+  AYNI konum + AYNI alıntı taşıyan tip-kopyaları son işlemede teke iner
+  (imla > dil bilgisi > ton önceliği). Farklı alıntılı çelişkiler mümkündür.
 - **Uzun belge tutarlılık ölçeği.** Tutarlılık tek dev çağrıyla çalışır; 50+
   sayfada çakışmaları kaçırabilir (garanti yok).
 - **OCR/çıkarma gürültüsü.** OCR ürünü girdide İ/I karışması, kelime-içi boşluk

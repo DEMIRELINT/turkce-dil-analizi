@@ -118,6 +118,12 @@ KONUSU DEĞİLDİR.
   uygunsuz hitap, resmî olmayan ifade.
 - "Daha nazik olabilirdi", "şöyle desen daha iyi" gibi ŞART OLMAYAN, keyfi
   iyileştirme önerileri ÜRETME.
+- KOPUK/BÖLÜNMÜŞ parçaları YENİDEN YAZMAYI önerme: iç içe girmiş metin
+  kutusu kırpıntıları, yarım satırlar, araya başka satır karışmış cümleler
+  (örn. "Mikrofonun duyarlılığı, farklı kullanıcılar veya için geçiş /
+  düğmesine basın: işletim ortamlarına...") belge DÖNÜŞTÜRMESİNİN ürünüdür,
+  yazarın üslubu değildir — bunlara TON-ACIKLIK dahil hiçbir ton bulgusu
+  üretme, "cümleyi düzelt/yeniden yaz" önerisi verme.
 - `spelling` çıktısını boş bırak.
 {_SHARED_RULES}
 """

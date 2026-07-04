@@ -115,6 +115,47 @@ def _spans_overlap(a: Finding, b: Finding) -> bool:
     return a.start < b.end and b.start < a.end
 
 
+# Çapraz-geçiş tip-kopyası önceliği: aynı hata iki geçişten iki tip etiketiyle
+# gelirse (örn. "zamanı aşınır" hem dil_bilgisi hem ton) daha SOMUT eksen
+# kazanır. tutarlilik bu sıraya DAHİL DEĞİLDİR — belge-geneli çakışma iddiası
+# yerel bulgunun kopyası değil, ayrı bir bilgidir (korunur).
+_TYPE_PRIORITY = {"imla": 0, "dil_bilgisi": 1, "ton": 2}
+
+
+def drop_cross_pass_duplicates(findings: list[Finding]) -> list[Finding]:
+    """Örtüşen konum + aynı (normalize) alıntı taşıyan FARKLI tipteki bulguları
+    tip önceliğiyle (imla > dil_bilgisi > ton) teke indirir.
+
+    Geçişler birbirini görmediğinden aynı ifade iki geçişten iki ayrı bulgu
+    olarak gelebilir; rapor aynı hatayı iki satır gösterir. Aynı-tip birebir
+    kopyaları `_dedup` (analyzer) zaten eler; bu fonksiyon yalnız TİP FARKLI
+    kopyaları hedefler. `tutarlilik` tipi elemeye de elenmeye de girmez.
+    Deterministiktir: karşılaştırma konum+alıntıya, seçim sabit önceliğe
+    dayanır; girdi sırasından bağımsızdır.
+    """
+    out: list[Finding] = []
+    for f in findings:
+        if f.type.value not in _TYPE_PRIORITY:
+            out.append(f)
+            continue
+        superseded = False
+        for other in findings:
+            if other is f or other.type == f.type:
+                continue
+            if other.type.value not in _TYPE_PRIORITY:
+                continue
+            if not _spans_overlap(f, other):
+                continue
+            if _norm(other.excerpt) != _norm(f.excerpt):
+                continue
+            if _TYPE_PRIORITY[other.type.value] < _TYPE_PRIORITY[f.type.value]:
+                superseded = True  # daha öncelikli tip aynı hatayı taşıyor
+                break
+        if not superseded:
+            out.append(f)
+    return out
+
+
 def merge_findings(
     deterministic: list[Finding], llm: list[Finding]
 ) -> list[Finding]:

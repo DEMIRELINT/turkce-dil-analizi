@@ -77,8 +77,12 @@ def test_parallel_output_is_identical_to_sequential():
     # Birebir aynı: bulgular, sıra, offsetler, üstveri.
     assert seq.model_dump() == par.model_dump()
     # Anlamlı bir çıktı ürettiğimizden emin ol (boş eşitlik tuzağına düşme):
-    # her parçada yerel+ton (2) × 4 parça + 1 tutarlılık = 9 bulgu.
-    assert len(seq.findings) == 9
+    # sahte model her parçada AYNI "XX" alıntısını hem dil_bilgisi hem ton
+    # tipiyle üretir — çapraz-geçiş tip-kopyası tekilleştirmesi ton kopyasını
+    # eler (imla > dil_bilgisi > ton). Kalan: 4 parça × 1 dil_bilgisi + 1
+    # tutarlılık = 5 bulgu; ton kopyası kalmamalı.
+    assert len(seq.findings) == 5
+    assert not [f for f in seq.findings if f.type == FindingType.TON]
 
 
 def test_parallel_is_faster_than_sequential():

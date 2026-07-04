@@ -374,8 +374,11 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
   kurulabilen ama bağlamda yanlış kelimeleri yakalayamaz (ör. "güncelleme"
   yerine "günceleme"). Prompt'u genişletmek yanlış-pozitif riskini artırır;
   bilinçli olarak dokunulmadı (`golden.jsonl`'de ölçülü FN örneği var).
-- **Çapraz-geçiş çelişkisi.** Aynı ifade farklı geçişlerden (ör. imla + dil
-  bilgisi) iki farklı öneri alabilir; geçişler birbirini görmez.
+- **Çapraz-geçiş çelişkisi (daraltıldı).** Geçişler birbirini görmez; aynı
+  ifade iki geçişten iki bulgu alabilir. AYNI konum + AYNI alıntı taşıyan
+  tip-kopyaları artık `postprocess.drop_cross_pass_duplicates` ile teke iner
+  (imla > dil_bilgisi > ton önceliği; tutarlılık muaf). FARKLI alıntılı/
+  kısmi örtüşen çelişkiler ise hâlâ mümkündür — bilinçli kalan sınır budur.
 - **Uzun belge tutarlılık ölçeği.** Tutarlılık tek dev LLM çağrısıyla çalışır;
   50+ sayfada dikkat seyrelmesi nedeniyle çakışmaları kaçırabilir — kaçırmama
   garantisi yoktur. (Gelecek: deterministik terim-indeksi + LLM yargısı.)

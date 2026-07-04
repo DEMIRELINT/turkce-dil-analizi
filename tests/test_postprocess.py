@@ -1,5 +1,6 @@
 from dilanaliz.postprocess import (
     drop_context_satisfied_findings,
+    drop_cross_pass_duplicates,
     drop_noop_findings,
     drop_unlocated_findings,
     is_noop_suggestion,
@@ -151,3 +152,41 @@ def test_validate_keeps_non_turkish_letter_when_in_excerpt():
     result = AnalysisResult(findings=[_f("Linux'da", "Linux'ta")])
     validate_suggestions(result)
     assert len(result.findings) == 1
+
+
+# --- Çapraz-geçiş tip-kopyası tekilleştirme ----------------------------------
+
+def test_cross_pass_duplicate_keeps_higher_priority_type():
+    # Aynı konum + aynı alıntı, iki geçişten iki tiple gelirse (dil_bilgisi +
+    # ton) daha somut eksen (dil_bilgisi) kalır, ton kopyası elenir.
+    a = _span("zamanı aşınır", 100, FindingType.DIL_BILGISI)
+    b = _span("zamanı aşınır", 100, FindingType.TON)
+    out = drop_cross_pass_duplicates([a, b])
+    assert out == [a]
+    # Girdi sırası değişse de sonuç aynı (determinizm).
+    assert drop_cross_pass_duplicates([b, a]) == [a]
+
+
+def test_cross_pass_different_excerpts_are_kept():
+    # Konum örtüşse bile alıntı FARKLIYSA iki bulgu iki ayrı iddiadır — ikisi
+    # de korunur (farklı-alıntılı çelişkiler bilinen sınır olarak kalır).
+    a = _span("hands-free (VOX) işleviyle çalıştırabilir", 200, FindingType.DIL_BILGISI)
+    b = _span("hands-free", 200, FindingType.TON)
+    out = drop_cross_pass_duplicates([a, b])
+    assert len(out) == 2
+
+
+def test_cross_pass_consistency_type_is_untouched():
+    # tutarlilik tipi ne eler ne elenir: belge-geneli iddia yerel bulgunun
+    # kopyası değildir.
+    a = _span("Khz", 300, FindingType.IMLA)
+    b = _span("Khz", 300, FindingType.TUTARLILIK)
+    out = drop_cross_pass_duplicates([a, b])
+    assert len(out) == 2
+
+
+def test_cross_pass_same_type_untouched():
+    # Aynı tip birebir kopyalar bu fonksiyonun işi değil (_dedup halleder).
+    a = _span("hata", 10, FindingType.IMLA)
+    b = _span("hata", 10, FindingType.IMLA)
+    assert len(drop_cross_pass_duplicates([a, b])) == 2

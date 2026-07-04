@@ -79,3 +79,4 @@
 {"id": "imla-kesme-rakam-1", "text": "Ayrıntılı çizim sayfa 21'daki tabloda yer almaktadır.", "expected": [{"type": "imla", "excerpt": "21'daki"}]}
 {"id": "imla-kisaltma-1", "text": "Yükleniciyle yapılan görüşmede TDK'nın son teslim tarihi netleşti.", "expected": [{"type": "imla", "excerpt": "TDK'nın"}]}
 {"id": "imla-sira-sayi-1", "text": "Ayrıntılar 8.'inci maddede yer almaktadır.", "expected": [{"type": "imla", "excerpt": "8.'inci"}]}
+{"id": "gramer-cati-nesne-1", "text": "Bu seri telsizleri CPS kullanarak programlanabilir.", "expected": [{"type": "dil_bilgisi", "excerpt": "telsizleri CPS kullanarak programlanabilir"}]}
