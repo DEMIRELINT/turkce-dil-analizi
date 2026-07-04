@@ -28,3 +28,6 @@ dicts/
 
 # OS / editör
 .DS_Store
+
+# Beklemede tutulan Tur-1 değişiklikleri (TDK oturumunda geri uygulanacak)
+.tur1-beklemede.patch

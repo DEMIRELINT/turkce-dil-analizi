@@ -93,10 +93,30 @@ ayrı geçişte çalıştırır: **yerel** (cümle: imla + noktalama + dil bilgi
 **ton** (paragraf), **tutarlılık** (belge). *Niçin ayrı?* Her eksen farklı bir
 bağlam penceresi ister; birini diğerinin gürültüsünden ayırmak isabeti artırır.
 
-**3.4 Deterministik imla + LLM ayrımı.** [spell.py](src/dilanaliz/spell.py)
-Hunspell ile şüpheli kelimeleri offset'leriyle bulur; Gemini her adayı bağlamda
-değerlendirir (`LLMSpellingDecision`): gerçek hata mı, yoksa özel ad/terim mi?
-Gemini karar vermezse tespit kaybolmasın diye Hunspell bulgusu korunur (fallback).
+**3.4 Deterministik imla + LLM ayrımı — Hunspell neden TEK BAŞINA yetmiyor?**
+Hunspell yalnız *"bu kelime Türkçede var mı yok mu"* sorusuna bakar — bir
+**sözlük** denetimidir. Ama pek çok yazım hatası **sözlükte tamamen geçerli
+kelimelerle** yapılır; Hunspell bunları yapısal olarak GÖREMEZ:
+
+| Örnek | Hunspell'e göre | Gerçek durum |
+|---|---|---|
+| "Ben**de** geldim." | "bende" geçerli bir kelime → hata YOK | Bağlaç "de" burada AYRI yazılmalı — bağlama bakmadan anlaşılmaz |
+| "Kaynak Telsiz**'**de sorun var." | "Telsiz'de" de "Telsizde" de tek başına geçerli | Hangisinin doğru olduğu "özel ad mı değil mi" kuralına bağlı, sözlüğe değil |
+| "CPS, cihaza ihtiyacınız olacak." | virgül sözlüğün konusu değil | Virgülün yeri/gerekliliği bir **kural** meselesi (bağlaç, liste, zarf tümleci) |
+
+Bu üç örnek de **kelime düzeyinde** doğru ama **kullanım düzeyinde** hatalı
+olabilir — sözlük burada çaresiz kalır. Bu yüzden sistem iki katmanlı çalışır:
+
+1. **Hunspell** ([spell.py](src/dilanaliz/spell.py)) — sözlükte OLMAYAN
+   kelimeleri offset'leriyle bulur (deterministik, sıfır halüsinasyon, ama
+   yalnız tespit — öneri üretmez).
+2. **LLM + `rules.md`** — (a) Hunspell'in bulduğu şüpheli kelimelere bağlama
+   göre karar verir (`LLMSpellingDecision`): gerçek hata mı, yoksa özel ad/
+   terim mi? Karar vermezse tespit kaybolmasın diye Hunspell bulgusu korunur
+   (fallback). (b) Hunspell'in hiç *göremeyeceği*, sözlükte geçerli ama
+   bağlamda yanlış kullanılan yazım kurallarını (de/da, ki, mi ayrımı,
+   bitişik/ayrı yazım, kesme işareti, noktalama, birim yazımı) **kendi
+   başına** tarar — bu kuralların kaynağı `rules.md`'dir (bkz. §9).
 
 **3.5 Offset üretimi.** LLM offset **üretmez** (uydurma konum riski).
 [locate.py](src/dilanaliz/locate.py) her bulgunun `excerpt`'ini kaynak metinde
@@ -247,6 +267,24 @@ docx yükleyip veya metin yapıştırıp canlı ilerlemeyle analiz eder (bkz. §
 | `HISTORY_DIR` | `./history` | *(web)* Analiz geçmişi kayıt klasörü. |
 
 ## 9. Kural Dökümanı & Özelleştirme
+
+**Dört eksen, iki motor.** Sistem 4 eksende bulgu üretir; her eksende görevli
+motor ve kaynağı farklıdır:
+
+| Eksen | Motor | Kaynağı ne? |
+|---|---|---|
+| **İmla — kelime düzeyi** | Hunspell (sözlük) | TDK sözlüğü (`tr_TR.dic`) |
+| **İmla — bağlamsal** (de/da, ki, mi, bitişik/ayrı, kesme, noktalama, birim) | LLM (`rules.md` A bölümü) | **TDK Yazım Kılavuzu** |
+| **Dil bilgisi** (özne-yüklem, tamlama, çatı, anlatım bozukluğu) | LLM (`rules.md` B bölümü) | Genel Türkçe dil bilgisi (TDK'nın Yazım Kılavuzu'nun **kapsamı dışında** — kılavuz "nasıl yazılır" der, "cümle doğru mu kurulmuş" demez) |
+| **Ton/üslup** | LLM (`rules.md` C bölümü) | Kurumsal yazışma normları (TDK'nın konusu değil) |
+| **Tutarlılık** | LLM (belge-geneli, ayrı geçiş) | Redaksiyon pratiği (TDK'nın konusu değil) |
+
+Yalnız **"İmla — bağlamsal"** satırı TDK'nın Yazım Kılavuzu'na doğrudan
+bağlanabilir (kaynak: [tdk.gov.tr/icerik/yazim-kurallari](https://tdk.gov.tr/kategori/icerik/yazim-kurallari/)) —
+çünkü Hunspell'in kelime-sözlüğü ile çözemediği, ama yine de "TDK ne diyor"
+sorusuna kesin cevabı olan tek eksen budur (bkz. §3.4). Diğer üç eksen farklı
+bilgi alanlarına dayanır; TDK'ya zorla bağlanırsa kaynağı olmayan kural
+uydurulmuş olur.
 
 **Davranış / Bilgi ayrımı:** [prompt.py](src/dilanaliz/prompt.py) yalnız modelin
 *davranışını* tutar; *kurallar* `RulesProvider` üzerinden ayrı gelir

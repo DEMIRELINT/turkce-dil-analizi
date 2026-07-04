@@ -70,3 +70,8 @@
 {"id": "tutarlilik-acilim-zor-1", "text": "Sistemde GPS modülü bulunur. GPS sinyali zayıfsa cihaz uyarı verir. Genel Konumlandırma Sistemi modülünün güncel olduğundan emin olun.", "expected": [{"type": "tutarlilik", "excerpt": "Genel Konumlandırma Sistemi"}]}
 {"id": "tutarlilik-serbest-ifade-temiz-1", "text": "Bakım ekipleri düzenli aralıklarla saha kontrolü yapar. Elde edilen bulgular dönemsel olarak yönetime raporlanır.", "expected": []}
 {"id": "tutarlilik-buyukharf-temiz-1", "text": "Sunucu her gece otomatik olarak yeniden başlatılır. Bakım penceresi dışında sunucu kapatılmaz.", "expected": []}
+{"id": "imla-noktalama-eksik-1", "text": "Her iki cihazın aynı bant (UHF veya VHF) tür (Ekranlı veya Ekransız) ve bölgeden olması gerekmektedir.", "expected": [{"type": "imla", "excerpt": "bant (UHF veya VHF) tür"}]}
+{"id": "imla-noktalama-zarffiil-1", "text": "Kapıyı açarak, içeri girdi.", "expected": [{"type": "imla", "excerpt": "açarak,"}]}
+{"id": "imla-noktalama-zarffiil-temiz-1", "text": "Kapıyı açarak içeri girdi.", "expected": []}
+{"id": "imla-noktalama-icin-temiz-1", "text": "Yaralanma riskini azaltmak için, yalnızca onaylı pilleri şarj edin.", "expected": []}
+{"id": "imla-noktalama-liste-temiz-1", "text": "Kurulum için CPS, yuvalı şarj cihazı ve programlama kablosuna ihtiyacınız olacak.", "expected": []}

@@ -122,6 +122,42 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 - **IMLA-NOKTALAMA** — Cümle uygun noktalama ile biter. Bağlaç "ve"den önce
   genellikle virgül konmaz. Sıralı öğeler virgülle ayrılır. Doğru: "elma, armut
   ve üzüm". Yanlış: "elma, armut, ve üzüm".
+  (Kaynak: TDK Noktalama İşaretleri, Virgül md. 1 ve UYARI'lar —
+  tdk.gov.tr/icerik/yazim-kurallari/noktalama-isaretleri-aciklamalar.)
+  - **EKSİK virgül de hatadır** (TDK Virgül md. 1 — "birbiri ardınca sıralanan
+    eş görevli kelime ve kelime gruplarının arasına konur"): çok ögeli bir
+    sıralamada öğeler arasında virgül yoksa ekle. Yanlış: "aynı bant (UHF veya
+    VHF) tür (Ekranlı veya Ekransız) ve bölgeden olmalıdır" → Doğru: "aynı
+    bant (UHF veya VHF), tür (Ekranlı veya Ekransız) ve bölgeden olmalıdır".
+  - **Zarf-fiil eki (-arak/-ıp/-ınca/-dıkça/-ken vb.) almış TEK bir kelimeden
+    sonra virgül konmaz** (TDK Virgül md. 13 UYARI — bu kural YALNIZ zarf-fiil
+    içindir, başka yapıları kapsamaz). Yanlış: "Kapıyı açarak, içeri girdi."
+    → Doğru: "Kapıyı açarak içeri girdi." ANCAK art arda BİRDEN FAZLA
+    zarf-fiil varsa aralarına virgül konur (TDK md. 13 asıl madde, TDK'nın
+    kendi örneği): "Ancak yemekte bir karara varıp, arkadaşına dikkatli
+    dikkatli bakarak konuştu." NOT (temkinli istisna — Sülükçü 2018'in
+    TDK'ya önerdiği düzeltmeyle uyumlu): Virgülün kaldırılması cümlede anlam
+    karışıklığı yaratacaksa (uzun/iç içe cümlede hangi öğenin neyi
+    nitelediği belirsizleşiyorsa) virgülü kaldırmayı önerme.
+  - **"İçin" edatı bu kuralın KAPSAMI DIŞINDADIR** — edat, zarf-fiil
+    değildir; TDK'nın virgül kurallarında "için"e özgü bir madde YOKTUR.
+    "X yapmak için," gibi yapılardaki virgüle dair bulgu ÜRETME (ne ekleme
+    ne kaldırma) — kaynağı belirsiz bir alanda sessiz kalmak doğrusu.
+  - **LİSTE VİRGÜLÜNE DOKUNMA** (TDK Virgül md. 1): Cümle başındaki öğe bir
+    listenin parçasıysa virgül ZORUNLUDUR; kaldırılması anlamı bozar. Örn.
+    "CPS, Yuvalı Şarj Cihazı ve Programlama Kablosuna ihtiyacınız olacak."
+    cümlesindeki ilk virgül üç öğeli listenin ayracıdır — kaldırılırsa "CPS
+    Yuvalı Şarj Cihazı" diye tek bir aygıt varmış anlamı çıkar. Virgül
+    kaldırma önerisi vermeden önce virgülün LİSTE ayracı olup olmadığını
+    kontrol et.
+  - **Noktalı virgülden sonra küçük harf DOĞRUDUR** (TDK: virgül ve noktalı
+    virgülden sonra gelen kelime, normalde büyük yazılması gerekmiyorsa
+    küçük yazılır): "...basılı tutun; dinlemek için ise serbest bırakın."
+    kuruluşunda ne noktalı virgül ne de sonrasındaki küçük harf hatadır —
+    ikisi için de bulgu üretme.
+  - **Başlık/etiket satırına son noktalama EKLEME:** Nokta ile bitmeyen kısa
+    başlık, düğme açıklaması veya şekil etiketi ("Kanal 1'i önceden ayarlamak
+    için varsayılan ayar") cümle değildir; sonuna nokta eklemeyi önerme.
 
 ### A8. Sayı ve ölçü birimi yazımı
 
