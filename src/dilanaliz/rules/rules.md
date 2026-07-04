@@ -13,57 +13,84 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 
 ## A. İMLA (Yazım)
 
+> **Kaynak türü notu:** Bu bölümdeki maddeler iki farklı resmî TDK kaynağına
+> dayanır. **Tür A** — TDK Yazım Kuralları sayfası (madde numarasıyla
+> anılabilir, örn. "TDK Virgül md. 1"). **Tür B** — TDK Güncel Türkçe
+> Sözlük (kelimenin doğru yazımı sözlükte bu biçimde geçer; bir "yazım
+> KURALI" maddesi değildir, madde numarası UYDURULMAZ). Her iki tür de
+> RESMÎ TDK kaynağıdır; yalnız atıf biçimi farklıdır.
+
 ### A1. Bağlaç / ek ayrımı (bağlama duyarlı — dikkat)
 
-- **IMLA-DE-DA** — Bağlaç olan "de/da" ayrı yazılır ("Ben **de** geldim", "Kitap
-  **da** güzeldi"); "ve, dahi, bile" anlamı taşır, cümleden çıkarılınca anlam
-  bozulmaz ama eksilir. Bulunma/hâl eki "-de/-da/-te/-ta" bitişik yazılır
-  ("ev**de**", "okul**da**", "sınıf**ta**"). Sert ünsüzle biten kelimeden sonra
-  bağlaç yine ayrı ve "de/da" kalır ("kitap **da**", "çiçek **de**").
+- **IMLA-DE-DA** *(Tür A — TDK Bağlaç Olan da/de'nin Yazılışı; TDK Bulunma
+  Durumu Eki -da/-de/-ta/-te'nin Yazılışı)* — Bağlaç olan "de/da" ayrı
+  yazılır ("Ben **de** geldim", "Kitap **da** güzeldi"); "ve, dahi, bile"
+  anlamı taşır, cümleden çıkarılınca anlam bozulmaz ama eksilir. Bulunma/hâl
+  eki "-de/-da/-te/-ta" bitişik yazılır ("ev**de**", "okul**da**",
+  "sınıf**ta**"). Sert ünsüzle biten kelimeden sonra bağlaç yine ayrı ve
+  "de/da" kalır, ASLA "ta/te" olmaz (TDK'nın kendi UYARI'sı: "gidip **de**
+  gelmemek" — "gidip **te** gelmemek" DEĞİL): "kitap **da**", "çiçek **de**".
   Doğru: "Ben de geldim", "Evde kaldım". Yanlış: "Bende geldim", "ev de kaldım".
-- **IMLA-KI** — Bağlaç "ki" ayrı yazılır ("Duydum **ki** gelmişsin"). Aitlik/ilgi
-  eki "-ki" bitişik yazılır ("akşam**ki**", "yarın**ki**", "benim**ki**",
-  "masadaki"). Kalıplaşmışlar bitişik istisnadır: "oysaki, mademki, halbuki,
-  sanki, çünkü, meğerki, belki, illaki".
+  **Bağlaç "da/de" kesme işaretiyle de ASLA ayrılmaz** (TDK'nın kendi UYARI'sı):
+  Doğru: "Ayşe de geldi". Yanlış: "Ayşe'de geldi" (bağlaç anlamındaysa).
+- **IMLA-KI** *(Tür A — TDK Bağlaç Olan ki'nin Yazılışı)* — Bağlaç "ki" ayrı
+  yazılır ("Duydum **ki** gelmişsin"). Aitlik/ilgi eki "-ki" bitişik yazılır
+  ("akşam**ki**", "yarın**ki**", "benim**ki**", "masadaki"). Kalıplaşmışlar
+  bitişik istisnadır (TDK'nın kendi listesi, tam 7 kelime): "belki, çünkü,
+  hâlbuki, mademki, meğerki, oysaki, sanki".
   Doğru: "Bilmiyordum ki", "yarınki toplantı", "benimkinden".
   Yanlış: "Bilmiyordumki", "yarın ki", **"Senin ki" → doğrusu "Seninki"** (aitlik
   eki bitişik yazılmalı). NOT: Aitlik eki "-ki" yanlışlıkla AYRI yazılmışsa bu bir
-  hatadır; mutlaka işaretle.
-- **IMLA-MI** — Soru eki "mı/mi/mu/mü" her zaman ayrı yazılır, ünlü uyumuna uyar
-  ve kendinden sonraki eki bitişik alır ("Geldi **mi**?", "Güzel **mi**?",
-  "Çalışıyor **musun**?"). Doğru: "Gelecek misin?". Yanlış: "Gelecekmisin?".
+  hatadır; mutlaka işaretle. NOT: Kalıplaşmışlar listesi KAPALI ve TDK'nın
+  kendi listesiyle SINIRLIDIR — listede olmayan bir kelimeyi ("illaki" gibi)
+  bu 7'liye benzeterek bitişik "doğru" sayma.
+- **IMLA-MI** *(Tür A — TDK Soru Eki mı/mi/mu/mü'nün Yazılışı)* — Soru eki
+  "mı/mi/mu/mü" her zaman ayrı yazılır, ünlü uyumuna uyar ve kendinden
+  sonraki eki bitişik alır ("Geldi **mi**?", "Güzel **mi**?", "Çalışıyor
+  **musun**?"). Doğru: "Gelecek misin?". Yanlış: "Gelecekmisin?".
 
 ### A2. Birleşik / ayrı yazılan sözcükler
 
-- **IMLA-BITISIK** — Bitişik yazılır: "hiçbir", "herhangi", "birçok", "birkaç",
-  "biraz", "çünkü", "hiçkimse" DEĞİL → "hiç kimse" (ayrı). Doğru: "birkaç kişi".
+- **IMLA-BITISIK** *(Tür A — TDK Bitişik Yazılan Birleşik Kelimeler md. 1, 2, 3)*
+  — Bitişik yazılır: "hiçbir", "herhangi", "birçok", "birkaç", "biraz",
+  "çünkü", "hiçkimse" DEĞİL → "hiç kimse" (ayrı). Doğru: "birkaç kişi".
   Yanlış: "bir kaç kişi", "her hangi".
-  Ayrıca aşağıdaki iki TDK grubu da bitişik yazılır (ayrı yazılmışsa hata):
-  - **Ses düşmesine uğrayan birleşik kelimeler:** kaynana, kaynata, nasıl,
-    niçin, pazartesi, sütlaç. Doğru: "kaynanam geldi". Yanlış: "kayın anam
-    geldi" (bu birleşik kelimeler için ayrı yazım kullanılmaz).
+  Ayrıca aşağıdaki üç TDK grubu da bitişik yazılır (ayrı yazılmışsa hata):
+  - **Ses düşmesine uğrayan birleşik kelimeler** (TDK md. 1): kaynana, kaynata,
+    nasıl, niçin, pazartesi, sütlaç. Doğru: "kaynanam geldi". Yanlış: "kayın
+    anam geldi" (bu birleşik kelimeler için ayrı yazım kullanılmaz).
   - **"etmek/olmak" ile ses olayına (türeme/düşme/değişme) uğrayan
-    bileşikler:** affetmek, bahsetmek, emretmek, hissetmek, kahrolmak,
-    kaybolmak, reddetmek, sabretmek, seyretmek, zannetmek. Doğru:
+    bileşikler** (TDK md. 2): affetmek, bahsetmek, emretmek, hissetmek,
+    kahrolmak, kaybolmak, reddetmek, sabretmek, seyretmek, zannetmek. Doğru:
     "teklifi reddettik". Yanlış: "teklifi red ettik", "olayı fark etti"
     DEĞİL → doğrusu zaten ayrı olan "fark etmek" bu listeye dahil değildir
     (yalnız yukarıdaki 10 kelime bu kuralın kapsamındadır — listede
     olmayan "etmek/olmak" bileşiği için bulgu üretme).
   - **Sıfat-fiil ekiyle (-an/-en, -r/-ar/-er/-ır/-ir, -maz/-mez) kurulan
-    kalıplaşmış birleşik kelimeler:** gökdelen, cankurtaran, dalgakıran,
-    basınçölçer. Doğru: "gökdelen inşaatı". Yanlış: "gök delen inşaatı".
-- **IMLA-AYRI** — Ayrı yazılır: "her şey", "hiç kimse", "pek çok", "ya da",
-  "bir şey", "bir an". Doğru: "her şey hazır", "ya da". Yanlış: "herşey", "yada".
-  Ayrıca sıfat-fiil ekiyle kurulan sıfat tamlaması yapısındaki şu kalıplar da
-  ayrı yazılır: "döner sermaye", "yeter sayı", "tükenmez kalem". Doğru:
-  "döner sermaye işletmesi". Yanlış: "dönersermaye işletmesi".
+    kalıplaşmış birleşik kelimeler** (TDK md. 3, TDK'nın kendi örnekleri):
+    gökdelen, cankurtaran, dalgakıran, basınçölçer. Doğru: "gökdelen inşaatı".
+    Yanlış: "gök delen inşaatı".
+- **IMLA-AYRI** — İki farklı kaynaklı alt-grup:
+  - *(Tür A — TDK Ayrı Yazılan Birleşik Kelimeler, sıfat-fiil ekiyle kurulan
+    sıfat tamlaması maddesi, TDK'nın kendi örnekleri)*: "döner sermaye",
+    "yeter sayı", "tükenmez kalem" gibi kalıplar ayrı yazılır. Doğru:
+    "döner sermaye işletmesi". Yanlış: "dönersermaye işletmesi".
+  - *(Tür B — TDK Güncel Türkçe Sözlük; bu kelimeler TDK'nın "Ayrı Yazılan
+    Birleşik Kelimeler" yazım-kuralı sayfasında YOKTUR, sözlükte iki ayrı
+    sözcük olarak geçtikleri için ayrı yazılır)*: "her şey", "hiç kimse",
+    "pek çok", "ya da", "bir şey", "bir an". Doğru: "her şey hazır", "ya da".
+    Yanlış: "herşey", "yada".
 
 ### A3. Sık karışan / yanlış yazılan sözcükler
 
-- **IMLA-BAGLAMSAL-KARISTIRMA** — Bağlamsal karıştırılabilir kelime çifti
-  (SÖZLÜKTE HER İKİSİ DE geçerli, ama biri cümlede yanlış anlamda kullanılmış
-  olabilir — normal tek-kelime yazım taraması bunu YAKALAYAMAZ, bu yüzden
-  kapalı bir liste olarak burada AÇIKÇA tanımlanır):
+> Bu bölümdeki maddelerin tamamı **Tür B**'dir (TDK Güncel Türkçe Sözlük —
+> kelimenin sözlükte hangi biçimde geçtiği bilgisi); TDK'nın Yazım Kuralları
+> sitesinde bunlara karşılık gelen madde numaralı bir sayfa yoktur.
+
+- **IMLA-BAGLAMSAL-KARISTIRMA** *(Tür B)* — Bağlamsal karıştırılabilir kelime
+  çifti (SÖZLÜKTE HER İKİSİ DE geçerli, ama biri cümlede yanlış anlamda
+  kullanılmış olabilir — normal tek-kelime yazım taraması bunu YAKALAYAMAZ,
+  bu yüzden kapalı bir liste olarak burada AÇIKÇA tanımlanır):
   - "güncelleme" (bir şeyi güncel hâle getirme) ≠ "günceleme" (günlük tutma
     anlamında nadir/eskil bir kelime). Kurumsal/teknik metinde "günceleme
     dosyası", "yazılımı günceleme" gibi bir kullanım GENELDE "güncelleme"
@@ -75,19 +102,23 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   NOT: Bu liste KAPALI ve kısadır — yalnız yukarıdaki iki çift için geçerlidir,
   başka sözlük-geçerli kelimeleri bu gerekçeyle sorgulama (bkz. Bilinen
   Sınırlar → "Sözlük-geçerli ama bağlamda yanlış teknik terim").
-- **IMLA-YALNIZ** — Doğrusu "yalnız"; "yanlız" yanlıştır.
-- **IMLA-YANLIS** — Doğrusu "yanlış"; "yannış", "yalnış" yanlıştır.
-- **IMLA-HERKES** — Doğrusu "herkes"; "herkez" yanlıştır.
-- **IMLA-HERSEY** — "her şey" AYRI yazılır; "herşey" yanlıştır. Sık yapılan hata,
-  mutlaka işaretle. Doğru: "her şey hazır". Yanlış: "herşey hazır".
-- **IMLA-YABANCI** — Sık yanlış yazılan alıntı sözcükler: "şoför" (şöför değil),
-  "orijinal" (orjinal değil), "egzoz" (egzos değil), "espri" (espiri değil),
-  "kontrol" (kontrol/kontörl karışıklığı), "makine" (makina tartışmalı, TDK
-  "makine"), "sürpriz" (süpriz değil), "yanlış"/"laboratuvar" (laboratuar değil),
-  "aksesuar" (aksesuvar değil), "antrenman" (antreman değil), "lisans" (lizans
-  değil), "performans" (perfomans değil), "konfigürasyon" (konfigrasyon değil),
-  "adaptör" (adaptor/adapter değil).
-- **IMLA-SAAT** — "saat" → "saatler" (saatlar değil); ünlü uyumu istisnası.
+- **IMLA-YALNIZ** *(Tür B)* — Doğrusu "yalnız"; "yanlız" yanlıştır.
+- **IMLA-YANLIS** *(Tür B)* — Doğrusu "yanlış"; "yannış", "yalnış" yanlıştır.
+- **IMLA-HERKES** *(Tür B)* — Doğrusu "herkes"; "herkez" yanlıştır.
+- **IMLA-HERSEY** *(Tür B — "her şey"in ayrı yazımı IMLA-AYRI'daki Tür B
+  grubuyla aynı gerekçeye dayanır)* — "her şey" AYRI yazılır; "herşey"
+  yanlıştır. Sık yapılan hata, mutlaka işaretle. Doğru: "her şey hazır".
+  Yanlış: "herşey hazır".
+- **IMLA-YABANCI** *(Tür B)* — Sık yanlış yazılan alıntı sözcükler: "şoför"
+  (şöför değil), "orijinal" (orjinal değil), "egzoz" (egzos değil), "espri"
+  (espiri değil), "kontrol" (kontrol/kontörl karışıklığı), "makine" (makina
+  tartışmalı, TDK "makine"), "sürpriz" (süpriz değil), "yanlış"/"laboratuvar"
+  (laboratuar değil), "aksesuar" (aksesuvar değil), "antrenman" (antreman
+  değil), "lisans" (lizans değil), "performans" (perfomans değil),
+  "konfigürasyon" (konfigrasyon değil), "adaptör" (adaptor/adapter değil).
+- **IMLA-SAAT** *(Tür A — TDK Büyük Ünlü Uyumu, "uyuma girmeyen kelimeler"
+  listesi: "saat/saate" doğrudan TDK'nın kendi örneği)* — "saat" →
+  "saatler" (saatlar değil); ünlü uyumu istisnası.
 
 ### A4. Kesme işareti
 
@@ -153,14 +184,19 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 
 ### A6. Düzeltme işareti ve Türkçe karakter
 
-- **IMLA-DUZELTME-ISARETI** — Anlam ayırt eden yerlerde düzeltme/inceltme işareti
-  kullanılır: "kâr" (kazanç) ≠ "kar" (yağış); "hâlâ" (henüz/şimdiye dek) ≠ "hala"
-  (teyze); "âdet" (gelenek) ≠ "adet" (sayı). Bağlamdan kastedilen anlam NETSE eksik
-  düzeltme işaretini öner. Örn. "Telsiz hala açıksa" → "Telsiz **hâlâ** açıksa"
-  (henüz anlamı). NOT: Anlam belirsizse bulgu üretme (yanlış-pozitif riski).
-- **IMLA-TURKCE-KARAKTER** — Türkçe karakter eksikliği bir imla hatasıdır
-  (i/ı, ş/s, ç/c, ğ/g, ö/o, ü/u). Doğru: "geleceğim", "yarın". Yanlış: "gelecegim",
-  "yarin".
+- **IMLA-DUZELTME-ISARETI** *(Tür A — TDK Düzeltme İşareti md. 1; "hâlâ/hala"
+  ve "âdet/adet" TDK'nın kendi örnekleridir. "kâr/kar" TDK'nın örnek
+  listesinde YOK ama AYNI ilkenin — yazılışı bir, anlamı ayrı kelimeleri
+  ayırt etme — doğrudan bir genellemesidir)* — Anlam ayırt eden yerlerde
+  düzeltme/inceltme işareti kullanılır: "kâr" (kazanç) ≠ "kar" (yağış);
+  "hâlâ" (henüz/şimdiye dek) ≠ "hala" (teyze); "âdet" (gelenek) ≠ "adet"
+  (sayı). Bağlamdan kastedilen anlam NETSE eksik düzeltme işaretini öner.
+  Örn. "Telsiz hala açıksa" → "Telsiz **hâlâ** açıksa" (henüz anlamı). NOT:
+  Anlam belirsizse bulgu üretme (yanlış-pozitif riski).
+- **IMLA-TURKCE-KARAKTER** *(kaynak gerektirmez — temel Türk alfabesi
+  gerçeği, TDK'nın kendi yazım kılavuzu/sözlüğü zaten Türkçe karakterle
+  yazılıdır)* — Türkçe karakter eksikliği bir imla hatasıdır (i/ı, ş/s, ç/c,
+  ğ/g, ö/o, ü/u). Doğru: "geleceğim", "yarın". Yanlış: "gelecegim", "yarin".
 
 ### A7. Noktalama
 

@@ -419,7 +419,10 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
 ## Kural Kimlikleri (Hızlı Sözlük)
 
 Her bulgu mümkünse bir `rule_id` taşır; kuralların tam tanımı
-`src/dilanaliz/rules/rules.md`'dedir.
+`src/dilanaliz/rules/rules.md`'dedir. İmla (A) bölümündeki her madde **Tür A**
+(TDK Yazım Kuralları sayfası, madde numaralı) veya **Tür B** (TDK Güncel
+Türkçe Sözlük, madde numarasız) olarak etiketlidir — yeni imla maddesi
+eklerken hangi türe girdiğini belirle, madde numarası UYDURMA.
 
 - **İmla:** `IMLA-DE-DA`, `IMLA-KI`, `IMLA-MI`, `IMLA-BITISIK`, `IMLA-AYRI`,
   `IMLA-BAGLAMSAL-KARISTIRMA`, `IMLA-YALNIZ`, `IMLA-YANLIS`, `IMLA-HERKES`,
