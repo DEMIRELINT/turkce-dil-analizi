@@ -80,3 +80,4 @@
 {"id": "imla-kisaltma-1", "text": "Yükleniciyle yapılan görüşmede TDK'nın son teslim tarihi netleşti.", "expected": [{"type": "imla", "excerpt": "TDK'nın"}]}
 {"id": "imla-sira-sayi-1", "text": "Ayrıntılar 8.'inci maddede yer almaktadır.", "expected": [{"type": "imla", "excerpt": "8.'inci"}]}
 {"id": "gramer-cati-nesne-1", "text": "Bu seri telsizleri CPS kullanarak programlanabilir.", "expected": [{"type": "dil_bilgisi", "excerpt": "telsizleri CPS kullanarak programlanabilir"}]}
+{"id": "imla-noktalama-etiket-sonu-temiz-1", "text": "Daha fazla bilgi için bkz. “İşletim Güvenliği Talimatları” sayfa 7.", "expected": []}

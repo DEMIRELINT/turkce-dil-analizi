@@ -239,6 +239,13 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   - **Başlık/etiket satırına son noktalama EKLEME:** Nokta ile bitmeyen kısa
     başlık, düğme açıklaması veya şekil etiketi ("Kanal 1'i önceden ayarlamak
     için varsayılan ayar") cümle değildir; sonuna nokta eklemeyi önerme.
+    **Bu madde yalnız EKLEME yönündedir — var olan bir noktayı SİLMEYİ
+    önermek için kullanma.** Özellikle "bkz. "X" sayfa N." kalıbında sayfa
+    numarasından sonra gelen nokta, cümlenin kendi bitiş noktalama işaretidir
+    (cümle "Daha fazla bilgi için bkz. ... sayfa 7." ile biter) — bunu bir
+    "etiket sonu fazlalık nokta" sanıp kaldırma. Bir noktanın kaldırılmasını
+    önermeden önce o noktanın cümlenin GERÇEK bitişi olup olmadığını kontrol
+    et; öyleyse dokunma.
 
 ### A8. Sayı ve ölçü birimi yazımı
 
