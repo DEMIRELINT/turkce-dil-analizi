@@ -290,7 +290,10 @@ uydurulmuş olur.
 *davranışını* tutar; *kurallar* `RulesProvider` üzerinden ayrı gelir
 ([rules/rules.md](src/dilanaliz/rules/rules.md)). Kural değiştirmek için **kod
 değişmez** — `rules.md`'yi düzenle veya `.env`'de `RULES_PATH` ile kendi
-kurumsal kural dökümanını göster.
+kurumsal kural dökümanını göster. Kurallar geçişe göre kesitlenir: yerel geçiş
+yalnız A+B (imla + dil bilgisi), ton geçişi yalnız C bölümünü görür — her
+çağrı küçülür ve bir geçiş, başka eksenin "Yanlış:" örneklerini görüp onlardan
+sahte bulgu üretemez.
 
 Her bulgu mümkünse bir `rule_id` taşır:
 

@@ -12,7 +12,7 @@ _EMPTY = LLMAnalysis(findings=[], spelling=[])
 
 
 class _FakeRules:
-    def get_context(self, text: str) -> str:
+    def get_context(self, text: str, purpose: str = "all") -> str:
         return "KURALLAR"
 
 

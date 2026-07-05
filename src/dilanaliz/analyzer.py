@@ -231,7 +231,9 @@ class Analyzer:
 
     def _local_pass(self, text: str) -> list[Finding]:
         """Cümle bazlı geçiş: Hunspell adayları + noktalama/dil bilgisi/bağlamsal imla."""
-        rules_context = self._rules.get_context(text)
+        # Yalnız bu geçişin kuralları (A imla + B dil bilgisi) — ton bölümü
+        # ve geliştirici notları gönderilmez (token + halüsinasyon yüzeyi).
+        rules_context = self._rules.get_context(text, purpose="local")
         candidates = self._speller.check_text(text) if self._speller else []
         candidate_words = [c.excerpt for c in candidates]
 
@@ -247,7 +249,9 @@ class Analyzer:
 
     def _tone_pass(self, text: str) -> list[Finding]:
         """Paragraf bazlı geçiş: yalnız ton/üslup."""
-        rules_context = self._rules.get_context(text)
+        # Yalnız C (ton/üslup) bölümü — imla/dil bilgisi kuralları bu geçişin
+        # görevi dışıdır; "Yanlış:" örnekleri halüsinasyon kaynağı olmasın.
+        rules_context = self._rules.get_context(text, purpose="tone")
         user_message = build_tone_message(rules_context, text)
         return self._located_findings(TONE_SYSTEM_PROMPT, user_message, text)
 

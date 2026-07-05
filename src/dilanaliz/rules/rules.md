@@ -383,6 +383,9 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
 
 ## Bilinen Sınırlar
 
+> (Bu bölüm geliştirici dokümantasyonudur; modele GÖNDERİLMEZ —
+> `StaticRulesProvider` yalnız A/B/C bölümlerini kesitler.)
+
 Bu bölüm bilinçli olarak ÇÖZÜLMEYEN, ölçülmüş boşlukları belgeler — kural
 genişletmesi burada YAPILMAZ (bkz. `eval/golden.jsonl`'deki ilgili FN örneği).
 

@@ -174,7 +174,13 @@ koru:
 
 - **Davranış / Bilgi ayrımı** — `prompt.py` yalnız modelin *davranışını* tutar;
   *kurallar* `RulesProvider` üzerinden ayrı gelir. Kural değişikliği `rules.md`
-  veya `.env`'deki `RULES_PATH` ile yapılır, **kod değişmeden**.
+  veya `.env`'deki `RULES_PATH` ile yapılır, **kod değişmeden**. Sağlayıcı
+  **geçiş-farkındadır**: `get_context(text, purpose)` — yerel geçiş yalnız
+  A+B (imla + dil bilgisi), ton geçişi yalnız C bölümünü alır; `rules.md`'nin
+  "Bilinen Sınırlar" bölümü geliştirici notudur, modele HİÇ gönderilmez.
+  Tanınan başlığı olmayan harici `RULES_PATH` dosyasında kesitleme devre dışı
+  kalır (tam metin gider — kural sessizce kaybolmaz). Yeni geçiş eklerken
+  purpose eşlemesini (`rules/static.py` → `_PURPOSE_KINDS`) güncelle.
 - **Sağlayıcı soyutlaması** — `providers/build_chat_model` bir LangChain
   `BaseChatModel` döndürür. Gemini'yi yerel vLLM ile değiştirmek analyzer'ı
   etkilememeli.

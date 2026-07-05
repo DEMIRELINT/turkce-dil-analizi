@@ -8,10 +8,16 @@ Eşleştirme: bir tahmin, aynı eksende (type) ve alıntısı beklenen alıntıy
 denk geliyorsa Doğru Pozitif (TP) sayılır. Artan tahminler FP, eşleşmeyen
 beklenenler FN'dir. TEMİZ metinlerdeki tüm tahminler FP'dir (yanlış pozitif).
 
+ÇEKİRDEK vs TON: Özet skor (ÇEKİRDEK) yalnız imla + dil bilgisi + tutarlılıktan
+hesaplanır; ton AYRI raporlanır (bkz. CORE_AXES). Ton öznel ve gürültülü bir
+eksendir, özellikle kılavuz/talimat metninde (emir kipi normaldir) yanlış-
+pozitif baskındır — çekirdek precision'a katılırsa güçlü eksenlerin gerçek
+başarısını maskeler.
+
 Kısmi/ucuz koşu: EVAL_FILTER ortam değişkeniyle yalnız belirli id'leri (veya
-id ön eklerini) çalıştır — ücretli API'de her küçük kural değişikliğinde
-53 örneğin tamamını göndermemek için. Tam koşu yalnız büyük kilometre
-taşlarında (bir Faz'ın sonu, PR öncesi) önerilir.
+id ön eklerini) çalıştır — ücretli API'de her küçük kural değişikliğinde tüm
+örnekleri göndermemek için. Tam koşu yalnız büyük kilometre taşlarında (bir
+Faz'ın sonu, PR öncesi) önerilir.
     EVAL_FILTER=imla-yabanci,temiz EVAL_DELAY_SEC=0 python eval/run_eval.py
 """
 
@@ -29,6 +35,11 @@ from dilanaliz.schema import AnalysisResult
 GOLDEN = Path(__file__).with_name("golden.jsonl")
 DUMP = Path(__file__).with_name("last_predictions.json")
 AXES = ["imla", "dil_bilgisi", "ton", "tutarlilik"]
+# "GENEL" (çekirdek) skoru YALNIZ bu eksenlerden hesaplanır. Ton bilinçli olarak
+# DIŞARIDA: öznel + gürültülü bir eksendir ve özellikle kılavuz/talimat
+# metninde (emir kipi normaldir) yanlış-pozitif baskındır; çekirdek precision'a
+# katılırsa güçlü eksenlerin gerçek başarısını maskeler. Ton ayrı raporlanır.
+CORE_AXES = ["imla", "dil_bilgisi", "tutarlilik"]
 
 
 def _norm(s: str) -> str:
@@ -77,7 +88,8 @@ def main() -> None:
     total_tp = defaultdict(int)
     total_fp = defaultdict(int)
     total_fn = defaultdict(int)
-    clean_fp = 0
+    clean_fp = 0       # çekirdek eksenler (imla + dil bilgisi + tutarlılık)
+    clean_fp_tone = 0  # ton — ayrı sayılır (çekirdeğe katılmaz)
 
     # Gemini ücretsiz katman dakikada 5 istekle sınırlı. Çağrılar arasına bekleme
     # koyarak 429'u önleriz. Ücretli katmanda EVAL_DELAY_SEC=0 ile kapatılabilir.
@@ -87,9 +99,10 @@ def main() -> None:
 
     filt = os.getenv("EVAL_FILTER", "").strip()
     if filt:
+        full_count = len(examples)
         prefixes = [p.strip() for p in filt.split(",") if p.strip()]
         examples = [ex for ex in examples if any(ex["id"] == p or ex["id"].startswith(p) for p in prefixes)]
-        print(f"[EVAL_FILTER={filt!r}] {len(examples)} örnek seçildi (tam set 53).")
+        print(f"[EVAL_FILTER={filt!r}] {len(examples)} örnek seçildi (tam set {full_count}).")
 
     dump: list[dict] = []
     processed = 0
@@ -115,7 +128,8 @@ def main() -> None:
             total_fp[ax] += fp[ax]
             total_fn[ax] += fn[ax]
         if not ex["expected"]:
-            clean_fp += len(result.findings)
+            clean_fp += sum(1 for f in result.findings if f.type.value != "ton")
+            clean_fp_tone += sum(1 for f in result.findings if f.type.value == "ton")
         dump.append(
             {
                 "id": ex["id"],
@@ -136,21 +150,27 @@ def main() -> None:
         print(f"\n[Kısmi çalışma] {processed}/{len(examples)} örnek işlendi. "
               f"Sonuçlar {DUMP.name}'a yazıldı; kalanlar önbellekten devam edecek.")
 
+    def _line(label: str, tp: int, fp: int, fn: int) -> None:
+        prec = tp / (tp + fp) if (tp + fp) else 0.0
+        rec = tp / (tp + fn) if (tp + fn) else 0.0
+        print(f"{label:<14}{prec:>10.2f}{rec:>9.2f}{tp:>5}{fp:>5}{fn:>5}")
+
     print("\n=== Eksen bazlı ===")
     print(f"{'eksen':<14}{'precision':>10}{'recall':>9}{'TP':>5}{'FP':>5}{'FN':>5}")
     for ax in AXES:
-        tp, fp, fn = total_tp[ax], total_fp[ax], total_fn[ax]
-        prec = tp / (tp + fp) if (tp + fp) else 0.0
-        rec = tp / (tp + fn) if (tp + fn) else 0.0
-        print(f"{ax:<14}{prec:>10.2f}{rec:>9.2f}{tp:>5}{fp:>5}{fn:>5}")
+        _line(ax, total_tp[ax], total_fp[ax], total_fn[ax])
 
-    g_tp = sum(total_tp.values())
-    g_fp = sum(total_fp.values())
-    g_fn = sum(total_fn.values())
-    g_prec = g_tp / (g_tp + g_fp) if (g_tp + g_fp) else 0.0
-    g_rec = g_tp / (g_tp + g_fn) if (g_tp + g_fn) else 0.0
-    print(f"{'GENEL':<14}{g_prec:>10.2f}{g_rec:>9.2f}{g_tp:>5}{g_fp:>5}{g_fn:>5}")
-    print(f"\nTEMİZ metinlerde yanlış pozitif sayısı: {clean_fp}")
+    # ÇEKİRDEK skoru (imla + dil bilgisi + tutarlılık) — ton hariç. Ton öznel/
+    # gürültülü olduğundan ayrı raporlanır; çekirdek precision'ı maskelememesi
+    # için toplama katılmaz (bkz. CORE_AXES yorumu).
+    c_tp = sum(total_tp[ax] for ax in CORE_AXES)
+    c_fp = sum(total_fp[ax] for ax in CORE_AXES)
+    c_fn = sum(total_fn[ax] for ax in CORE_AXES)
+    print("-" * 43)
+    _line("ÇEKİRDEK", c_tp, c_fp, c_fn)  # GENEL yerine: ton'suz çekirdek
+    _line("(ton ayrı)", total_tp["ton"], total_fp["ton"], total_fn["ton"])
+
+    print(f"\nTEMİZ metinlerde yanlış pozitif — çekirdek: {clean_fp}  |  ton: {clean_fp_tone}")
 
 
 if __name__ == "__main__":
