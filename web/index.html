@@ -104,12 +104,51 @@
   .cell.done { background: var(--ok); border-color: var(--ok); }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 
+  /* Denetlenen eksenler (imla/dil bilgisi/ton/tutarlılık) — bilgi rozetleri */
+  .axis-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .axis-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12.5px; font-weight: 600; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 99px; padding: 3px 11px;
+    background: var(--panel2); opacity: .55;
+    transition: opacity .2s ease, color .2s ease;
+  }
+  .axis-badge .ax-dot { width: 9px; height: 9px; border-radius: 99px; background: var(--line); flex: none; }
+  .axis-badge.active, .axis-badge.done { opacity: 1; color: var(--fg); }
+  .axis-badge.active .ax-dot { animation: pulse 1s ease-in-out infinite; }
+  .axis-badge.active.imla .ax-dot { background: var(--imla); }
+  .axis-badge.active.dil_bilgisi .ax-dot { background: var(--dil_bilgisi); }
+  .axis-badge.active.ton .ax-dot { background: var(--ton); }
+  .axis-badge.active.tutarlilik .ax-dot { background: var(--tutarlilik); }
+  .axis-badge.done .ax-dot { background: var(--ok); animation: none; }
+  .grid-hint { color: var(--muted); font-size: 12px; margin: 0 0 8px; display: none; }
+
   /* Sonuç */
   #resultCard { display: none; }
   .result-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
   .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
   .chip { border-radius: 99px; padding: 4px 12px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); }
   .chip b { font-weight: 800; }
+  /* Özet rozetleri aynı zamanda eksen süzgeci (G): tıkla → yalnız o ekseni göster */
+  .filter-chip { cursor: pointer; user-select: none; transition: background .15s ease; }
+  .filter-chip:hover { background: var(--panel2); }
+  .filter-chip.active { background: var(--panel2); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+  /* Bulgular eksene göre başlıklı bölümlere ayrılır (H) */
+  .find-section { margin-bottom: 4px; }
+  .section-head {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); margin: 16px 0 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .find-section:first-child .section-head { margin-top: 0; }
+  .section-head .section-count {
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 99px;
+    padding: 1px 8px; font-size: 11px; font-weight: 700;
+  }
+  .section-head.imla { color: var(--imla); }
+  .section-head.dil_bilgisi { color: var(--dil_bilgisi); }
+  .section-head.ton { color: var(--ton); }
+  .section-head.tutarlilik { color: var(--tutarlilik); }
 
   /* İki sütunlu sonuç düzeni: solda kaynak metin (%66), sağda bulgular (%33) */
   .result-split { display: flex; gap: 20px; align-items: flex-start; }
@@ -274,6 +313,8 @@
   <div class="card" id="progressCard">
     <div class="bar"><i id="barFill"></i></div>
     <div class="prog-head" id="progHead"></div>
+    <div class="axis-badges" id="axisBadges"></div>
+    <div class="grid-hint" id="gridHint">Her kare belgenin bir bölümüdür.</div>
     <div class="chunk-grid" id="chunkGrid"></div>
     <div class="steps" id="steps"></div>
   </div>
@@ -297,6 +338,29 @@ const $ = (id) => document.getElementById(id);
 const TYPE_LABEL = { imla: "İmla", dil_bilgisi: "Dil bilgisi", ton: "Ton", tutarlilik: "Tutarlılık" };
 const TYPES = ["imla", "dil_bilgisi", "ton", "tutarlilik"];
 
+// Kural kimliğini (rule_id) insan-okur Türkçe etikete çevirir. Ham kimlik
+// tooltip olarak korunur; eşleşme yoksa kimlik olduğu gibi gösterilir.
+const RULE_LABEL = {
+  "IMLA-DE-DA": "de/da ekinin yazımı", "IMLA-KI": "ki bağlacının yazımı",
+  "IMLA-MI": "mı/mi soru ekinin yazımı", "IMLA-BITISIK": "bitişik yazım",
+  "IMLA-AYRI": "ayrı yazım", "IMLA-BAGLAMSAL-KARISTIRMA": "bağlamsal karıştırma",
+  "IMLA-YALNIZ": "‘yalnız’ yazımı", "IMLA-YANLIS": "‘yanlış’ yazımı",
+  "IMLA-HERKES": "‘herkes’ yazımı", "IMLA-HERSEY": "‘her şey’ yazımı",
+  "IMLA-YABANCI": "yabancı kelime yazımı", "IMLA-SAAT": "saat yazımı",
+  "IMLA-KESME": "kesme işareti", "IMLA-KISALTMA": "kısaltma yazımı",
+  "IMLA-SIRA-SAYI": "sıra sayısı yazımı", "IMLA-DUZELTME-ISARETI": "düzeltme işareti",
+  "IMLA-TURKCE-KARAKTER": "Türkçe karakter", "IMLA-NOKTALAMA": "noktalama",
+  "IMLA-BIRIM": "birim yazımı", "HUNSPELL": "sözlük denetimi",
+  "GRAMER-OZNE-YUKLEM": "özne-yüklem uyumu", "GRAMER-TAMLAMA": "tamlama",
+  "GRAMER-ANLATIM": "anlatım bozukluğu", "GRAMER-CATI": "çatı uyumu",
+  "GRAMER-EK-FIIL": "ek-fiil", "GRAMER-SAYI-UYUM": "sayı uyumu",
+  "GRAMER-TEKRAR": "gereksiz tekrar", "GRAMER-BOLUNMUS-KELIME": "bölünmüş kelime",
+  "TON-RESMI": "resmî ton", "TON-NEZAKET": "nezaket",
+  "TON-HITAP-TUTARLILIK": "hitap tutarlılığı", "TON-ACIKLIK": "açıklık",
+  "TON-KLISE": "klişe ifade",
+};
+const ruleLabel = (id) => RULE_LABEL[id] || id;
+
 function esc(s) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
@@ -304,13 +368,38 @@ function esc(s) {
 // --- İlerleme akışı -------------------------------------------------------
 let stepEls = {};
 let cells = {};                                  // parça kimliği (1..N) → hücre öğesi
+let axisEls = {};                                // eksen anahtarı → rozet öğesi
 let progState = { total: 0, done: 0, run: 0 };   // canlı sayaçlar
+let progStartMs = 0;                             // geçen süre için başlangıç
+let progTimer = null;                            // saniyelik süre yenileme
+
+// Denetlenen dört ekseni bilgi rozeti olarak kur (durum canlı güncellenir).
+function buildAxisBadges() {
+  const box = $("axisBadges"); box.innerHTML = ""; axisEls = {};
+  TYPES.forEach((t) => {
+    const el = document.createElement("span");
+    el.className = "axis-badge " + t;
+    el.innerHTML = `<span class="ax-dot"></span><span class="ax-lbl">${TYPE_LABEL[t]}</span>`;
+    box.appendChild(el); axisEls[t] = el;
+  });
+}
+function setAxis(key, status) {
+  const el = axisEls[key]; if (!el) return;
+  el.classList.remove("active", "done");
+  if (status) el.classList.add(status);
+}
+
+function stopProgTimer() { if (progTimer) { clearInterval(progTimer); progTimer = null; } }
 
 function resetProgress() {
   $("steps").innerHTML = ""; stepEls = {};
   $("chunkGrid").innerHTML = ""; cells = {};
+  buildAxisBadges();
+  $("gridHint").style.display = "none";
   $("progHead").textContent = "";
   progState = { total: 0, done: 0, run: 0 };
+  progStartMs = Date.now();
+  stopProgTimer(); progTimer = setInterval(refreshHead, 1000);
   $("barFill").style.width = "0";
   $("inputCard").style.display = "none";
   $("newAnalysisBar").style.display = "none";
@@ -331,13 +420,27 @@ function showInputView() {
   $("text").value = ""; $("file").value = ""; $("fileName").textContent = "";
 }
 
-// Üstteki canlı özet + ilerleme çubuğu (parçalar çubuğun %92'sini, kalanı
-// tutarlılık/finalize doldurur).
+// Geçen süreyi "d:ss" biçiminde ver.
+function fmtElapsed(ms) {
+  const s = Math.floor(ms / 1000);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
+
+// Üstteki canlı özet + ilerleme çubuğu (bölümler çubuğun %92'sini, kalanı
+// tutarlılık/finalize doldurur). Saniyede bir de zamanlayıcıdan çağrılır.
 function refreshHead() {
   const t = progState.total;
-  $("progHead").innerHTML =
-    `<b>${progState.done}/${t}</b> parça tamamlandı` +
-    (progState.run > 0 ? ` · <span class="run-n">${progState.run} işleniyor</span>` : "");
+  const elapsed = progStartMs ? ` · ${fmtElapsed(Date.now() - progStartMs)} geçti` : "";
+  let msg;
+  if (t <= 0) {
+    msg = "Belge hazırlanıyor…";
+  } else if (progState.done === 0 && progState.run === 0) {
+    msg = `Belgeniz <b>${t}</b> bölüme ayrıldı — yazım, dil bilgisi, ton ve tutarlılık denetleniyor.`;
+  } else {
+    msg = `<b>${progState.done}/${t}</b> bölüm incelendi` +
+      (progState.run > 0 ? ` · <span class="run-n">${progState.run} tanesi işleniyor</span>` : "");
+  }
+  $("progHead").innerHTML = msg + elapsed;
   if (t > 0) $("barFill").style.width = Math.round((progState.done / t) * 92) + "%";
 }
 
@@ -362,36 +465,53 @@ function onExtract(ev) {
   (ev.warnings || []).forEach((w) => { html += `<div class="ex-warn">⚠ ${esc(w)}</div>`; });
   $("extractNote").innerHTML = html;
   $("extractNote").style.display = "block";
+  // Canlı akışta "belge okunuyor" adımını tamamlanmış işaretle (geçmiş
+  // görüntülemede progressCard gizli olduğundan dokunma).
+  if ($("progressCard").style.display !== "none" && stepEls["extract"]) {
+    setStep("extract", "Belge metni okundu", "done");
+  }
 }
+// Yerel geçiş eksenleri (imla/dil bilgisi/ton) bölüm içinde iç içe çalışır;
+// tutarlılık ayrı bir geçiştir. Rozet durumu bu üç eksen için topluca yönetilir.
+const LOCAL_AXES = ["imla", "dil_bilgisi", "ton"];
+
 function onProgress(ev) {
   switch (ev.stage) {
+    case "extract":                        // docx metni çıkarılıyor (adım olarak göster)
+      setStep("extract", ev.message || "Belge metni okunuyor…", "active");
+      break;
     case "chunk": {
-      // Belge N parçaya bölündü → hepsini "bekliyor" hücresi olarak önceden çiz.
+      // Belge N bölüme ayrıldı → hepsini "bekliyor" hücresi olarak önceden çiz.
       progState.total = ev.total;
       const grid = $("chunkGrid");
       for (let i = 1; i <= ev.total; i++) {
         const c = document.createElement("div");
-        c.className = "cell"; c.title = "Parça " + i + " — bekliyor";
+        c.className = "cell"; c.title = "Bölüm " + i + " — bekliyor";
         grid.appendChild(c); cells[i] = c;
+      }
+      if (ev.total > 0) $("gridHint").style.display = "block";
+      refreshHead();
+      break;
+    }
+    case "chunk_start": {                 // bir bölüm işlenmeye başladı (amber, nabız)
+      const c = cells[ev.current];
+      if (c) { c.classList.add("run"); c.title = ev.message; }
+      LOCAL_AXES.forEach((t) => setAxis(t, "active"));  // yerel eksenler denetleniyor
+      progState.run++; refreshHead();
+      break;
+    }
+    case "chunk_done": {                   // bir bölüm bitti (yeşil)
+      const c = cells[ev.current];
+      if (c) { c.classList.remove("run"); c.classList.add("done"); c.title = ev.message; }
+      progState.run = Math.max(0, progState.run - 1); progState.done++;
+      if (progState.total > 0 && progState.done >= progState.total) {
+        LOCAL_AXES.forEach((t) => setAxis(t, "done"));  // tüm bölümler bitti
       }
       refreshHead();
       break;
     }
-    case "chunk_start": {                 // bir parça işlenmeye başladı (amber, nabız)
-      const c = cells[ev.current];
-      if (c) { c.classList.add("run"); c.title = ev.message; }
-      progState.run++; refreshHead();
-      break;
-    }
-    case "chunk_done": {                   // bir parça bitti (yeşil)
-      const c = cells[ev.current];
-      if (c) { c.classList.remove("run"); c.classList.add("done"); c.title = ev.message; }
-      progState.run = Math.max(0, progState.run - 1); progState.done++;
-      refreshHead();
-      break;
-    }
-    case "consistency_start": setStep("consistency", ev.message, "active"); break;
-    case "consistency_done":  setStep("consistency", ev.message, "done");   break;
+    case "consistency_start": setAxis("tutarlilik", "active"); setStep("consistency", ev.message, "active"); break;
+    case "consistency_done":  setAxis("tutarlilik", "done");   setStep("consistency", ev.message, "done");   break;
     case "finalize":
       setStep("finalize", ev.message, "active");
       $("barFill").style.width = "96%";
@@ -399,25 +519,29 @@ function onProgress(ev) {
     case "done":
       setStep("finalize", ev.message, "done");
       $("barFill").style.width = "100%";
+      stopProgTimer();
       break;
   }
 }
 
 // --- Sonuç ----------------------------------------------------------------
 let lastPayload = null;   // indir/kopyala için en son gösterilen sonuç (canlı ya da geçmiş)
+let activeFilter = null;  // eksene göre süzgeç (null = hepsi)
 
 function renderResult(payload) {
   lastPayload = payload;
+  activeFilter = null;      // her yeni sonuçta süzgeci sıfırla
+  stopProgTimer();
   document.querySelectorAll(".step.active").forEach((s) => s.classList.add("done"));
   $("barFill").style.width = "100%";
   const source = payload.source;
   const findings = payload.result.findings || [];
 
-  // Özet rozetleri
+  // Özet rozetleri — aynı zamanda eksen süzgeci (tıklanabilir).
   const counts = {}; TYPES.forEach((t) => counts[t] = 0);
   findings.forEach((f) => { if (counts[f.type] !== undefined) counts[f.type]++; });
-  let chips = `<span class="chip">Toplam <b>${findings.length}</b> bulgu</span>`;
-  TYPES.forEach((t) => { if (counts[t]) chips += `<span class="chip" style="border-color:var(--${t})">${TYPE_LABEL[t]} <b>${counts[t]}</b></span>`; });
+  let chips = `<span class="chip filter-chip active" data-filter="">Toplam <b>${findings.length}</b> bulgu</span>`;
+  TYPES.forEach((t) => { if (counts[t]) chips += `<span class="chip filter-chip" data-filter="${t}" style="border-color:var(--${t})">${TYPE_LABEL[t]} <b>${counts[t]}</b></span>`; });
   $("summary").innerHTML = chips;
 
   // Kaynak metin + vurgular (çakışmayanları sırayla işaretle)
@@ -455,16 +579,18 @@ function renderResult(payload) {
     }
     const sorted = Array.from(groups.values()).sort((a, b) =>
       (order[a.type] - order[b.type]) || (b.count - a.count) || ((a.start ?? 1e9) - (b.start ?? 1e9)));
-    $("findings").innerHTML = sorted.map((f) => {
+
+    // Tek bir gruplanmış bulguyu karta çevirir. Tek bulgulu kart: doğrudan
+    // kendi konumuna tıklanabilir. Gruplu kart: başlık ilk occurrence'a atlar,
+    // "Tüm konumları göster" tam listeyi açar — her satır KENDİ excerpt→suggestion
+    // çiftini HER ZAMAN gösterir, tutarlı ve tıklanabilir tam-genişlik blok.
+    const cardHtml = (f) => {
       const conf = f.confidence != null ? ` · güven ${(f.confidence * 100).toFixed(0)}%` : "";
-      const rule = f.rule_id ? ` · ${esc(f.rule_id)}` : "";
+      // rule_id insan-okur etikete çevrilir; ham kimlik tooltip'te korunur.
+      const rule = f.rule_id ? ` · <span title="${esc(f.rule_id)}">${esc(ruleLabel(f.rule_id))}</span>` : "";
       const sug = f.suggestion ? `<span class="arrow"> → </span><span class="sug">${esc(f.suggestion)}</span>` : "";
       const badge = f.count > 1 ? ` <span class="count-badge">${f.count} yerde</span>` : "";
       const firstStart = f.occurrences.length ? f.occurrences[0].start : f.start;
-      // Tek bulgulu kart: doğrudan kendi konumuna tıklanabilir. Gruplu kart:
-      // başlık ilk occurrence'a atlar, "Tüm konumları göster" tam listeyi açar
-      // — her satır KENDİ excerpt→suggestion çiftini HER ZAMAN gösterir (temsilciyle
-      // aynı olsun ya da farklı olsun), tutarlı ve tıklanabilir tam-genişlik blok.
       const headJump = firstStart != null ? ` data-jump="${firstStart}"` : "";
       const details = f.count > 1 ? `<details><summary>Tüm konumları göster (${f.count})</summary>
         <div class="loc-rows">${f.occurrences.map((o, i) =>
@@ -478,11 +604,42 @@ function renderResult(payload) {
         <div class="meta">${rule}${conf}</div>
         ${details}
       </div>`;
-    }).join("");
+    };
+
+    // Bulgular eksene göre başlıklı bölümlere ayrılır (tür sırası korunur).
+    let sectionsHtml = "";
+    for (const t of TYPES) {
+      const items = sorted.filter((g) => g.type === t);
+      if (!items.length) continue;
+      sectionsHtml += `<section class="find-section" data-section="${t}">
+        <h3 class="section-head ${t}">${TYPE_LABEL[t]} <span class="section-count">${items.length}</span></h3>
+        ${items.map(cardHtml).join("")}
+      </section>`;
+    }
+    $("findings").innerHTML = sectionsHtml;
   }
+  applyFilter();
   $("resultCard").style.display = "block";
   showResultsView();
 }
+
+// Aktif eksen süzgecini uygula: yalnız seçili türün bölümünü göster (null=hepsi).
+function applyFilter() {
+  document.querySelectorAll("#findings [data-section]").forEach((s) => {
+    s.style.display = (!activeFilter || s.dataset.section === activeFilter) ? "" : "none";
+  });
+}
+
+// Özet rozetine tıkla → eksene göre süz (aynı çipe yeniden tıklama gerekmez;
+// "Toplam" çipi süzgeci sıfırlar).
+$("summary").addEventListener("click", (e) => {
+  const chip = e.target.closest(".filter-chip");
+  if (!chip) return;
+  activeFilter = chip.dataset.filter || null;
+  document.querySelectorAll("#summary .filter-chip").forEach((c) =>
+    c.classList.toggle("active", (c.dataset.filter || null) === activeFilter));
+  applyFilter();
+});
 
 // Bir konum çipine tıklanınca kaynak metindeki ilgili <mark>'a kaydır + vurgula.
 $("findings").addEventListener("click", (e) => {
@@ -536,7 +693,8 @@ function buildReport(payload) {
         out += `${i + 1}. "${f.excerpt}"${sug}\n`;
         if (f.explanation) out += `   - Açıklama: ${f.explanation}\n`;
         const meta = [];
-        if (f.rule_id) meta.push(f.rule_id);
+        // Ajan-dostu: ham kimliği koru, insan-okur etiketi parantezde ekle.
+        if (f.rule_id) meta.push(RULE_LABEL[f.rule_id] ? `${f.rule_id} (${RULE_LABEL[f.rule_id]})` : f.rule_id);
         if (f.confidence != null) meta.push(`güven %${Math.round(f.confidence * 100)}`);
         if (meta.length) out += `   - ${meta.join(" · ")}\n`;
         if (f.start != null) {
@@ -669,6 +827,7 @@ async function start() {
     es.addEventListener("error", (e) => {
       const msg = e.data ? JSON.parse(e.data).message : "Bağlantı hatası.";
       $("steps").innerHTML += `<div class="step err">⚠ ${esc(msg)}</div>`;
+      stopProgTimer();
       es.close(); running = false; $("run").disabled = false;
     });
     es.addEventListener("done", () => {
@@ -677,6 +836,7 @@ async function start() {
     });
   } catch (err) {
     $("steps").innerHTML += `<div class="step err">⚠ ${esc(String(err))}</div>`;
+    stopProgTimer();
     running = false; $("run").disabled = false;
   }
 }

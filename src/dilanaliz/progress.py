@@ -22,8 +22,9 @@ class ProgressEvent:
     stage   : makine-okur aşama anahtarı
               ("chunk" = bölme tamamlandı | "chunk_start"/"chunk_done" = bir parça
                başladı/bitti | "consistency_start"/"consistency_done" |
-               "finalize" | "done").
-    message : Türkçe, kullanıcıya gösterilecek mesaj ("Parça 2/5 inceleniyor").
+               "finalize" | "done"). Not: "parça" içeride deterministik bölme
+               birimidir; kullanıcıya gösterilen mesajlarda "bölüm" denir.
+    message : Türkçe, kullanıcıya gösterilecek mesaj ("Bölüm 2/5 inceleniyor").
     current : parça kimliği (1 tabanlı, kararlı); 0 = anlamlı değil. Paralelde
               parçalar sırasız biter, ama her parçanın `current`'ı sabittir.
     total   : toplam parça sayısı; 0 = anlamlı değil.

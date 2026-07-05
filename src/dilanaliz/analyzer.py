@@ -138,7 +138,7 @@ class Analyzer:
 
         chunks = chunk_text(text, max_chars=max_chars)
         total = len(chunks)
-        emit(progress, ProgressEvent("chunk", f"Belge {total} parçaya bölündü", 0, total))
+        emit(progress, ProgressEvent("chunk", f"Belge {total} bölüme ayrıldı", 0, total))
 
         # İlerleme yayını thread-safe olmalı: paralelde parça-işçileri aynı anda
         # "başladı/bitti" olayı yayar; callback (web SSE yazarı) thread-safe
@@ -155,19 +155,19 @@ class Analyzer:
             # her parçayı ayrı satır/hücre olarak gösterip aynı anda kaçının işlendiğini
             # canlı izleyebilir.
             emit_safe(ProgressEvent(
-                "chunk_start", f"Parça {index}/{total} inceleniyor", index, total))
+                "chunk_start", f"Bölüm {index}/{total} inceleniyor", index, total))
             if _covered_by_ranges(text, chunk.start, chunk.end, drop_ranges):
                 # Parça yalnız tablo/İçindekiler verisi: düzyazı denetimi
                 # anlamsız, LLM'e gönderme (tablo değerlerini tutarlılık geçişi
                 # zaten görüyor; TOC başlıkları gövdede zaten denetleniyor).
                 emit_safe(ProgressEvent(
                     "chunk_done",
-                    f"Parça {index}/{total} tablo/içindekiler verisi — dil denetimi atlandı",
+                    f"Bölüm {index}/{total} tablo/içindekiler verisi — dil denetimi atlandı",
                     index, total))
                 return []
             out = self._chunk_pass(chunk)
             emit_safe(ProgressEvent(
-                "chunk_done", f"Parça {index}/{total} tamamlandı", index, total))
+                "chunk_done", f"Bölüm {index}/{total} tamamlandı", index, total))
             return out
 
         def consistency_worker() -> list[Finding]:
