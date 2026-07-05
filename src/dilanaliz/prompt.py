@@ -117,7 +117,23 @@ KONUSU DEĞİLDİR.
   formunu gönderin" gibi CİHAZ ya da İDARİ adım fark etmez — DOKUNMA), karışık/
   uygunsuz hitap, resmî olmayan ifade.
 - "Daha nazik olabilirdi", "şöyle desen daha iyi" gibi ŞART OLMAYAN, keyfi
-  iyileştirme önerileri ÜRETME.
+  iyileştirme önerileri ÜRETME. Cümlede BAŞKA bir hata (yazım/dil bilgisi)
+  varsa bile o hatayı ton sorunu SANMA ve cümleyi "kurumsallaştırma" — yalnız
+  GERÇEK bir ton ihlali (argo, kabalık, karışık hitap) varsa bulgu üret.
+  Somut yasak kalıplar (bunlara BENZER hiçbir öneri üretme):
+  - "Verdiğiniz bilgi yannış çıktı, tekrar kontrol edeceğiz." cümlesini
+    "Verdiğiniz bilginin hatalı olduğunu tespit ettik." gibi resmîleştirip
+    YENİDEN YAZMA — cümlede gerçek bir üslup ihlali yok (yalnız bir yazım
+    hatası var, o başka bir geçişin işi).
+  - TON-HITAP-TUTARLILIK yalnız AYNI metinde GERÇEKTEN karışık (hem sen HEM
+    siz) hitap varsa işler; "Gelecekmisin toplantıya?" gibi TEK bir hitap
+    biçimi kullanan bir cümleyi "Toplantıya katılabilecek misiniz?" diye
+    başka hitaba ÇEVİRME — karıştırma yoksa dokunma.
+  - TON-NEZAKET'in "kişisel hitap taşıyan metin" şartını KATI uygula: metinde
+    böyle bir işaret YOKSA (kime yöneltildiği belirsizse) bulgu ÜRETME.
+    "Toplantıya herkez vaktinde gelsin." gibi adresi belirsiz bir cümledeki
+    emir kipini "katılım rica olunur" diye çevirme — belirsizlikte varsayılan
+    SESSİZ KALMAKTIR, kuralı işletmek değil.
 - KOPUK/BÖLÜNMÜŞ parçaları YENİDEN YAZMAYI önerme: iç içe girmiş metin
   kutusu kırpıntıları, yarım satırlar, araya başka satır karışmış cümleler
   (örn. "Mikrofonun duyarlılığı, farklı kullanıcılar veya için geçiş /

@@ -121,23 +121,59 @@ def _spans_overlap(a: Finding, b: Finding) -> bool:
 # yerel bulgunun kopyası değil, ayrı bir bilgidir (korunur).
 _TYPE_PRIORITY = {"imla": 0, "dil_bilgisi": 1, "ton": 2}
 
+# Kelime sonu noktalama: atomik düzeltme karşılaştırmasında yok sayılır (bir
+# geçiş "sundular." bir geçiş "sundular" diye alıntılayabilir — aynı kelime).
+_TRAILING_PUNCT = ".,!?;:'\"”’"
+
+
+def _atomic_correction(excerpt: str, suggestion: str) -> tuple[str, str] | None:
+    """Alıntı ile öneri arasındaki TEK kelime farkını (önce, sonra) döndürür.
+
+    Kelime sayıları eşit değilse veya fark sayısı 1'den farklıysa (0 veya
+    birden çok kelime değişmişse) None döner — bu durumda iki bulgunun AYNI
+    düzeltmeyi mi yaptığı güvenilir biçimde karşılaştırılamaz (örn. tam cümle
+    yeniden yazımı gibi çok-kelimeli öneriler).
+    """
+    exc_words = [w.rstrip(_TRAILING_PUNCT) for w in _norm(excerpt).split(" ")]
+    sug_words = [w.rstrip(_TRAILING_PUNCT) for w in _norm(suggestion).split(" ")]
+    if len(exc_words) != len(sug_words):
+        return None
+    diffs = [(a, b) for a, b in zip(exc_words, sug_words) if a != b]
+    if len(diffs) != 1:
+        return None
+    return diffs[0]
+
 
 def drop_cross_pass_duplicates(findings: list[Finding]) -> list[Finding]:
-    """Örtüşen konum + aynı (normalize) alıntı taşıyan FARKLI tipteki bulguları
-    tip önceliğiyle (imla > dil_bilgisi > ton) teke indirir.
+    """Örtüşen konum + (aynı alıntı YA DA aynı atomik düzeltme) taşıyan FARKLI
+    tipteki bulguları tip önceliğiyle (imla > dil_bilgisi > ton) teke indirir.
 
     Geçişler birbirini görmediğinden aynı ifade iki geçişten iki ayrı bulgu
-    olarak gelebilir; rapor aynı hatayı iki satır gösterir. Aynı-tip birebir
-    kopyaları `_dedup` (analyzer) zaten eler; bu fonksiyon yalnız TİP FARKLI
-    kopyaları hedefler. `tutarlilik` tipi elemeye de elenmeye de girmez.
-    Deterministiktir: karşılaştırma konum+alıntıya, seçim sabit önceliğe
-    dayanır; girdi sırasından bağımsızdır.
+    olarak gelebilir; rapor aynı hatayı iki satır gösterir. İki eşleşme yolu
+    vardır: (1) alıntılar birebir aynı (örn. ikisi de "zamanı aşınır"), (2)
+    alıntılar FARKLI ama İKİSİ DE AYNI kelimeyi aynı biçimde düzeltiyor (örn.
+    dil_bilgisi bulgusu tüm cümleyi alıntılarken "sundular"→"sunuldu" öneriyor,
+    ton bulgusu yalnız "sundular" kelimesini alıntılayıp AYNI düzeltmeyi
+    öneriyor — `_atomic_correction` bu iki bulgunun aynı hatayı hedeflediğini
+    kelime-farkı üzerinden tespit eder). Atomik düzeltme çıkarılamayan (çok
+    kelimeli/serbest yeniden yazım) bulgular yalnız (1) yoluyla karşılaştırılır
+    — böylece örtüşen ama GERÇEKTEN FARKLI iddialar (örn. aynı kelimeye farklı
+    gerekçelerle işaret eden iki ayrı bulgu) yanlışlıkla birleştirilmez.
+
+    Aynı-tip birebir kopyaları `_dedup` (analyzer) zaten eler; bu fonksiyon
+    yalnız TİP FARKLI kopyaları hedefler. `tutarlilik` tipi elemeye de
+    elenmeye de girmez. Deterministiktir: karşılaştırma konum+içeriğe, seçim
+    sabit önceliğe dayanır; girdi sırasından bağımsızdır.
     """
+    corrections = {
+        id(f): _atomic_correction(f.excerpt, f.suggestion) for f in findings
+    }
     out: list[Finding] = []
     for f in findings:
         if f.type.value not in _TYPE_PRIORITY:
             out.append(f)
             continue
+        f_correction = corrections[id(f)]
         superseded = False
         for other in findings:
             if other is f or other.type == f.type:
@@ -146,7 +182,11 @@ def drop_cross_pass_duplicates(findings: list[Finding]) -> list[Finding]:
                 continue
             if not _spans_overlap(f, other):
                 continue
-            if _norm(other.excerpt) != _norm(f.excerpt):
+            same_excerpt = _norm(other.excerpt) == _norm(f.excerpt)
+            same_correction = (
+                f_correction is not None and f_correction == corrections[id(other)]
+            )
+            if not (same_excerpt or same_correction):
                 continue
             if _TYPE_PRIORITY[other.type.value] < _TYPE_PRIORITY[f.type.value]:
                 superseded = True  # daha öncelikli tip aynı hatayı taşıyor

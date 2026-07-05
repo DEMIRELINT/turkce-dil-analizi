@@ -23,6 +23,16 @@ def _span(excerpt: str, start: int, type_: FindingType = FindingType.IMLA) -> Fi
     )
 
 
+def _span_sug(
+    excerpt: str, suggestion: str, start: int, type_: FindingType = FindingType.IMLA
+) -> Finding:
+    """`_span` gibi ama gerçek bir `suggestion` verir (atomik-düzeltme testleri için)."""
+    return Finding(
+        type=type_, excerpt=excerpt, explanation="x", suggestion=suggestion,
+        start=start, end=start + len(excerpt),
+    )
+
+
 def test_identical_is_noop():
     assert is_noop_suggestion("Ben de", "Ben de") is True
 
@@ -190,3 +200,36 @@ def test_cross_pass_same_type_untouched():
     a = _span("hata", 10, FindingType.IMLA)
     b = _span("hata", 10, FindingType.IMLA)
     assert len(drop_cross_pass_duplicates([a, b])) == 2
+
+
+def test_cross_pass_same_atomic_correction_different_excerpt_collapses():
+    # dil_bilgisi TÜM CÜMLEyi alıntılayıp "sundular"→"sunuldu" öneriyor; ton
+    # yalnız "sundular" kelimesini alıntılayıp AYNI düzeltmeyi öneriyor —
+    # alıntılar farklı ama atomik düzeltme (tek kelime farkı) aynı, teke iner.
+    a = _span_sug(
+        "Rapor hazırlandı ve yönetime sundular.",
+        "Rapor hazırlandı ve yönetime sunuldu.",
+        100, FindingType.DIL_BILGISI,
+    )
+    b = _span_sug("sundular", "sunuldu", 130, FindingType.TON)
+    out = drop_cross_pass_duplicates([a, b])
+    assert out == [a]
+    assert drop_cross_pass_duplicates([b, a]) == [a]
+
+
+def test_cross_pass_multi_word_rewrite_without_atomic_match_keeps_both():
+    # Öneri serbest/çok-kelimeli yeniden yazımsa (tek kelime farkı çıkarılamaz)
+    # atomik-düzeltme yolu devre dışı kalır; yalnız tam-alıntı eşleşmesi
+    # geçerlidir — burada o da yok, ikisi de farklı iddia olarak korunur.
+    a = _span_sug(
+        "Verdiğiniz bilgi yannış çıktı",
+        "Verdiğiniz bilgi hatalı çıktı",
+        200, FindingType.IMLA,
+    )
+    b = _span_sug(
+        "Verdiğiniz bilgi yannış çıktı, tekrar kontrol edeceğiz.",
+        "Verdiğiniz bilginin hatalı olduğunu tespit ettik.",
+        200, FindingType.TON,
+    )
+    out = drop_cross_pass_duplicates([a, b])
+    assert len(out) == 2

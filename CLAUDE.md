@@ -381,10 +381,13 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
   yerine "günceleme"). Prompt'u genişletmek yanlış-pozitif riskini artırır;
   bilinçli olarak dokunulmadı (`golden.jsonl`'de ölçülü FN örneği var).
 - **Çapraz-geçiş çelişkisi (daraltıldı).** Geçişler birbirini görmez; aynı
-  ifade iki geçişten iki bulgu alabilir. AYNI konum + AYNI alıntı taşıyan
-  tip-kopyaları artık `postprocess.drop_cross_pass_duplicates` ile teke iner
-  (imla > dil_bilgisi > ton önceliği; tutarlılık muaf). FARKLI alıntılı/
-  kısmi örtüşen çelişkiler ise hâlâ mümkündür — bilinçli kalan sınır budur.
+  ifade iki geçişten iki bulgu alabilir. Örtüşen konum + (AYNI alıntı YA DA
+  AYNI atomik düzeltme — `_atomic_correction`: tek kelime farkı üzerinden
+  "aynı hatayı mı düzeltiyor" testi) taşıyan tip-kopyaları artık
+  `postprocess.drop_cross_pass_duplicates` ile teke iner (imla > dil_bilgisi
+  > ton önceliği; tutarlılık muaf). Atomik düzeltme çıkarılamayan (çok
+  kelimeli/serbest yeniden yazım) örtüşen bulgular hâlâ İKİSİ DE korunur —
+  bilinçli kalan sınır budur.
 - **Uzun belge tutarlılık ölçeği.** Tutarlılık tek dev LLM çağrısıyla çalışır;
   50+ sayfada dikkat seyrelmesi nedeniyle çakışmaları kaçırabilir — kaçırmama
   garantisi yoktur. (Gelecek: deterministik terim-indeksi + LLM yargısı.)
