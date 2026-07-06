@@ -194,6 +194,19 @@
   .empty { color: var(--ok); font-weight: 600; }
   .err { color: var(--imla); font-weight: 600; }
 
+  /* Gözlem kanalı — bulgulardan GÖRSEL olarak ayrık (nötr, kesikli çerçeve,
+     bulgu renkleri yok): "doğrulanmamış, editör değerlendirmesi gerekir". */
+  .obs-section { margin-top: 22px; padding-top: 14px; border-top: 1px dashed var(--line); }
+  .obs-head { font-size: 14px; font-weight: 700; color: var(--muted); margin: 0 0 4px; }
+  .obs-disclaimer { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; font-style: italic; }
+  .obs-item {
+    border: 1px dashed var(--line); border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 8px; background: transparent;
+  }
+  .obs-item .obs-excerpt { font-weight: 650; color: var(--fg); }
+  .obs-item .obs-note { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .chip.obs-chip { border-color: var(--muted); color: var(--muted); cursor: default; }
+
   /* Toplulaştırılmış bulgu: tekrar rozeti + genişletilebilir konum listesi */
   .finding .count-badge {
     background: var(--panel); border: 1px solid var(--line); border-radius: 99px;
@@ -542,6 +555,9 @@ function renderResult(payload) {
   findings.forEach((f) => { if (counts[f.type] !== undefined) counts[f.type]++; });
   let chips = `<span class="chip filter-chip active" data-filter="">Toplam <b>${findings.length}</b> bulgu</span>`;
   TYPES.forEach((t) => { if (counts[t]) chips += `<span class="chip filter-chip" data-filter="${t}" style="border-color:var(--${t})">${TYPE_LABEL[t]} <b>${counts[t]}</b></span>`; });
+  // Gözlemler bulgu SAYISINA katılmaz; ayrı, tıklanamaz bir rozet olarak gösterilir.
+  const obsCount = (payload.result.observations || []).length;
+  if (obsCount) chips += `<span class="chip obs-chip" title="Doğrulanmamış gözlem — editör değerlendirmesi gerekir">🔍 <b>${obsCount}</b> gözlem</span>`;
   $("summary").innerHTML = chips;
 
   // Kaynak metin + vurgular (çakışmayanları sırayla işaretle)
@@ -617,6 +633,21 @@ function renderResult(payload) {
       </section>`;
     }
     $("findings").innerHTML = sectionsHtml;
+  }
+
+  // Gözlemler — bulgulardan AYRI, katlanmayan ayrı bölüm. Kaynak metinde
+  // vurgulanmaz (offset yok); yalnız alıntı + not. Bulgu süzgecinden etkilenmez
+  // (data-section taşımaz → applyFilter dokunmaz), her zaman görünür.
+  const observations = payload.result.observations || [];
+  if (observations.length) {
+    const obsItems = observations.map((o) =>
+      `<div class="obs-item"><div class="obs-excerpt">${esc(o.excerpt)}</div><div class="obs-note">${esc(o.note)}</div></div>`
+    ).join("");
+    $("findings").innerHTML += `<section class="obs-section">
+      <h3 class="obs-head">🔍 Gözlemler — doğrulanmamış <span class="section-count">${observations.length}</span></h3>
+      <p class="obs-disclaimer">Bunlar kesin bulgu DEĞİLDİR; modelin bir kurala bağlayamadığı ama şüphelendiği yerlerdir. Öneri içermez — editörün değerlendirmesi gerekir.</p>
+      ${obsItems}
+    </section>`;
   }
   applyFilter();
   $("resultCard").style.display = "block";
@@ -704,6 +735,19 @@ function buildReport(payload) {
         out += "\n";
       });
     }
+  }
+
+  // Gözlemler — bulgulardan AYRI bölüm (doğrulanmamış). Gözlem yoksa hiç yazma.
+  const observations = (payload.result && payload.result.observations) || [];
+  if (observations.length) {
+    out += "## Gözlemler (doğrulanmamış — editör değerlendirmesi gerekir)\n\n";
+    out += "> Bunlar kesin bulgu değildir; bir kurala bağlanamayan, şüphe uyandıran " +
+           "yerlerdir. Öneri içermez.\n\n";
+    observations.forEach((o, i) => {
+      out += `${i + 1}. "${o.excerpt}"\n`;
+      if (o.note) out += `   - Not: ${o.note}\n`;
+      out += "\n";
+    });
   }
 
   out += "## Kaynak Metin\n\n```\n" + source + "\n```\n";
