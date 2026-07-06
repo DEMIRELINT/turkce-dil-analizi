@@ -84,7 +84,7 @@ src/dilanaliz/
   prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı)
   providers/                # LLM sağlayıcı soyutlaması (Gemini → vLLM değişebilir)
   rules/                    # RulesProvider + rules.md (kurallar koddan ayrı, kimlikli)
-  schema.py                 # Pydantic v2 bulgu/çıktı şemaları (imla/dil_bilgisi/ton/tutarlilik)
+  schema.py                 # Pydantic v2 bulgu/çıktı şemaları (imla/dil_bilgisi/ton/tutarlilik) + Observation (gözlem kanalı)
   locate.py                 # Alıntıyı kaynakta konumlama (offset — LLM offset üretmez)
   postprocess.py            # Birleştirme + tekilleştirme + noop/bozuk öneri eleme
   cache.py                  # Disk önbelleği (.cache/llm_cache.json; thread-safe)
@@ -186,6 +186,21 @@ koru:
   etkilememeli.
 - **Katı JSON çıktı** — `with_structured_output` parse hatasını engeller; çıktı
   şeması `schema.py`'dedir, gevşetme.
+- **Gözlem kanalı (`observations`) findings'ten AYRIDIR** — model "kurala
+  bağlayamadığı ama şüphelendiği" yerleri `findings`'e DEĞİL `AnalysisResult.
+  observations`'a (`schema.Observation`: excerpt + note, offset/öneri YOK) yazar.
+  Ayrı bir LLM çağrısı DEĞİL; yalnız **yerel geçişin** çıktı şemasına eklenen bir
+  alan (ton/tutarlılık boş bırakır, tıpkı `spelling` gibi). Gözlem, findings
+  boru hattına (locate/`drop_unlocated`/`drop_cross_pass_duplicates`/`_sort_key`/
+  `_dedup`) HİÇ girmez → determinizm sözleşmesi (findings) değişmez; gözlemin
+  kendisi `_finalize`'da `_dedup_sort_observations` ile `(excerpt, note)`
+  anahtarıyla ayrıca tekilleştirilip sıralanır (paralel toplamadan bağımsız).
+  Ölçüme GİRMEZ: `run_eval._match` yalnız `result.findings` okur; gözlem
+  precision/recall'a katılmaz (bilinçli — doğrulanmamış kanal). Web/rapor gözlemi
+  "doğrulanmamış — editör değerlendirmesi gerekir" etiketiyle AYRI bölümde
+  gösterir, bulgularla asla karışmaz. Model bu kanalı ancak prompt'ta SOMUT
+  ÖRNEK varsa kullanır (örneksiz → sessiz; bkz. Görev 1 tezi). Uzun vadede yeni
+  kuralların keşif hattıdır (gözlem → editör onayı → rules.md kuralı).
 - **Konumlanamayan bulgu sessizce elenir** — `postprocess.drop_unlocated_findings`
   (`_finalize` içinde çağrılır) `locate.py`'nin offset veremediği (kaynakta
   BİREBİR/normalize bulunamayan) bulguları atar. Bunlar çoğunlukla LLM'in
@@ -356,6 +371,10 @@ kaynağı sanma, gözden geçirmeden silme:
 - **Kuralı ölçmeden değiştirme** — `eval/` üzerinde öncesi/sonrası bakmadan
   prompt/kural değiştirme.
 - **Tutarlılık geçişini parçalama** — kör noktayı geri getirir (yukarıya bak).
+- **Gözlemi (`observations`) findings hattına sokma / bulgu gibi gösterme /
+  puanlamaya katma** — gözlem ayrı, doğrulanmamış, düşük-güvenli kanaldır
+  (bkz. Mimari Seam). Ona offset/eleme uygulama, precision/recall'a sayma,
+  arayüzde bulgularla karıştırma.
 - **Çıktı sırasını bozan değişiklik** — `_finalize` determinizmini bozarsan
   paralel/sıralı sonuçlar ayrışır.
 - **Gizli dış çağrı / telemetri** ekleme — air-gap uyumunu kırar.

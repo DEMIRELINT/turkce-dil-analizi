@@ -10,6 +10,7 @@ from dilanaliz.schema import (
     LLMAnalysis,
     LLMFinding,
     LLMSpellingDecision,
+    Observation,
 )
 
 
@@ -367,3 +368,60 @@ def test_no_spans_means_no_filtering():
     analyzer = _build_analyzer(by_pass)
     result = analyzer.analyze_document(source)
     assert [f.excerpt for f in result.findings] == ["446.00625"]
+
+
+# --- Gözlem kanalı (observations) — findings'ten ayrı, düşük-güvenli -----------
+
+
+def test_local_pass_observations_surface_in_result_not_findings():
+    # Yerel geçişten gelen gözlem ayrı kanalda görünür; findings'e KARIŞMAZ.
+    obs = Observation(excerpt="şüpheli ifade", note="kurala bağlanamadı")
+    by_pass = {"local": LLMAnalysis(findings=[], observations=[obs])}
+    analyzer = _build_analyzer(by_pass)
+
+    result = analyzer.analyze("Bir cümle burada.")
+
+    assert result.findings == []
+    assert len(result.observations) == 1
+    assert result.observations[0].excerpt == "şüpheli ifade"
+    assert result.observations[0].note == "kurala bağlanamadı"
+
+
+def test_observations_survive_without_source_offset():
+    # Gözlem findings hattından (locate/drop_unlocated) MUAF: excerpt kaynakta
+    # birebir geçmese bile ELENMEZ (bir bulgu olsaydı konumlanamadığı için atılırdı).
+    obs = Observation(excerpt="kaynakta-olmayan-metin", note="şüphe")
+    by_pass = {"local": LLMAnalysis(findings=[], observations=[obs])}
+    analyzer = _build_analyzer(by_pass)
+
+    result = analyzer.analyze("Tamamen farklı bir metin.")
+
+    assert [o.excerpt for o in result.observations] == ["kaynakta-olmayan-metin"]
+
+
+def test_tone_and_consistency_observations_are_ignored():
+    # Gözlem YALNIZ yerel geçişten toplanır; ton/tutarlılık geçişi (kazara)
+    # gözlem döndürse bile sonuçta görünmez.
+    by_pass = {
+        "tone": LLMAnalysis(observations=[Observation(excerpt="ton-g", note="x")]),
+        "consistency": LLMAnalysis(observations=[Observation(excerpt="tut-g", note="x")]),
+    }
+    analyzer = _build_analyzer(by_pass)
+
+    result = analyzer.analyze("Bir cümle.")
+
+    assert result.observations == []
+
+
+def test_observations_deduped_and_sorted_deterministically():
+    # analyze_document: aynı gözlem birden çok parçadan gelebilir → tekilleşir;
+    # sıra (excerpt, note) anahtarıyla deterministik (paralel toplamadan bağımsız).
+    obs_b = Observation(excerpt="b-şüphe", note="n")
+    obs_a = Observation(excerpt="a-şüphe", note="n")
+    by_pass = {"local": LLMAnalysis(observations=[obs_b, obs_a, obs_b])}
+    analyzer = _build_analyzer(by_pass)
+    source = "aaaa\n\nbbbb"  # iki parça → yerel geçiş iki kez → gözlemler çoğalır
+
+    result = analyzer.analyze_document(source, max_chars=5)
+
+    assert [o.excerpt for o in result.observations] == ["a-şüphe", "b-şüphe"]

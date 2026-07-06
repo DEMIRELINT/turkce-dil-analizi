@@ -139,10 +139,20 @@ def main() -> None:
                     {"type": f.type.value, "excerpt": f.excerpt, "suggestion": f.suggestion}
                     for f in result.findings
                 ],
+                # Gözlemler skora GİRMEZ (ayrı kanal); yalnız elle denetim +
+                # keşif hattı görünürlüğü için dökülür.
+                "observations": [
+                    {"excerpt": o.excerpt, "note": o.note} for o in result.observations
+                ],
             }
         )
         processed += 1
-        print(f"- {ex['id']}: bulgu={len(result.findings)} beklenen={len(ex['expected'])}")
+        n_obs = len(result.observations)
+        obs_note = f" gözlem={n_obs}" if n_obs else ""
+        print(
+            f"- {ex['id']}: bulgu={len(result.findings)} "
+            f"beklenen={len(ex['expected'])}{obs_note}"
+        )
 
     # Hata olsa bile eldeki tahminleri kalibrasyon için diske yaz.
     DUMP.write_text(json.dumps(dump, ensure_ascii=False, indent=2), encoding="utf-8")

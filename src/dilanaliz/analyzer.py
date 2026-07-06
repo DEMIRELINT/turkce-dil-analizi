@@ -48,7 +48,14 @@ from .prompt import (
 )
 from .providers import build_chat_model
 from .rules import RulesProvider, StaticRulesProvider
-from .schema import AnalysisResult, Finding, FindingType, LLMAnalysis, LLMSpellingDecision
+from .schema import (
+    AnalysisResult,
+    Finding,
+    FindingType,
+    LLMAnalysis,
+    LLMSpellingDecision,
+    Observation,
+)
 from .spell import HunspellChecker, match_case
 
 
@@ -85,10 +92,11 @@ class Analyzer:
     def analyze(self, text: str) -> AnalysisResult:
         """Kısa metni TEK parça olarak üç geçişle inceler (chunk'lamadan)."""
         findings: list[Finding] = []
-        findings += self._local_pass(text)
+        local_findings, observations = self._local_pass(text)
+        findings += local_findings
         findings += self._tone_pass(text)
         findings += self._consistency_pass(text)
-        return self._finalize(findings, text)
+        return self._finalize(findings, text, observations)
 
     def analyze_document(
         self,
@@ -149,7 +157,7 @@ class Analyzer:
             with progress_lock:
                 emit(progress, event)
 
-        def chunk_worker(index: int, chunk) -> list[Finding]:
+        def chunk_worker(index: int, chunk) -> tuple[list[Finding], list[Observation]]:
             # Parça başına İKİ olay: işçi parçayı ALDIĞINDA "chunk_start", BİTİRDİĞİNDE
             # "chunk_done". `index` parçanın kararlı kimliği (1 tabanlı); arayüz bununla
             # her parçayı ayrı satır/hücre olarak gösterip aynı anda kaçının işlendiğini
@@ -164,27 +172,33 @@ class Analyzer:
                     "chunk_done",
                     f"Bölüm {index}/{total} tablo/içindekiler verisi — dil denetimi atlandı",
                     index, total))
-                return []
-            out = self._chunk_pass(chunk)
+                return [], []
+            out_findings, out_observations = self._chunk_pass(chunk)
             emit_safe(ProgressEvent(
                 "chunk_done", f"Bölüm {index}/{total} tamamlandı", index, total))
-            return out
+            return out_findings, out_observations
 
-        def consistency_worker() -> list[Finding]:
+        def consistency_worker() -> tuple[list[Finding], list[Observation]]:
+            # Tutarlılık geçişi gözlem üretmez (yalnız yerel geçiş); boş liste döner.
             emit_safe(ProgressEvent(
                 "consistency_start", "Belge geneli tutarlılık inceleniyor", total, total))
             out = self._consistency_pass(text)
             emit_safe(ProgressEvent(
                 "consistency_done", "Belge geneli tutarlılık tamamlandı", total, total))
-            return out
+            return out, []
 
         findings: list[Finding] = []
+        observations: list[Observation] = []
 
         if self._max_workers <= 1:
             # Sıralı referans yol: deterministik; eval/hata ayıklama/karşılaştırma.
             for index, chunk in enumerate(chunks, start=1):
-                findings.extend(chunk_worker(index, chunk))
-            findings += consistency_worker()
+                c_findings, c_obs = chunk_worker(index, chunk)
+                findings.extend(c_findings)
+                observations.extend(c_obs)
+            c_findings, c_obs = consistency_worker()
+            findings += c_findings
+            observations += c_obs
         else:
             findings_lock = threading.Lock()
             with ThreadPoolExecutor(max_workers=self._max_workers) as pool:
@@ -197,9 +211,10 @@ class Analyzer:
                     for index, chunk in enumerate(chunks, start=1)
                 }
                 for fut in as_completed(futures):
-                    res = fut.result()  # hata olduğu gibi yükselir → "hata çıkarsa dur"
+                    res_findings, res_obs = fut.result()  # hata olduğu gibi yükselir → dur
                     with findings_lock:
-                        findings.extend(res)
+                        findings.extend(res_findings)
+                        observations.extend(res_obs)
 
         emit(progress, ProgressEvent(
             "finalize", "Bulgular birleştiriliyor ve sıralanıyor", total, total))
@@ -208,29 +223,36 @@ class Analyzer:
         if drop_ranges or heading_ranges:
             findings = _drop_structural_noise(findings, drop_ranges, heading_ranges)
             findings += _decimal_summary(text, table_ranges)
-        result = self._finalize(findings, text)
+        result = self._finalize(findings, text, observations)
         emit(progress, ProgressEvent("done", "Analiz tamamlandı", total, total))
         return result
 
-    def _chunk_pass(self, chunk) -> list[Finding]:
+    def _chunk_pass(self, chunk) -> tuple[list[Finding], list[Observation]]:
         """Tek parça için yerel + ton geçişi; offsetleri kaynağa taşır (rebasing).
 
-        Saf: yalnız o parçanın bulgu listesini döndürür (paylaşılan duruma yazmaz),
-        böylece paralel çağrılabilir. Offset rebasing burada yapılır.
+        Saf: yalnız o parçanın bulgu + gözlem listesini döndürür (paylaşılan duruma
+        yazmaz), böylece paralel çağrılabilir. Offset rebasing yalnız bulgulara
+        uygulanır; gözlemin offseti yoktur (yalnız alıntı + not).
         """
+        local_findings, observations = self._local_pass(chunk.text)
         out: list[Finding] = []
-        for finding in self._local_pass(chunk.text) + self._tone_pass(chunk.text):
+        for finding in local_findings + self._tone_pass(chunk.text):
             if finding.start is not None:
                 finding.start += chunk.start
             if finding.end is not None:
                 finding.end += chunk.start
             out.append(finding)
-        return out
+        return out, observations
 
     # --- Tek tek geçişler ----------------------------------------------------
 
-    def _local_pass(self, text: str) -> list[Finding]:
-        """Cümle bazlı geçiş: Hunspell adayları + noktalama/dil bilgisi/bağlamsal imla."""
+    def _local_pass(self, text: str) -> tuple[list[Finding], list[Observation]]:
+        """Cümle bazlı geçiş: Hunspell adayları + noktalama/dil bilgisi/bağlamsal imla.
+
+        Bulgularla BİRLİKTE, modelin kurala bağlayamadığı gözlemleri (doğrulanmamış
+        şüpheler) de döndürür. Gözlem yalnız BU geçişte üretilir (ton/tutarlılık
+        boş bırakır); findings hattından (offset/eleme) tamamen ayrıdır.
+        """
         # Yalnız bu geçişin kuralları (A imla + B dil bilgisi) — ton bölümü
         # ve geliştirici notları gönderilmez (token + halüsinasyon yüzeyi).
         rules_context = self._rules.get_context(text, purpose="local")
@@ -245,7 +267,8 @@ class Analyzer:
         enrich_with_offsets(result, text)
 
         spelling_findings = self._resolve_spelling(candidates, raw.spelling)
-        return merge_findings(spelling_findings, result.findings)
+        findings = merge_findings(spelling_findings, result.findings)
+        return findings, result.observations
 
     def _tone_pass(self, text: str) -> list[Finding]:
         """Paragraf bazlı geçiş: yalnız ton/üslup."""
@@ -272,7 +295,12 @@ class Analyzer:
 
     # --- Birleştirme / son işleme -------------------------------------------
 
-    def _finalize(self, findings: list[Finding], text: str) -> AnalysisResult:
+    def _finalize(
+        self,
+        findings: list[Finding],
+        text: str,
+        observations: list[Observation] | None = None,
+    ) -> AnalysisResult:
         """Tüm geçişlerin bulgularını sıralar, tekilleştirir ve doğrular.
 
         ÖNCE konumlanamayan (kaynakta bulunamayan, muhtemelen halüsinasyon)
@@ -282,6 +310,12 @@ class Analyzer:
         sıra hem de tekilleştirmede "ilk korunan" kayıt, parçaların paralel
         işlenme/toplanma sırasından BAĞIMSIZ olur — çıktı `max_workers`
         değerinden etkilenmez (birebir aynı).
+
+        `observations` (doğrulanmamış gözlemler) findings boru hattından
+        TAMAMEN AYRIDIR: eleme/konumlama/çapraz-geçiş tekilleştirmesine
+        GİRMEZ (bkz. schema.Observation). Yalnız kendi hafif deterministik
+        tekilleştirme+sıralamasından geçer ki paralel toplama sırasından
+        bağımsız olsun.
         """
         located = drop_unlocated_findings(findings)
         located = drop_context_satisfied_findings(located, text)
@@ -291,6 +325,7 @@ class Analyzer:
         located = drop_cross_pass_duplicates(located)
         ordered = sorted(located, key=_sort_key)
         result = AnalysisResult(findings=_dedup(ordered))
+        result.observations = _dedup_sort_observations(observations or [])
         result.model_id = self._model_id
         result.text_len = len(text)
         # Bozuk öneri koruması (örn. "birçok" → "birchoq"): otomatik uygulamada
@@ -391,6 +426,25 @@ def _dedup(findings: list[Finding]) -> list[Finding]:
         seen.add(key)
         out.append(f)
     return out
+
+
+def _dedup_sort_observations(observations: list[Observation]) -> list[Observation]:
+    """Gözlemleri (alıntı + not) tekilleştirip deterministik sıralar.
+
+    Gözlemin offseti yoktur; paralel parça toplamasının sırasından bağımsız,
+    kararlı bir çıktı için `(excerpt, note)` anahtarıyla tekilleştirip aynı
+    anahtara göre sıralarız. findings hattına (offset/eleme/çapraz-geçiş) HİÇ
+    girmez — ayrı, düşük-güvenli kanal (bkz. schema.Observation).
+    """
+    seen: set[tuple[str, str]] = set()
+    unique: list[Observation] = []
+    for o in observations:
+        key = (o.excerpt, o.note)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(o)
+    return sorted(unique, key=lambda o: (o.excerpt, o.note))
 
 
 # --- Yapısal süzme (etiketli bloklar) ----------------------------------------

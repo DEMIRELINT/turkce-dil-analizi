@@ -44,10 +44,25 @@ class Finding(BaseModel):
     end: int | None = Field(default=None, description="Kaynak metindeki bitiş offseti")
 
 
+class Observation(BaseModel):
+    """Doğrulanmamış gözlem: modelin kurala bağlayamadığı ama şüphelendiği yer.
+
+    Bir bulgu (`Finding`) DEĞİLDİR — kesinlik iddiası taşımaz, düzeltme önerisi
+    yoktur. `findings` boru hattından (offset/eleme/tekilleştirme) tamamen ayrı
+    bir kanaldır; kullanıcıya "editör değerlendirmesi gerekir" etiketiyle ayrı
+    gösterilir ve precision/recall ölçümüne GİRMEZ (bkz. analyzer._finalize).
+    """
+
+    excerpt: str = Field(description="Şüphe uyandıran, metinden BİREBİR alıntı")
+    note: str = Field(description="Neden şüphelenildiğinin kısa gerekçesi (öneri değil)")
+
+
 class AnalysisResult(BaseModel):
-    """Bir metnin analiz sonucu: bulgu listesi + üstveri."""
+    """Bir metnin analiz sonucu: bulgu listesi + gözlemler + üstveri."""
 
     findings: list[Finding] = Field(default_factory=list)
+    # Doğrulanmamış gözlemler — findings'ten AYRI kanal (bkz. Observation).
+    observations: list[Observation] = Field(default_factory=list)
 
     # Üstveri analyzer tarafından doldurulur (LLM şemasında zorunlu değil).
     model_id: str | None = Field(default=None)
@@ -96,6 +111,13 @@ class LLMAnalysis(BaseModel):
         default_factory=list,
         description="Yazım denetçisinin işaretlediği adaylar için kararlar",
     )
+    observations: list[Observation] = Field(
+        default_factory=list,
+        description=(
+            "Kurala bağlanamayan ama şüphelenilen yerler (doğrulanmamış gözlem). "
+            "Bir bulgu DEĞİLDİR; yalnız yerel geçiş doldurur, ton/tutarlılık boş bırakır."
+        ),
+    )
 
     def to_result(self) -> AnalysisResult:
         """Ham LLM çıktısını zenginleştirilebilir public modele dönüştürür."""
@@ -110,5 +132,6 @@ class LLMAnalysis(BaseModel):
                     confidence=f.confidence,
                 )
                 for f in self.findings
-            ]
+            ],
+            observations=list(self.observations),
         )

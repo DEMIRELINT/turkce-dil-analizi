@@ -80,8 +80,13 @@ def _timed(analyzer: Analyzer, text: str) -> tuple[AnalysisResult, float]:
     return result, time.perf_counter() - t0
 
 
-def _view(result: AnalysisResult) -> list[dict]:
-    return [f.model_dump() for f in result.findings]
+def _view(result: AnalysisResult) -> dict:
+    # Hem bulgular hem gözlemler (ayrı kanal) sıralı/paralel arasında birebir
+    # aynı olmalı — determinizm sözleşmesi ikisini de kapsar.
+    return {
+        "findings": [f.model_dump() for f in result.findings],
+        "observations": [o.model_dump() for o in result.observations],
+    }
 
 
 def main() -> None:

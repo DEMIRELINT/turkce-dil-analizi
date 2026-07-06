@@ -10,8 +10,9 @@ odaklı bir geçişte çalışır. Bu modülde üç sistem promptu vardır:
 - ``TONE_SYSTEM_PROMPT``        — paragraf bazlı: yalnız ton/üslup. (chunk)
 - ``CONSISTENCY_SYSTEM_PROMPT`` — bütün belge: terim/birim/kısaltma tutarlılığı.
 
-Hepsi aynı ``LLMAnalysis`` şemasını döndürür (ton/tutarlılık ``spelling``'i boş
-bırakır).
+Hepsi aynı ``LLMAnalysis`` şemasını döndürür (ton/tutarlılık ``spelling`` ve
+``observations``'ı boş bırakır; ``observations`` yalnız yerel geçişte üretilen
+doğrulanmamış gözlem kanalıdır).
 """
 
 from __future__ import annotations
@@ -77,11 +78,26 @@ metni CÜMLE CÜMLE değerlendirir ve YALNIZ şu eksenlerde bulgu üretirsin:
 TON ve belge-geneli TUTARLILIK bu geçişin KONUSU DEĞİLDİR; onları başka geçişler
 yapar, sen değerlendirme.
 
-İKİ AYRI ÇIKTI üretirsin:
+ÜÇ AYRI ÇIKTI üretirsin:
 A) `findings` — yukarıdaki üç eksenden bulgular (`type`: imla veya dil_bilgisi).
 B) `spelling` — sana "ŞÜPHELİ KELİMELER" listesi verilir (yazım denetçisi
    işaretledi). Her aday için: gerçek hata mı, yoksa özel ad/teknik terim/geçerli
    kullanım mı?
+C) `observations` — DOĞRULANMAMIŞ GÖZLEM kanalı. Bir yerden şüpheleniyor ama onu
+   yukarıdaki bir kurala/eksene AÇIKÇA bağlayamıyorsan, o şüpheyi `findings`'e
+   DEĞİL BURAYA yaz. Her gözlem: `excerpt` (metinden BİREBİR alıntı) + `note`
+   (neden şüphelendiğinin KISA gerekçesi). Öneri/düzeltme VERME (gözlem "emin
+   değilim" demektir; kesinlik iddiası taşımaz). Şüphe yoksa boş bırak.
+   NE TÜR şeyler gözlemdir (örnekler): (a) mantıken tuhaf/çelişkili görünen ama
+   dil hatası OLMAYAN bir ifade ("kullanıcı sayısı arttıkça yanıt süresi kısalır"
+   — teknik olarak şüpheli bir iddia, ama bir yazım/dil bilgisi kuralı ihlali
+   değil → note: "mantıksal olarak tersine benziyor, teyit gerekir"); (b) teknik
+   metinde yeri belirsiz mecazi/muğlak ifade ("havada asılı kalan beklentiler"
+   → note: "mecaz; teknik bağlamda ne kastedildiği net değil"); (c) olası ama
+   emin olamadığın bir terim/tutarsızlık sezgisi. Bunları findings'e koyMAK
+   yanlış-pozitif olurdu; susmak da sinyali kaybederdi — gözlem tam bu ikisinin
+   arasıdır. Yine de temkinli ol: her cümlede gözlem ARAMA, yalnız GERÇEKTEN
+   dikkat çeken, editörün bakmasında yarar olan yerleri yaz.
 
 KURALLAR (uyman zorunlu):
 - Genel tek-kelime yazımını ve eksik Türkçe karakteri SEN arama; o iş "ŞÜPHELİ
@@ -98,6 +114,10 @@ KURALLAR (uyman zorunlu):
   bulunma eki "-de/-da" bitişik. Bağlaç "ki" ayrı; aitlik/ilgi eki "-ki"
   ("benimki, yarınki") bitişik. DOĞRU yazılmışları ("Ben de", "yarınki") işaretleme;
   yanlışları MUTLAKA işaretle ("Bende geldim" → "Ben de"; "Senin ki" → "Seninki").
+- `observations` DİSİPLİNİ: EMİN OLDUĞUN, bir kurala bağlanan hatayı ASLA
+  `observations`'a taşıma — o `findings`'e gider. `observations` yalnız kurala
+  bağlayamadığın, findings'e zaten koyMAYacağın sınırdaki şüpheler içindir. Bir
+  kaçış kutusu değil, EK bir kanaldır; findings'in yerine geçmez.
 {_SHARED_RULES}
 """
 
@@ -140,7 +160,7 @@ KONUSU DEĞİLDİR.
   düğmesine basın: işletim ortamlarına...") belge DÖNÜŞTÜRMESİNİN ürünüdür,
   yazarın üslubu değildir — bunlara TON-ACIKLIK dahil hiçbir ton bulgusu
   üretme, "cümleyi düzelt/yeniden yaz" önerisi verme.
-- `spelling` çıktısını boş bırak.
+- `spelling` ve `observations` çıktısını boş bırak (bu geçiş gözlem üretmez).
 {_SHARED_RULES}
 """
 
@@ -196,7 +216,7 @@ NASIL karar verirsin:
   birbiriyle çelişen stilini işaretle. Ön koşul: en az iki farklı stilin
   belgede bir arada geçmesi (tek biçimli tek etiket = senin tercihin, dokunma).
 - Aynı kavramın gerçekten kastedildiğinden emin değilsen üretme (yanlış pozitif).
-- `spelling` çıktısını boş bırak.
+- `spelling` ve `observations` çıktısını boş bırak (bu geçiş gözlem üretmez).
 {_SHARED_RULES}
 """
 
