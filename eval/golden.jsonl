@@ -81,3 +81,8 @@
 {"id": "imla-sira-sayi-1", "text": "Ayrıntılar 8.'inci maddede yer almaktadır.", "expected": [{"type": "imla", "excerpt": "8.'inci"}]}
 {"id": "gramer-cati-nesne-1", "text": "Bu seri telsizleri CPS kullanarak programlanabilir.", "expected": [{"type": "dil_bilgisi", "excerpt": "telsizleri CPS kullanarak programlanabilir"}]}
 {"id": "imla-noktalama-etiket-sonu-temiz-1", "text": "Daha fazla bilgi için bkz. “İşletim Güvenliği Talimatları” sayfa 7.", "expected": []}
+{"id": "gramer-bildirme-1", "text": "Cihaz kullanılmadığında güç anahtarı kapalıdır.", "expected": []}
+{"id": "gramer-bildirme-2", "text": "Bakım sırasında güç anahtarı aktiftir konumuna getirilir.", "expected": [{"type": "dil_bilgisi", "excerpt": "aktiftir konumuna getirilir"}]}
+{"id": "gramer-mantik-1", "text": "Cihaz yalnızca onaylı orijinal şarj cihazıyla şarj edilmelidir.", "expected": []}
+{"id": "gramer-mantik-arac-temiz-1", "text": "Cihaz yalnızca onaylı aksesuarlarla kullanılmalıdır.", "expected": []}
+{"id": "gramer-mantik-2", "text": "Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla kullanılmalıdır.", "expected": [{"type": "dil_bilgisi", "excerpt": "Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla kullanılmalıdır"}]}

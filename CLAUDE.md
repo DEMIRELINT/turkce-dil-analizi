@@ -438,9 +438,10 @@ eklerken hangi türe girdiğini belirle, madde numarası UYDURMA.
   `IMLA-HERSEY`, `IMLA-YABANCI`, `IMLA-SAAT`, `IMLA-KESME`, `IMLA-KISALTMA`,
   `IMLA-SIRA-SAYI`, `IMLA-DUZELTME-ISARETI`, `IMLA-TURKCE-KARAKTER`,
   `IMLA-NOKTALAMA`, `IMLA-BIRIM` (+ deterministik `HUNSPELL`).
-- **Dil bilgisi:** `GRAMER-OZNE-YUKLEM`, `GRAMER-TAMLAMA`, `GRAMER-ANLATIM`,
-  `GRAMER-CATI`, `GRAMER-EK-FIIL`, `GRAMER-SAYI-UYUM`, `GRAMER-TEKRAR`,
-  `GRAMER-BOLUNMUS-KELIME`.
+- **Dil bilgisi:** `GRAMER-OZNE-YUKLEM`, `GRAMER-TAMLAMA`, `GRAMER-ANLATIM`
+  (özne-araç mantık tersliği dâhil), `GRAMER-CATI`, `GRAMER-EK-FIIL`,
+  `GRAMER-SAYI-UYUM`, `GRAMER-TEKRAR`, `GRAMER-BOLUNMUS-KELIME`,
+  `GRAMER-BILDIRME-EKI`.
 - **Ton:** `TON-RESMI`, `TON-NEZAKET`, `TON-HITAP-TUTARLILIK`, `TON-ACIKLIK`,
   `TON-KLISE`.
 - **Tutarlılık:** belge-geneli terim/birim/kısaltma çakışması (`tutarlilik`).

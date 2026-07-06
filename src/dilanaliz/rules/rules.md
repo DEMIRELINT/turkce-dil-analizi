@@ -282,6 +282,17 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
     gibi özellikler" → "...VOX seviyesi vb. özellikler").
   - Eksik öge (özne/nesne/tümleç eksikliği), yanlış bağlama.
   - Mantık hatası, sıralama bozukluğu.
+  - Özne-araç mantık tersliği (yalnız FİZİKSEL/MANTIKSAL olarak olanaksız
+    eşleşmede): cümlenin öznesi ile "-la/-le/-yla" ya da "tarafından" aracının
+    rolleri ters kurulup talimatı çelişkili/uygulanamaz kıldığında. Yanlış:
+    "Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla
+    kullanılmalıdır." (özne = şarj cihazı; oysa kastedilen, CİHAZIN onaylı şarj
+    cihazıyla şarj edilmesidir) → Doğru: "Cihaz yalnızca onaylı orijinal şarj
+    cihazıyla şarj edilmelidir." SINIR (yanlış-pozitif kapısı): Özne ile araç
+    GERÇEKTEN tutarlı ve cümle uygulanabilir bir talimatsa ("Cihaz yalnızca
+    onaylı aksesuarlarla kullanılmalıdır" — özne/araç uyumlu) ASLA işaretleme;
+    yalnız rollerin ters kurulduğu, sonucun mantıken olanaksız olduğu AÇIK
+    durumları işaretle.
 - **GRAMER-CATI** — Çatı (etken/edilgen) uyumsuzluğu: bağlı cümlelerde çatı
   TUTARLI olmalı, ortasında sebepsiz değişmemeli. Doğru (ikisi de edilgen):
   "Rapor hazırlandı ve yönetime sunuldu." Doğru (ikisi de etken, özne belli):
@@ -347,6 +358,21 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   kapı+da+yım çekimi; "başvuru" sözlükte var). İki kelimenin ayrı yazımı
   Türkçede ZATEN DOĞRUYSA ("pil ölçer", "veri tabanı" gibi) sözlükte
   bulunmayan bitişik biçimler ("pilölçer") UYDURMA — böyle öneri ASLA üretme.
+- **GRAMER-BILDIRME-EKI** — Bildirme eki (-dır/-dir/-dur/-dür), bir DURUM/KONUM/
+  ETİKET adını yükleme çevirip AYNI cümlede başka bir asıl yüklemle
+  çakıştıramaz. Bir arayüz/konum etiketi başka bir yüklemin ("getirilir",
+  "alınır", "seçilir", "getirilmelidir") tümleci ise YALIN kalmalı ve tırnak
+  içinde gösterilmelidir. Doğru: "cihaz 'Kapalı' konumuna getirilmelidir".
+  Yanlış: "cihaz yeniden Kapalı'dır konumuna getirilmelidir" (→ "'Kapalı'
+  konumuna getirilmelidir") — burada -dır etiketi sözde yüklem yapıp hemen
+  ardından gelen "getirilmelidir" ile YAPISAL çelişki üretir (iki asıl yüklem).
+  NOT (yanlış-pozitif kapısı): Bildirme eki bir cümlenin GERÇEK ve TEK
+  yükleminde ise tamamen doğrudur ("Cihaz kapalıdır.", "Bu ayar
+  varsayılandır.") — bunları ASLA işaretleme; yalnız etiketin -dır ile
+  yüklemleşip AYNI cümlede İKİNCİ bir asıl yüklemle (getirilir/alınır/seçilir
+  vb.) çakıştığı durumu işaretle. Aynı sözcükteki olası kesme işareti hatası
+  ("Kapalı'dır") AYRI bir imla bulgusudur; bu madde yalnız YAPISAL çakışmayı
+  hedefler.
 
 ---
 
