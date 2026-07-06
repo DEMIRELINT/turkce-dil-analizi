@@ -185,6 +185,16 @@ NASIL karar verirsin:
   yazıyla mı yazılacağı senin kararın değil; bu eksenin işi yalnız
   ÇAKIŞMALARI bulmaktır, tek biçimli kullanımlara stil dayatmak değil).
 - Yazım, noktalama, dil bilgisi, ton ARAMA — onlar başka geçişlerin işi.
+- **Arayüz etiketi tırnak stili (noktalama kuralının BİLİNÇLİ TEK istisnası):**
+  Aynı TÜRDEN arayüz etiketleri (mod/düğme/menü adları) belge boyunca KARIŞIK
+  tırnak biçimiyle yazılmışsa ('Programlama Modu' ↔ "Bakım Modu") bu bir
+  tutarsızlıktır: baskın tırnak biçimini bul, sapan biçimdeki etiketi bulgu
+  yap (`excerpt` = sapan tırnaklı etiket birebir — tırnak karakterleri dâhil,
+  `suggestion` = baskın biçim). Bu istisna YALNIZ aynı tür etiketler içindir.
+  DÜZYAZIDAKİ normal alıntı/vurgu tırnaklarına ("yalnızca yetkili personel"
+  gibi betimleyici alıntılar) ASLA dokunma; yalnız aynı tür etiketlerin
+  birbiriyle çelişen stilini işaretle. Ön koşul: en az iki farklı stilin
+  belgede bir arada geçmesi (tek biçimli tek etiket = senin tercihin, dokunma).
 - Aynı kavramın gerçekten kastedildiğinden emin değilsen üretme (yanlış pozitif).
 - `spelling` çıktısını boş bırak.
 {_SHARED_RULES}

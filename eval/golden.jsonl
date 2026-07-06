@@ -86,3 +86,5 @@
 {"id": "gramer-mantik-1", "text": "Cihaz yalnızca onaylı orijinal şarj cihazıyla şarj edilmelidir.", "expected": []}
 {"id": "gramer-mantik-arac-temiz-1", "text": "Cihaz yalnızca onaylı aksesuarlarla kullanılmalıdır.", "expected": []}
 {"id": "gramer-mantik-2", "text": "Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla kullanılmalıdır.", "expected": [{"type": "dil_bilgisi", "excerpt": "Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla kullanılmalıdır"}]}
+{"id": "tutarlilik-tirnak-1", "text": "Yönetmelikte belirtildiği gibi cihaz 'yalnızca yetkili personel tarafından' kullanılabilir. Bu kural tüm kullanıcılar için geçerlidir.", "expected": []}
+{"id": "tutarlilik-tirnak-2", "text": "Cihazı çalıştırmak için 'Programlama Modu' seçilir. Ayarları değiştirmek için 'Gelişmiş Mod' kullanılır. Bakım işlemleri için \"Bakım Modu\" etkinleştirilir.", "expected": [{"type": "tutarlilik", "excerpt": "\"Bakım Modu\""}]}
