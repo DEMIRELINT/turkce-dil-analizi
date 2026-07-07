@@ -76,15 +76,15 @@ pyproject.toml              # Bağımlılıklar (pinli, air-gap uyumlu)
 .env.example                # Örnek ortam değişkenleri (kopyala → .env)
 dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü (air-gap: repoda bulundurulur)
 src/dilanaliz/
-  analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, span-farkında süzme, build_default_analyzer)
+  analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, span-farkında süzme, tutarlılık map-reduce/terim-indeksi, build_default_analyzer)
   spell.py                  # Hunspell deterministik imla TESPİTİ (öneri üretmez; Türkçe İ/I-farkında lookup; 4 harf altı denetlenmez)
   extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi/icindekiler; satır-içi görsel → [görsel] yer tutucu, tam-satır görsel silinir, ardışık tekrar tekilleştirme)
   chunk.py                  # Uzun metni deterministik paragraf parçalarına böler (taşan paragraf cümleye iner)
   progress.py               # Geçiş ilerleme olayları (CLI stderr / web SSE)
-  prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı)
+  prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı; tutarlılık map-reduce için terim-çıkarım + reduce promptları)
   providers/                # LLM sağlayıcı soyutlaması (Gemini → vLLM değişebilir)
   rules/                    # RulesProvider + rules.md (kurallar koddan ayrı, kimlikli)
-  schema.py                 # Pydantic v2 bulgu/çıktı şemaları (imla/dil_bilgisi/ton/tutarlilik) + Observation (gözlem kanalı)
+  schema.py                 # Pydantic v2 bulgu/çıktı şemaları (imla/dil_bilgisi/ton/tutarlilik) + Observation (gözlem kanalı) + TermEntry/LLMTermExtraction (tutarlılık map adımı)
   locate.py                 # Alıntıyı kaynakta konumlama (offset — LLM offset üretmez)
   postprocess.py            # Birleştirme + tekilleştirme + noop/bozuk öneri eleme
   cache.py                  # Disk önbelleği (.cache/llm_cache.json; thread-safe)
@@ -162,6 +162,7 @@ python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 | `LANGSMITH_TRACING` | `false` | Air-gap hijyeni: telemetri kapalı kalmalı. |
 | `GOOGLE_GENAI_TRANSPORT` | *(boş)* | Opsiyonel Gemini REST taşıma anahtarı (gRPC yerine REST). |
 | `LLM_TIMEOUT_SEC` | `60` | Tek LLM çağrısı için üst zaman aşımı (sn). Bağlantı yarıda tıkanırsa çağrı asılı kalmasın diye. `0`/boş → sınırsız (istemci varsayılanı). |
+| `CONSISTENCY_MAP_REDUCE_CHARS` | `16000` | Tutarlılık geçişi map-reduce eşiği (karakter). Belge bu boyutu **aşarsa** tutarlılık tek dev çağrı yerine map-reduce (parça başına terim çıkarımı + tek yargı çağrısı) ile çalışır → uzun belgede zaman aşımı tavanı kalkar. Eşik altında eski tek-çağrı yolu (altın-set bu yolda ölçülü). `0`/negatif → `1` (fiilen her belge map-reduce). |
 | `EVAL_DELAY_SEC` | `13` | Yalnız `eval/run_eval.py`'de çağrılar arası gecikme; ücretli katmanda `0`. |
 | `EVAL_FILTER` | *(boş)* | Yalnız `eval/run_eval.py`'de: virgülle ayrılmış id/id-ön-eki listesi (örn. `imla-yabanci,temiz`) — yalnız eşleşen örnekleri çalıştırır. Ücretli API'de küçük kural değişikliklerinde tam 53 örneği göndermemek için; tam koşu yalnız büyük kilometre taşlarında (Faz sonu, PR öncesi) önerilir. |
 
@@ -229,9 +230,35 @@ koru:
   böylece `CONCURRENCY` ne olursa olsun sonuç birebir aynıdır. Yeni geçiş/bulgu
   eklerken bu deterministiklik sözleşmesini koru; önbellek (`cache.py`) ve ilerleme
   yayını thread-safe'tir (kilitli).
-- **Belge-geneli tutarlılık parçalanamaz** — tutarlılık geçişi (terim/kısaltma
-  çakışması) BÜTÜN metni tek çağrıda görür. Parçalarsan "AI"↔"Artificial
-  Intelligence" gibi çapraz-parça çakışmaları göremez (kör nokta geri gelir).
+- **Belge-geneli tutarlılık: küçük belgede tek çağrı, büyük belgede map-reduce**
+  — tutarlılık geçişi (terim/kısaltma çakışması) bütünsel görüş gerektirir;
+  ham metni naif parçalayıp her parçaya AYRI sorarsan "AI"↔"Artificial
+  Intelligence" gibi çapraz-parça çakışmaları göremezsin (kör nokta). Bu yüzden:
+  **küçük belge** (≤ `CONSISTENCY_MAP_REDUCE_CHARS`) tek çağrıda görülür
+  (`_consistency_pass` → `build_consistency_message` + `CONSISTENCY_SYSTEM_PROMPT`).
+  **Büyük belge** (uzun belgede tek dev çağrı Google'da zaman aşımına uğrar)
+  `_consistency_map_reduce` ile çalışır: (1) MAP — her parçadan yalnız sabit
+  terim/kısaltma/birim/etiket çıkarılır (paralel; ayrı şema `LLMTermExtraction`,
+  `TERM_EXTRACT_SYSTEM_PROMPT`); (2) ADAY KÜMELEME — `_build_term_index` gürültüyü
+  (`_is_indexable_term`: sayı/değer/ölçüm yüzeyleri) eler, sonra yüzeyleri
+  YALNIZ TUTARSIZLIK ADAYI kümelere indirger: ya yüzey-anahtarı (`_norm_surface_
+  key`: harf/tırnak/boşluk-duyarsız → yazım varyantı) ya kavram-anahtarı
+  (`_norm_concept_key` → eşanlam) altında ≥2 farklı yüzey. Jenerik kavram
+  kümeleri (`_CONCEPT_CLUSTER_MAX` üstü — "özellik adı", "bölüm başlığı") atılır.
+  SALT büyük/küçük harf farkıyla ayrılan kümeler de ELENİR (başlık "Başlık
+  Düzeni" ↔ düzyazı küçük harf DOĞAL farktır — en sık sahte-pozitif kaynağıydı;
+  birim harfi kHz↔Khz zaten yerel IMLA-BIRIM'de yakalanır, burada tekrar üretme).
+  TEK biçimde geçen terim hiç gönderilmez (tutarsız olamaz) → reduce girdisi
+  belge boyutundan BAĞIMSIZ küçük kalır; (3) REDUCE — LLM'e ham metin DEĞİL bu
+  aday kümeler gönderilir (`CONSISTENCY_REDUCE_SYSTEM_PROMPT`), her küme için
+  "gerçekten aynı mı?" yargısı `tutarlilik` bulguları üretir. Aday kümeleme
+  belgenin tamamından toplandığından bütünsel görüş korunur (kör nokta gelmez);
+  her adımın girdisi küçük olduğundan zaman aşımı tavanı kalkar. Offset yine
+  `enrich_with_offsets` ile (LLM offset üretmez); reduce `excerpt`'i kümedeki bir
+  `surface` ile birebir olmalıdır ki konumlanabilsin. İlerleme (`on_progress` →
+  web SSE) map k/N + reduce adımını canlı bildirir. **Naif "böl ve her parçaya
+  ayrı tutarlılık sor" hâlâ yasak** — reduce'un tek yargı adımı bütün adayları
+  bir arada görür, çözüm budur.
 - **Etiketli blok sözleşmesi** — `extract_docx_blocks` blok türü haritası
   (`BlockSpan`) döndürür; offsetler birleşik metinle birebir hizalıdır
   (`text[s.start:s.end]` bloğun kendisi). `analyzer.analyze_document(spans=...)`
@@ -370,7 +397,10 @@ kaynağı sanma, gözden geçirmeden silme:
   kaynak metinden hesaplanır; LLM'e bırakmak uydurma konumlar üretir.
 - **Kuralı ölçmeden değiştirme** — `eval/` üzerinde öncesi/sonrası bakmadan
   prompt/kural değiştirme.
-- **Tutarlılık geçişini parçalama** — kör noktayı geri getirir (yukarıya bak).
+- **Tutarlılık yargısını naif parçalama** — belgeyi böl ve her parçaya AYRI
+  "tutarlılık bul" sorma; kör noktayı geri getirir (çapraz-parça çakışmalar
+  kaybolur). Uzun belge çözümü map-reduce'tur: terim çıkarımı parçalanır ama
+  YARGI adımı belge-geneli TEK indeksi bir arada görür (bkz. Mimari Seam).
 - **Gözlemi (`observations`) findings hattına sokma / bulgu gibi gösterme /
   puanlamaya katma** — gözlem ayrı, doğrulanmamış, düşük-güvenli kanaldır
   (bkz. Mimari Seam). Ona offset/eleme uygulama, precision/recall'a sayma,
@@ -407,9 +437,20 @@ Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model b
   > ton önceliği; tutarlılık muaf). Atomik düzeltme çıkarılamayan (çok
   kelimeli/serbest yeniden yazım) örtüşen bulgular hâlâ İKİSİ DE korunur —
   bilinçli kalan sınır budur.
-- **Uzun belge tutarlılık ölçeği.** Tutarlılık tek dev LLM çağrısıyla çalışır;
-  50+ sayfada dikkat seyrelmesi nedeniyle çakışmaları kaçırabilir — kaçırmama
-  garantisi yoktur. (Gelecek: deterministik terim-indeksi + LLM yargısı.)
+- **Uzun belge tutarlılık ölçeği.** Küçük belgede tutarlılık tek çağrıyla
+  çalışır; belge `CONSISTENCY_MAP_REDUCE_CHARS`'ı aşınca map-reduce'a geçer
+  (terim-indeksi + aday kümeleme + tek yargı — tek dev çağrının zaman aşımı
+  çözüldü). Kalan sınırlar: (a) map bir kavramı parçalarda FARKLI `concept`'le
+  etiketlerse eşanlam kümesi (PTT↔BK) kaçabilir; (b) gerçek bir eşanlam kümesi
+  `_CONCEPT_CLUSTER_MAX`'tan (3) çok varyant taşırsa jenerik sanılıp atılır
+  (nadir); (c) reduce ham metnin geniş bağlamı olmadan karar verir, ince
+  bağlamsal çakışmaları kaçırabilir; (d) salt büyük/küçük harf farkıyla ayrılan
+  kümeler bilinçli elendiğinden gerçek bir ürün-adı harf tutarsızlığı (örn.
+  "iVOX" ↔ "IVOX") tutarlılık geçişinde YAKALANMAZ — bu, "standart pil" ↔
+  "Standart Pil" gibi başlık/düzyazı sahte-pozitiflerini kesmek için verilen
+  bilinçli takastır. Yine de eski "dev çağrı zaman aşımı → hiç
+  sonuç yok" durumundan kesin daha iyidir. Eşik ve küme sınırı sezgiseldir;
+  `run_eval` + gerçek belgeyle ayarlanabilir.
 - **OCR/çıkarma gürültüsü.** Girdi OCR ürünüyse İ/I karışması, kelime-içi
   boşluk/nokta gibi bozulmalar sahte bulgu üretir ("çöp girer, çöp çıkar").
   Temiz dijital `.docx` tercih edilir. PDF'ten çevrilmiş `.docx`'lerde çıkarma

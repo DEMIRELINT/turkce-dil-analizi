@@ -19,6 +19,12 @@ from .schema import AnalysisResult, Finding
 # büyük olasılıkla bozulmuştur (örn. "birçok" → "birchoq") → güvenilmez sayılır.
 _NON_TURKISH = set("qwxQWX")
 
+# Türkçe yazımda hiç kullanılmayan işaretler. Model bazen kesme işareti yerine
+# backtick üretir (örn. "Modu'na" → "Modu`na") — geçersiz, uygulanamaz öneri.
+# ALINTIDA yoksa (yani öneri onu SONRADAN eklemişse) bozuk sayılır; aynı mantık
+# _NON_TURKISH ile — ayrı kümede çünkü harf değil işarettir.
+_INVALID_PUNCT = set("`")
+
 # Tırnak/kesme eşdeğerlikleri: Word "akıllı tırnak" üretir (’ “ ”), LLM çoğu kez
 # düz ASCII döndürür (' "). İkisi görsel olarak aynı işlevi görür; normalize
 # edilmeden karşılaştırılırsa "ALKALINE'den" → "ALKALINE’den" gibi hiçbir şey
@@ -52,8 +58,10 @@ def drop_noop_findings(result: AnalysisResult) -> AnalysisResult:
 
 
 def _suggestion_is_corrupt(excerpt: str, suggestion: str) -> bool:
-    """Öneri, alıntıda olmayan Türkçe-dışı harf (q/w/x) içeriyorsa True."""
-    return bool((set(suggestion) & _NON_TURKISH) - set(excerpt))
+    """Öneri, alıntıda olmayan Türkçe-dışı harf (q/w/x) veya geçersiz işaret
+    (backtick) içeriyorsa True."""
+    extra = set(suggestion) - set(excerpt)
+    return bool(extra & _NON_TURKISH) or bool(extra & _INVALID_PUNCT)
 
 
 def validate_suggestions(result: AnalysisResult) -> AnalysisResult:

@@ -88,3 +88,9 @@
 {"id": "gramer-mantik-2", "text": "Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla kullanılmalıdır.", "expected": [{"type": "dil_bilgisi", "excerpt": "Şarj cihazı, yalnızca üretici tarafından onaylanan orijinal aksesuarlarla kullanılmalıdır"}]}
 {"id": "tutarlilik-tirnak-1", "text": "Yönetmelikte belirtildiği gibi cihaz 'yalnızca yetkili personel tarafından' kullanılabilir. Bu kural tüm kullanıcılar için geçerlidir.", "expected": []}
 {"id": "tutarlilik-tirnak-2", "text": "Cihazı çalıştırmak için 'Programlama Modu' seçilir. Ayarları değiştirmek için 'Gelişmiş Mod' kullanılır. Bakım işlemleri için \"Bakım Modu\" etkinleştirilir.", "expected": [{"type": "tutarlilik", "excerpt": "\"Bakım Modu\""}]}
+{"id": "imla-noktalama-etiket-ikinokta-temiz-1", "text": "Not: Pil takımını takmadan önce cihazı kapatın.", "expected": []}
+{"id": "imla-noktalama-karakter-kumesi-temiz-1", "text": "Kanal adında şu karakterler kullanılabilir: 0 - 9 * {}? &%. + / - _", "expected": []}
+{"id": "gramer-bildirme-temiz-2", "text": "Telsizi Kapalı konuma getirin ve birkaç saniye bekleyin.", "expected": []}
+{"id": "imla-buyuk-harf-terim-temiz-1", "text": "Kaynak telsizi yuvaya yerleştirin ve LED göstergesini kontrol edin.", "expected": []}
+{"id": "imla-noktalama-icin-bkz-temiz-1", "text": "Li-ion Pil Ömrü özelliklerini öğrenmek için, bkz. \"Li-ion Pil Hakkında\" sayfa 12.", "expected": []}
+{"id": "imla-kesme-tirnak-ek-temiz-1", "text": "'Programlama Modu'na girmek için PTT'ye basın.", "expected": []}

@@ -136,6 +136,12 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   (kapanış tırnağının yanına GEREKSİZ bir kesme/tırnak daha eklenmiş —
   böyle yan yana iki kesme/tırnak İŞARETİ ASLA ÜRETME, bu bozuk bir
   öneridir).**
+  **BULGU ÜRETME UYARISI:** "'Etiket'ne", "'Etiket'na", "'Etiket'ndan" gibi
+  kapanış tırnağına DOĞRUDAN BİTİŞİK ek gördüğünde ("'Programlama Modu'na",
+  "'Boşta' Programlama Modu'ndan") bu YUKARIDAKİ "Doğru" örneğinin ta
+  kendisidir — buna ASLA hata deme, kesme EKLEMEYİ önerme, backtick veya
+  başka bir işaretle "düzeltme" ÜRETME. Bu biçim zaten kuralın istediği
+  DOĞRU biçimdir; dokunmadan geç.
   **Özel ad OLMAYANA kesme EKLETME** (TDK Kesme İşareti — kural yalnız özel
   adlara gelen ekler içindir): ürün/parça SINIFI adları ("kaynak telsiz",
   "standart pil", "yuvalı şarj aleti") özel ad değildir — büyük harfle
@@ -223,7 +229,13 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   - **"İçin" edatı bu kuralın KAPSAMI DIŞINDADIR** — edat, zarf-fiil
     değildir; TDK'nin virgül kurallarında "için"e özgü bir madde YOKTUR.
     "X yapmak için," gibi yapılardaki virgüle dair bulgu ÜRETME (ne ekleme
-    ne kaldırma) — kaynağı belirsiz bir alanda sessiz kalmak doğrusu.
+    ne kaldırma) — kaynağı belirsiz bir alanda sessiz kalmak doğrusu. **BU
+    İSTİSNA MUTLAKTIR:** "...için," kalıbını gördüğünde zarf-fiil kuralını
+    (yukarıdaki madde) "için"e UYGULAMA — "için" bir zarf-fiil eki DEĞİL, bir
+    EDATTIR; iki kural birbirine KARIŞTIRILAMAZ. Yanlış davranış örneği (ASLA
+    yapma): "...öğrenmek için, bkz. ... sayfa 12." cümlesindeki virgülü
+    "zarf-fiil kuralı" gerekçesiyle kaldırmayı önermek — bu cümlede zarf-fiil
+    YOKTUR, "için" vardır; sessiz kal.
   - **LİSTE VİRGÜLÜNE DOKUNMA** (TDK Virgül md. 1): Cümle başındaki öğe bir
     listenin parçasıysa virgül ZORUNLUDUR; kaldırılması anlamı bozar. Örn.
     "CPS, Yuvalı Şarj Cihazı ve Programlama Kablosuna ihtiyacınız olacak."
@@ -236,6 +248,17 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
     küçük yazılır): "...basılı tutun; dinlemek için ise serbest bırakın."
     kuruluşunda ne noktalı virgül ne de sonrasındaki küçük harf hatadır —
     ikisi için de bulgu üretme.
+  - **Etiket sözcüğü + iki nokta (:) DOĞRUDUR — noktaya çevirme.** Bir notu,
+    uyarıyı veya açıklamayı TANITAN etiket sözcüğünden sonra iki nokta üst üste
+    kullanımı TDK'ya göre doğrudur (iki nokta, kendisinden sonra açıklama/örnek
+    geleceğini bildirir). "Not:", "Notlar:", "Uyarı:", "Dikkat:", "Önemli:",
+    "Örnek:", "İpucu:" gibi kullanımları "Not." biçiminde noktaya çevirmeyi
+    ÖNERME — bu sahte-pozitiftir; iki nokta burada beklenen işarettir.
+  - **Literal KARAKTER/SİMGE KÜMESİNE virgül ekleme.** Bir teknik metinde izin
+    verilen karakterlerin/simgelerin literal dökümü (örn. kanal adı için
+    kullanılabilen küme: "0 - 9 * {}? &%. + / - _ ' ' \") bir düzyazı
+    SIRALAMASI DEĞİL, VERİDİR. Aralarına virgül ekleme önerme — "eş görevli
+    öğeler virgülle ayrılır" kuralı bu literal karakter kümelerine uygulanmaz.
   - **Başlık/etiket satırına son noktalama EKLEME:** Nokta ile bitmeyen kısa
     başlık, düğme açıklaması veya şekil etiketi ("Kanal 1'i önceden ayarlamak
     için varsayılan ayar") cümle değildir; sonuna nokta eklemeyi önerme.
@@ -358,14 +381,16 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   kapı+da+yım çekimi; "başvuru" sözlükte var). İki kelimenin ayrı yazımı
   Türkçede ZATEN DOĞRUYSA ("pil ölçer", "veri tabanı" gibi) sözlükte
   bulunmayan bitişik biçimler ("pilölçer") UYDURMA — böyle öneri ASLA üretme.
-- **GRAMER-BILDIRME-EKI** — Bildirme eki (-dır/-dir/-dur/-dür), bir DURUM/KONUM/
-  ETİKET adını yükleme çevirip AYNI cümlede başka bir asıl yüklemle
-  çakıştıramaz. Bir arayüz/konum etiketi başka bir yüklemin ("getirilir",
-  "alınır", "seçilir", "getirilmelidir") tümleci ise YALIN kalmalı ve tırnak
-  içinde gösterilmelidir. Doğru: "cihaz 'Kapalı' konumuna getirilmelidir".
-  Yanlış: "cihaz yeniden Kapalı'dır konumuna getirilmelidir" (→ "'Kapalı'
-  konumuna getirilmelidir") — burada -dır etiketi sözde yüklem yapıp hemen
-  ardından gelen "getirilmelidir" ile YAPISAL çelişki üretir (iki asıl yüklem).
+- **GRAMER-BILDIRME-EKI** — Bu kural yalnız ŞU YAPISAL ÇAKIŞMAYI hedefler:
+  bildirme eki (-dır/-dir/-dur/-dür) bir DURUM/KONUM/ETİKET adını sözde-yükleme
+  çevirmiş VE AYNI cümlede bu sözde-yüklemin hemen ardından başka bir asıl
+  yüklem ("getirilir", "alınır", "seçilir", "getirilmelidir") geliyor — iki
+  yüklem çakışması. Yanlış: "cihaz yeniden Kapalı'dır konumuna
+  getirilmelidir" (→ "'Kapalı' konumuna getirilmelidir") — burada -dır etiketi
+  sözde yüklem yapıp hemen ardından gelen "getirilmelidir" ile YAPISAL çelişki
+  üretir (iki asıl yüklem). **Bu kural etikete tırnak eklemeyi GENEL bir kural
+  olarak ÖNERMEZ** — tırnaklama yalnız bu -dır çakışmasını çözerken ortaya
+  çıkan bir YAN ETKİDİR, kuralın amacı DEĞİLDİR.
   NOT (yanlış-pozitif kapısı): Bildirme eki bir cümlenin GERÇEK ve TEK
   yükleminde ise tamamen doğrudur ("Cihaz kapalıdır.", "Bu ayar
   varsayılandır.") — bunları ASLA işaretleme; yalnız etiketin -dır ile
@@ -373,6 +398,12 @@ yalnız bu dosya güncellenir. İleride bu içerik kurumun resmî TDK/üslup kı
   vb.) çakıştığı durumu işaretle. Aynı sözcükteki olası kesme işareti hatası
   ("Kapalı'dır") AYRI bir imla bulgusudur; bu madde yalnız YAPISAL çakışmayı
   hedefler.
+  NOT-2 (yanlış-pozitif kapısı — ÖNEMLİ): Bu madde YALNIZ -dır bindirmesi (etiket
+  sözde-yüklem + AYNI cümlede ikinci asıl yüklem) varsa işler. -dır eki OLMAYAN
+  sade bir cümlede ("Telsizi Kapalı konuma getirin.", "Kapalı konumdayken")
+  durum/etiket sözcüğüne SIRF tırnak eklemek için bulgu ÜRETME — tırnak burada
+  ÜSLUP tercihidir, dil bilgisi hatası DEĞİLDİR. Yapısal -dır çakışması yoksa bu
+  eksende sessiz kal.
 
 ---
 

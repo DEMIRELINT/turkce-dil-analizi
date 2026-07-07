@@ -164,6 +164,19 @@ def test_validate_keeps_non_turkish_letter_when_in_excerpt():
     assert len(result.findings) == 1
 
 
+def test_validate_drops_backtick_suggestion():
+    # "'Programlama Modu'na" → "'Programlama Modu`na": kesme yerine backtick
+    # üretilmiş — Türkçede geçersiz, uygulanamaz öneri; elenir.
+    result = AnalysisResult(
+        findings=[
+            _f("'Programlama Modu'na", "'Programlama Modu`na"),  # bozuk → atılır
+            _f("yanlız", "yalnız"),                               # temiz → kalır
+        ]
+    )
+    validate_suggestions(result)
+    assert [f.excerpt for f in result.findings] == ["yanlız"]
+
+
 # --- Çapraz-geçiş tip-kopyası tekilleştirme ----------------------------------
 
 def test_cross_pass_duplicate_keeps_higher_priority_type():

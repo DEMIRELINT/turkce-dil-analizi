@@ -65,6 +65,11 @@ class Settings:
     # (istemci varsayılanı) — kurumsal ağda bağlantı yarıda tıkanırsa çağrı
     # asılı kalmasın diye None DEĞİL, makul bir varsayılan (60s) kullanılır.
     llm_timeout_sec: float | None
+    # Tutarlılık geçişi eşiği (karakter). Belge bu boyutu AŞARSA tutarlılık artık
+    # tek dev çağrıyla değil, map-reduce (parça başına terim çıkarımı + tek yargı
+    # çağrısı) ile çalışır — böylece uzun belgede zaman aşımı tavanı kalkar.
+    # Eşik ALTINDA mevcut kanıtlanmış tek-çağrı yolu korunur (altın-set değişmez).
+    consistency_map_reduce_chars: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -86,6 +91,10 @@ class Settings:
         # 0 veya boş → None (kütüphane varsayılanına düş, sınırsız).
         timeout_sec = _env_float("LLM_TIMEOUT_SEC", 60.0)
         llm_timeout_sec = timeout_sec if timeout_sec > 0 else None
+        # Tutarlılık map-reduce eşiği (karakter). Varsayılan ~16000: birkaç
+        # parça büyüklüğü; tek-çağrının rahat döndüğü üst bant. 0/negatif → 1'e
+        # sabitlenir (fiilen HER belge map-reduce; test/ölçüm için kullanışlı).
+        consistency_map_reduce_chars = max(1, _env_int("CONSISTENCY_MAP_REDUCE_CHARS", 16000))
         return cls(
             gemini_api_key=api_key,
             model_id=os.getenv("MODEL_ID", "gemini-2.5-flash-lite").strip(),
@@ -96,4 +105,5 @@ class Settings:
             max_workers=max_workers,
             genai_transport=genai_transport,
             llm_timeout_sec=llm_timeout_sec,
+            consistency_map_reduce_chars=consistency_map_reduce_chars,
         )

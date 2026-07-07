@@ -1,0 +1,25 @@
+BULUT YEDEKLEME SİSTEMİ — KULLANIM KILAVUZU
+
+1. Giriş
+
+Bu kılavuz, Bulut Yedekleme Sistemi'nin kurulumunu ve günlük kullanımını açıklar. Sisteme yanlız yetkili personel erişebilir. Kurulum sırasında herşey otomatik olarak yapılandırılır. Yeni sürüm daha hızlı daha güvenli ve daha kararlıdır.
+
+2. Kurulum ve Erişim
+
+Sistemi kurduktan sonra yönetici hesabınızın parolasını girin. Yeni parolayı yöneticiyede bildirin. Unutmayınki bu işlem geri alınamaz. Kurulum dosyaları Ankarada bulunan veri merkezinde saklanır.
+
+3. Depolama ve Kaynaklar
+
+Her hesaba 12.5 GB depolama alanı ve 500mb önbellek verilir. Sisteme aynı anda beş kullanıcılar bağlanabilir. Yedekler her gece otomatik olarak oluşturulurlar.
+
+4. Yönetim Arayüzü
+
+'Yönetim Paneli'nden tüm ayarları düzenleyebilirsiniz. 'Ayarlar Menüsü' üzerinden bildirim tercihlerini belirleyin. Raporlara ulaşmak için "Rapor Ekranı"nı açın. Giriş yaparken şifrenizi doğru girdiğinizden emin olun.
+
+5. Bakım ve Güvenlik
+
+İşlem tamamlandığında veriler sunucuya sunucuya kopyalanır. Bakım bittikten sonra sistem yeniden Aktif'tir konumuna alınır. Sunucu, yalnızca üretici tarafından onaylanan orijinal güç kaynağıyla soğutulmalıdır.
+
+6. Performans
+
+Sisteme bağlı kullanıcı sayısı arttıkça yedekleme süresi kısalır ve sunucu yükü azalır. Bu sayede yoğun saatlerde sistem en yüksek verime ulaşır.

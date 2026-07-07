@@ -10,7 +10,9 @@ from dilanaliz.schema import (
     LLMAnalysis,
     LLMFinding,
     LLMSpellingDecision,
+    LLMTermExtraction,
     Observation,
+    TermEntry,
 )
 
 
@@ -144,38 +146,54 @@ class _FakeRules:
 class _PassFakeStructured:
     """Geçiş-farkında sahte yapı: sistem promptuna göre ilgili analizi döndürür.
 
-    Böylece yerel/ton/tutarlılık geçişleri ayrı ayrı taklit edilebilir.
+    Böylece yerel/ton/tutarlılık geçişleri ayrı ayrı taklit edilebilir. Terim
+    çıkarımı (map) ayrı şemaya (LLMTermExtraction) bağlandığı için önce şemaya
+    bakılır: term çağrısı `by_pass["terms"]` (kullanıcı mesajını alan bir
+    callable) ile taklit edilir. Tutarlılık reduce çağrısı da sistem promptunda
+    "tutarlilik" geçtiği için "consistency" dalına düşer (aynı LLMAnalysis).
     """
 
-    def __init__(self, by_pass: dict[str, LLMAnalysis]) -> None:
+    def __init__(self, by_pass: dict, schema=LLMAnalysis) -> None:
         self._by_pass = by_pass
+        self._schema = schema
 
     def invoke(self, messages):
         system = messages[0].content
+        user = messages[1].content if len(messages) > 1 else ""
+        if self._schema is LLMTermExtraction:
+            terms = self._by_pass.get("terms")
+            if callable(terms):
+                return terms(user)
+            return terms or LLMTermExtraction()
         if "CÜMLE CÜMLE" in system:
             return self._by_pass.get("local", _EMPTY)
         if "TON/ÜSLUP" in system:
             return self._by_pass.get("tone", _EMPTY)
         if "tutarlilik" in system:
-            return self._by_pass.get("consistency", _EMPTY)
+            cons = self._by_pass.get("consistency", _EMPTY)
+            return cons(user) if callable(cons) else cons
         return _EMPTY
 
 
 class _FakeModel:
-    def __init__(self, by_pass: dict[str, LLMAnalysis]) -> None:
+    def __init__(self, by_pass: dict) -> None:
         self._by_pass = by_pass
 
-    def with_structured_output(self, schema):  # noqa: ARG002
-        return _PassFakeStructured(self._by_pass)
+    def with_structured_output(self, schema):
+        return _PassFakeStructured(self._by_pass, schema)
 
 
-def _build_analyzer(by_pass: dict[str, LLMAnalysis]) -> Analyzer:
+def _build_analyzer(
+    by_pass: dict, consistency_map_reduce_chars: int = 16000, max_workers: int = 1
+) -> Analyzer:
     return Analyzer(
         chat_model=_FakeModel(by_pass),
         rules_provider=_FakeRules(),
         model_id="test-model",
         cache=None,
         speller=None,
+        max_workers=max_workers,
+        consistency_map_reduce_chars=consistency_map_reduce_chars,
     )
 
 
@@ -218,6 +236,147 @@ def test_analyze_document_consistency_pass_runs_on_whole_text():
     tutarlilik = [f for f in result.findings if f.type == FindingType.TUTARLILIK]
     assert len(tutarlilik) == 1
     assert (tutarlilik[0].start, tutarlilik[0].end) == (6, 10)
+
+
+def test_consistency_below_threshold_uses_single_call_not_map_reduce():
+    # Eşik ALTINDA: mevcut tek-çağrı yolu; terim çıkarımı (map) HİÇ çağrılmamalı.
+    def _terms_must_not_be_called(_user):
+        raise AssertionError("Eşik altında map (terim çıkarımı) çağrılmamalı")
+
+    by_pass = {
+        "terms": _terms_must_not_be_called,
+        "consistency": LLMAnalysis(findings=[_llm_finding("XXXX", FindingType.TUTARLILIK)]),
+    }
+    analyzer = _build_analyzer(by_pass, consistency_map_reduce_chars=16000)
+    source = "aaaa\n\nXXXX"  # kısa → eşik altı
+
+    result = analyzer.analyze_document(source, max_chars=5)
+
+    tutarlilik = [f for f in result.findings if f.type == FindingType.TUTARLILIK]
+    assert len(tutarlilik) == 1
+    assert source[tutarlilik[0].start : tutarlilik[0].end] == "XXXX"
+
+
+def _cross_chunk_terms(user: str) -> LLMTermExtraction:
+    """Map sahtesi: parçada hangi terim geçiyorsa onu çıkarır (aynı kavram)."""
+    terms = []
+    if "PTT" in user:
+        terms.append(TermEntry(surface="PTT", concept="posta idaresi"))
+    if "BK" in user:
+        terms.append(TermEntry(surface="BK", concept="posta idaresi"))
+    return LLMTermExtraction(terms=terms)
+
+
+def test_consistency_above_threshold_uses_map_reduce_cross_chunk():
+    # Eşik ÜSTÜnde map-reduce: "PTT" ilk parçada, "BK" ayrı parçada. Map her
+    # parçadan terimi çıkarır; reduce belge-geneli indeksi görüp çakışmayı bulur.
+    captured: dict[str, str] = {}
+
+    def _reduce(user: str) -> LLMAnalysis:
+        captured["index"] = user
+        # Reduce, indeksteki sapan biçimi (BK) baskın biçime (PTT) önerir.
+        return LLMAnalysis(findings=[
+            LLMFinding(
+                type=FindingType.TUTARLILIK,
+                excerpt="BK",
+                explanation="Aynı kurum iki farklı kısaltmayla yazılmış.",
+                suggestion="PTT",
+            )
+        ])
+
+    by_pass = {"terms": _cross_chunk_terms, "consistency": _reduce}
+    analyzer = _build_analyzer(by_pass, consistency_map_reduce_chars=20)
+    source = "Gonderi PTT ile yollanir.\n\nAncak BK subesi kapalidir."
+
+    result = analyzer.analyze_document(source, max_chars=30)
+
+    # Reduce ham metni DEĞİL, aday kümeleri gördü (PTT ve BK aynı kavram → kümede).
+    assert "PTT" in captured["index"] and "BK" in captured["index"]
+    assert "Küme" in captured["index"]
+    # Çakışma tek tutarlilik bulgusuna indi ve "BK" kaynakta konumlandı.
+    tutarlilik = [f for f in result.findings if f.type == FindingType.TUTARLILIK]
+    assert len(tutarlilik) == 1
+    assert source[tutarlilik[0].start : tutarlilik[0].end] == "BK"
+    assert tutarlilik[0].suggestion == "PTT"
+
+
+def test_consistency_map_reduce_deterministic_across_workers():
+    # Map paralel çalışsa da çıktı işlenme sırasından bağımsız (indeks sıralı).
+    def _reduce(user: str) -> LLMAnalysis:
+        return LLMAnalysis(findings=[
+            LLMFinding(type=FindingType.TUTARLILIK, excerpt="BK",
+                       explanation="x", suggestion="PTT")
+        ])
+
+    by_pass = {"terms": _cross_chunk_terms, "consistency": _reduce}
+    source = "Gonderi PTT ile yollanir.\n\nAncak BK subesi kapalidir."
+
+    seq = _build_analyzer(by_pass, consistency_map_reduce_chars=20, max_workers=1)
+    par = _build_analyzer(by_pass, consistency_map_reduce_chars=20, max_workers=4)
+    r_seq = seq.analyze_document(source, max_chars=30)
+    r_par = par.analyze_document(source, max_chars=30)
+
+    key = lambda r: [(f.type, f.start, f.end, f.excerpt, f.suggestion) for f in r.findings]
+    assert key(r_seq) == key(r_par)
+
+
+def test_term_index_drops_numeric_noise_and_single_form_terms():
+    from dilanaliz.analyzer import _build_term_index
+    # Sayısal/değer yüzeyler elenir; tek biçimde geçen terim adaya girmez.
+    entries = [
+        TermEntry(surface="0", concept="sayı"),
+        TermEntry(surface="1,5 metre", concept="uzunluk"),
+        TermEntry(surface="%90", concept="oran"),
+        TermEntry(surface="PTT", concept="posta idaresi"),  # tek biçim → aday değil
+    ]
+    assert _build_term_index(entries) == ""
+
+
+def test_term_index_clusters_quote_variants():
+    from dilanaliz.analyzer import _build_term_index
+    # Tırnak farkı (casefold sonrası HÂLÂ farklı) → gerçek varyant, aday küme.
+    entries = [
+        TermEntry(surface="'Programlama Modu'", concept="mod"),
+        TermEntry(surface="Programlama Modu", concept="mod"),
+    ]
+    idx = _build_term_index(entries)
+    assert "Küme" in idx
+    assert "'Programlama Modu'" in idx and "Programlama Modu" in idx
+
+
+def test_term_index_drops_case_only_clusters():
+    from dilanaliz.analyzer import _build_term_index
+    # Salt büyük/küçük harf farkı = başlık/düzyazı doğal farkı, tutarsızlık DEĞİL.
+    # "standart pil"↔"Standart Pil", "RX"↔"Rx", "Khz"↔"kHz" → hiçbiri bulgu olmaz.
+    entries = [
+        TermEntry(surface="standart pil", concept="pil"),
+        TermEntry(surface="Standart Pil", concept="pil"),
+        TermEntry(surface="RX", concept="alım"),
+        TermEntry(surface="Rx", concept="alım"),
+        TermEntry(surface="Khz", concept="birim"),
+        TermEntry(surface="kHz", concept="birim"),
+    ]
+    assert _build_term_index(entries) == ""
+
+
+def test_term_index_drops_generic_concept_buckets():
+    from dilanaliz.analyzer import _build_term_index
+    # Aynı jenerik kavrama bağlı ÇOK (>MAX) farklı yüzey = jenerik kova, atılır.
+    entries = [
+        TermEntry(surface=f"Başlık{i}", concept="bölüm başlığı") for i in range(6)
+    ]
+    assert _build_term_index(entries) == ""
+
+
+def test_term_index_keeps_small_synonym_concept_cluster():
+    from dilanaliz.analyzer import _build_term_index
+    # Aynı kavrama bağlı 2 FARKLI yüzey (eşanlam) → küçük küme, aday.
+    entries = [
+        TermEntry(surface="PTT", concept="posta idaresi"),
+        TermEntry(surface="BK", concept="posta idaresi"),
+    ]
+    idx = _build_term_index(entries)
+    assert "PTT" in idx and "BK" in idx and "Küme" in idx
 
 
 def test_analyze_document_empty_when_all_passes_empty():

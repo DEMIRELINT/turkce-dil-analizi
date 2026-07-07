@@ -39,10 +39,14 @@ from .postprocess import (
 )
 from .progress import ProgressCallback, ProgressEvent, emit
 from .prompt import (
+    CONSISTENCY_REDUCE_SYSTEM_PROMPT,
     CONSISTENCY_SYSTEM_PROMPT,
     LOCAL_SYSTEM_PROMPT,
+    TERM_EXTRACT_SYSTEM_PROMPT,
     TONE_SYSTEM_PROMPT,
     build_consistency_message,
+    build_consistency_reduce_message,
+    build_term_extract_message,
     build_tone_message,
     build_user_message,
 )
@@ -54,7 +58,9 @@ from .schema import (
     FindingType,
     LLMAnalysis,
     LLMSpellingDecision,
+    LLMTermExtraction,
     Observation,
+    TermEntry,
 )
 from .spell import HunspellChecker, match_case
 
@@ -78,6 +84,7 @@ class Analyzer:
         cache: DiskCache | None = None,
         speller: HunspellChecker | None = None,
         max_workers: int = 1,
+        consistency_map_reduce_chars: int = 16000,
     ) -> None:
         self._rules = rules_provider
         self._model_id = model_id
@@ -85,9 +92,14 @@ class Analyzer:
         self._speller = speller
         # Eşzamanlı işlenecek parça sayısı. 1 → sıralı (eski) davranış.
         self._max_workers = max(1, max_workers)
-        # Yapılandırılmış çıktı: parse hatasını kaldırır. Tüm geçişler aynı şemayı
-        # döndürür; yalnız sistem promptu değişir.
+        # Tutarlılık geçişi eşiği: belge bu karakter sayısını AŞARSA tek dev
+        # çağrı yerine map-reduce (terim çıkarımı + tek yargı) devreye girer.
+        self._consistency_map_reduce_chars = max(1, consistency_map_reduce_chars)
+        # Yapılandırılmış çıktı: parse hatasını kaldırır. Analiz geçişleri
+        # (yerel/ton/tutarlılık/reduce) LLMAnalysis; terim çıkarımı (map) ayrı
+        # bir katı şema (LLMTermExtraction) döndürür.
         self._structured = chat_model.with_structured_output(LLMAnalysis)
+        self._term_structured = chat_model.with_structured_output(LLMTermExtraction)
 
     def analyze(self, text: str) -> AnalysisResult:
         """Kısa metni TEK parça olarak üç geçişle inceler (chunk'lamadan)."""
@@ -182,7 +194,15 @@ class Analyzer:
             # Tutarlılık geçişi gözlem üretmez (yalnız yerel geçiş); boş liste döner.
             emit_safe(ProgressEvent(
                 "consistency_start", "Belge geneli tutarlılık inceleniyor", total, total))
-            out = self._consistency_pass(text)
+
+            # Map-reduce alt adımlarını (terim çıkarımı k/N, reduce yargısı) canlı
+            # bildir: uzun belgede tutarlılık artık birden çok çağrıdır; nerede
+            # takıldığı görünsün. "consistency_start" stage'i yeniden kullanılır
+            # (web UI mesajı günceller; yeni stage eklemeye gerek yok).
+            def on_progress(message: str, current: int, total_: int) -> None:
+                emit_safe(ProgressEvent("consistency_start", message, current, total_))
+
+            out = self._consistency_pass(text, on_progress=on_progress)
             emit_safe(ProgressEvent(
                 "consistency_done", "Belge geneli tutarlılık tamamlandı", total, total))
             return out, []
@@ -278,10 +298,79 @@ class Analyzer:
         user_message = build_tone_message(rules_context, text)
         return self._located_findings(TONE_SYSTEM_PROMPT, user_message, text)
 
-    def _consistency_pass(self, text: str) -> list[Finding]:
-        """Bütün belge geçişi: terim/birim/kısaltma tutarsızlığı."""
-        user_message = build_consistency_message(text)
-        return self._located_findings(CONSISTENCY_SYSTEM_PROMPT, user_message, text)
+    def _consistency_pass(self, text: str, on_progress=None) -> list[Finding]:
+        """Bütün belge geçişi: terim/birim/kısaltma tutarsızlığı.
+
+        Boyut-eşikli: küçük belgede (eşik altı) mevcut tek-çağrı yolu — kanıtlanmış,
+        altın-set ölçümü bu yolda ölçülmüştür. Büyük belgede (eşik üstü) tek dev
+        çağrı Google tarafında zaman aşımına uğradığından map-reduce yoluna geçilir
+        (bkz. `_consistency_map_reduce`); bütünsel görüş korunur (kör nokta gelmez).
+
+        `on_progress(message, current, total)` opsiyonel: verilirse map-reduce alt
+        adımlarını canlı bildirir (thread-safe olması çağıranın sorumluluğu).
+        """
+        if len(text) <= self._consistency_map_reduce_chars:
+            user_message = build_consistency_message(text)
+            return self._located_findings(CONSISTENCY_SYSTEM_PROMPT, user_message, text)
+        return self._consistency_map_reduce(text, on_progress=on_progress)
+
+    def _consistency_map_reduce(self, text: str, on_progress=None) -> list[Finding]:
+        """Uzun belge tutarlılığı: terim-indeksi (map) + tek yargı çağrısı (reduce).
+
+        1) MAP  : belgeyi `chunk_text` ile böl; her parçadan yalnız sabit terim/
+           kısaltma/birim/etiketleri çıkar (küçük çıktı; parçalar paralel).
+        2) BİRLEŞTİR: parça envanterlerini deterministik tek indekste topla
+           (`_build_term_index` — surface'e göre sıralı → sıra-bağımsız).
+        3) REDUCE: LLM'e ham metni DEĞİL bu küçük indeksi gönder; çakışma yargısı
+           `tutarlilik` bulguları üretir. Offset yine `enrich_with_offsets` ile
+           kaynaktan (LLM offset üretmez sözleşmesi korunur).
+
+        İndeks belgenin tamamını kapsadığından çapraz-parça çakışmalar görülür;
+        her adımın girdisi küçük olduğundan tek dev çağrının zaman aşımı tavanı yok.
+        """
+        chunks = chunk_text(text)
+        n = len(chunks)
+
+        def _report(done: int) -> None:
+            if on_progress is not None:
+                on_progress(f"Terimler çıkarılıyor (bölüm {done}/{n})", done, n)
+
+        # MAP — parça başına terim çıkarımı (paralel; determinizm indeks
+        # sıralamasıyla garanti, çıkarım sırasıyla değil).
+        _report(0)
+        per_chunk: list[list[TermEntry]] = [[] for _ in chunks]
+        if self._max_workers <= 1:
+            for i, chunk in enumerate(chunks):
+                per_chunk[i] = self._extract_terms(chunk.text)
+                _report(i + 1)
+        else:
+            with ThreadPoolExecutor(max_workers=self._max_workers) as pool:
+                fut_index = {
+                    pool.submit(self._extract_terms, chunk.text): i
+                    for i, chunk in enumerate(chunks)
+                }
+                done = 0
+                for fut in as_completed(fut_index):
+                    per_chunk[fut_index[fut]] = fut.result()  # hata olduğu gibi yükselir
+                    done += 1
+                    _report(done)
+
+        entries = [e for chunk_terms in per_chunk for e in chunk_terms]
+        index_block = _build_term_index(entries)
+        if not index_block:
+            return []  # sabit terim yok → çakışma da yok
+
+        # REDUCE — küçük indeks üzerinde tek yargı çağrısı.
+        if on_progress is not None:
+            on_progress("Belge geneli çakışma yargısı yapılıyor", n, n)
+        reduce_message = build_consistency_reduce_message(index_block)
+        return self._located_findings(CONSISTENCY_REDUCE_SYSTEM_PROMPT, reduce_message, text)
+
+    def _extract_terms(self, chunk_body: str) -> list[TermEntry]:
+        """Map adımı: tek parçadan sabit terim envanteri (yargı yok). Saf/paralel."""
+        user_message = build_term_extract_message(chunk_body)
+        raw = self._invoke_term_cached(TERM_EXTRACT_SYSTEM_PROMPT, user_message)
+        return list(raw.terms)
 
     def _located_findings(
         self, system_prompt: str, user_message: str, text: str
@@ -373,15 +462,15 @@ class Analyzer:
             resolved.append(c)
         return resolved
 
-    def _invoke_cached(self, system_prompt: str, user_message: str) -> LLMAnalysis:
-        key = make_key(self._model_id or "", system_prompt, user_message)
-        if self._cache is not None:
-            hit = self._cache.get(key)
-            if hit is not None:
-                return LLMAnalysis.model_validate_json(hit)
+    def _call_structured(self, structured, system_prompt: str, user_message: str):
+        """Yapısal LLM çağrısını okunur hataya sararak çalıştırır (önbelleksiz).
 
+        Zaman aşımı/retry tükenmesi `LLMCallError`'a dönüşür; CLI/web sınırı bunu
+        tek satır mesajla gösterir. `structured` hangi şemaya bağlıysa (LLMAnalysis
+        veya LLMTermExtraction) onun örneğini döndürür.
+        """
         try:
-            raw: LLMAnalysis = self._structured.invoke(
+            return structured.invoke(
                 [SystemMessage(content=system_prompt), HumanMessage(content=user_message)]
             )
         except Exception as exc:  # noqa: BLE001 — kullanıcıya okunur hata göster
@@ -390,6 +479,36 @@ class Analyzer:
                 "Bağlantıyı kontrol edin; kurumsal ağdaysanız "
                 "GOOGLE_GENAI_TRANSPORT=rest deneyin."
             ) from exc
+
+    def _invoke_cached(self, system_prompt: str, user_message: str) -> LLMAnalysis:
+        key = make_key(self._model_id or "", system_prompt, user_message)
+        if self._cache is not None:
+            hit = self._cache.get(key)
+            if hit is not None:
+                return LLMAnalysis.model_validate_json(hit)
+
+        raw: LLMAnalysis = self._call_structured(self._structured, system_prompt, user_message)
+
+        if self._cache is not None:
+            self._cache.set(key, raw.model_dump_json())
+        return raw
+
+    def _invoke_term_cached(self, system_prompt: str, user_message: str) -> LLMTermExtraction:
+        """Terim çıkarımı (map) için önbellekli çağrı.
+
+        Ayrı şema (LLMTermExtraction) döndürür. Önbellek anahtarı sistem promptunu
+        içerdiğinden analiz çağrılarıyla ÇAKIŞMAZ (terim promptu benzersiz) —
+        aynı anahtar uzayında güvenle yaşar.
+        """
+        key = make_key(self._model_id or "", system_prompt, user_message)
+        if self._cache is not None:
+            hit = self._cache.get(key)
+            if hit is not None:
+                return LLMTermExtraction.model_validate_json(hit)
+
+        raw: LLMTermExtraction = self._call_structured(
+            self._term_structured, system_prompt, user_message
+        )
 
         if self._cache is not None:
             self._cache.set(key, raw.model_dump_json())
@@ -426,6 +545,151 @@ def _dedup(findings: list[Finding]) -> list[Finding]:
         seen.add(key)
         out.append(f)
     return out
+
+
+# Tutarlılık terimi olarak kabul edilecek yüzey başında bulunabilecek tırnak
+# karakterleri (arayüz etiketleri "'...'" / '"..."' biçiminde başlar).
+_TERM_QUOTE_STARTS = "'\"‘’“”«»„`"
+
+
+def _is_indexable_term(surface: str) -> bool:
+    """Yüzey biçim gerçek bir 'sabit adlandırma' mı, yoksa sayısal/gürültü mü?
+
+    Deterministik gürültü süzgeci: map (LLM) prompt'a rağmen sayı/değer/tablo
+    verisi çıkarabilir (60 sayfalık gerçek belgede 592 benzersiz "terim"in çoğu
+    "0", "1", "%5 iletim", "1,5 metre" gibi VERİydi → reduce indeksi ~27 000
+    karaktere şişip zaman aşımına yol açtı). Kural: gerçek terim bir HARFLE ya da
+    tırnakla (arayüz etiketi) BAŞLAR; rakam/işaret/yüzde ile başlayanlar değer/
+    ölçümdür, elenir. Aşırı uzun yüzeyler (cümle parçası) da elenir.
+
+    Bilinçli takas: "12.5 KHz" gibi değer-önekli yüzeyler de elenir; ama prompt
+    map'e birim sembolünü DEĞERSİZ ("KHz") çıkarttırdığından birim-büyük/küçük
+    harf tutarsızlığı yine yakalanır (sembol harfle başlar → kalır).
+    """
+    s = surface.strip()
+    if not (2 <= len(s) <= 60):
+        return False
+    first = s[0]
+    return first.isalpha() or first in _TERM_QUOTE_STARTS
+
+
+# Yüzey biçim normalize anahtarı: büyük/küçük harf, tırnak, boşluk ve noktalama
+# farklarını siler. Aynı anahtara düşen FARKLI yüzeyler bir tutarsızlık adayıdır
+# (örn. 'Programlama Modu' ↔ "Programlama Modu"; "KHz" ↔ "Khz").
+_SURFACE_STRIP = re.compile(r"[\s'\"‘’“”«»„`.,;:()/\-_]")
+
+# Kavram-kümesi üst sınırı: bir kavram anahtarı bu sayıdan çok FARKLI yüzeye
+# bağlanıyorsa jenerik kavramdır ("özellik adı", "bölüm başlığı") — eşanlam
+# değil; kümelenmez. Gerçek eşanlam adayı (PTT↔BK) küçüktür.
+_CONCEPT_CLUSTER_MAX = 3
+
+
+def _norm_surface_key(surface: str) -> str:
+    """Yüzey biçimi kümeleme anahtarına indirger (harf/tırnak/boşluk-duyarsız).
+
+    Türkçe İ/I inceliği: casefold "İ"→"i̇" (birleşik) üretir; basit ve yeterli
+    olması için önce casefold, sonra ayraç/işaret temizliği yapılır."""
+    return _SURFACE_STRIP.sub("", surface.strip().casefold())
+
+
+def _norm_concept_key(concept: str) -> str:
+    """Kavram karşılığını kümeleme anahtarına indirger (boşluk-normalize casefold).
+
+    Aynı kavrama bağlanan FARKLI yüzeyler (örn. "PTT" ↔ "BK", ikisi de "posta
+    idaresi") yüzey-anahtarıyla yakalanamaz; kavram-anahtarı bu eşanlam adayını
+    yakalar. Map kavramı biraz farklı yazarsa küme kaçabilir (bilinen sınır)."""
+    return re.sub(r"\s+", " ", concept.strip().casefold())
+
+
+def _build_term_index(entries: list[TermEntry]) -> str:
+    """Terim envanterinden yalnız TUTARSIZLIK ADAYI kümeleri içeren indeks kurar.
+
+    Kritik ölçek kararı: reduce'a bütün terimleri göndermek "bütün belge" sorununu
+    "bütün indeks" sorununa taşır (60 sayfalık belgede 500+ terim → ~30 000
+    karakter → reduce yine zaman aşımı). Oysa bir terim belgede TEK biçimde
+    geçiyorsa tutarsız OLAMAZ. Bu yüzden yalnız ADAY kümeleri gönderiyoruz:
+
+    - Yüzey-anahtarı (`_norm_surface_key`) aynı olan ≥2 FARKLI yüzey → aday
+      (büyük/küçük harf, tırnak, boşluk, noktalama varyantı).
+    - Kavram-anahtarı (`_norm_concept_key`) aynı olan ≥2 FARKLI yüzey → aday
+      (eşanlam: "PTT" ↔ "BK", ikisi de "posta idaresi").
+
+    Böylece reduce girdisi belge boyutundan BAĞIMSIZ ve küçük kalır (yalnız
+    varyantı olan bir avuç terim). Tek-biçimli terimler hiç gönderilmez (tutarsız
+    olamazlar). Çıktı DETERMİNİSTİKtir: kümeler ve içleri sıralı → map işlenme
+    sırasından bağımsız. Aday yoksa boş string (reduce hiç çağrılmaz).
+
+    Yüzey biçim «...» arasına konur (arayüz etiketleri tırnak içerir); reduce
+    `excerpt`'i guillemet'siz iç metin olarak üretir.
+    """
+    # 1) Gürültü süz + yüzey başına geçiş sayısı ve kavramları topla.
+    agg: dict[str, dict] = {}
+    for e in entries:
+        surface = e.surface.strip()
+        if not _is_indexable_term(surface):
+            continue
+        slot = agg.setdefault(surface, {"count": 0, "concepts": set()})
+        slot["count"] += 1
+        concept = e.concept.strip()
+        if concept:
+            slot["concepts"].add(concept)
+    if not agg:
+        return ""
+
+    # 2) İki ayrı gruplama: (a) yüzey-anahtarı = yazım varyantı (tırnak/harf/
+    #    boşluk), (b) kavram-anahtarı = eşanlam. Ayrı tutulur çünkü farklı
+    #    boyut politikaları var.
+    surface_groups: dict[str, set[str]] = {}
+    concept_groups: dict[str, set[str]] = {}
+    for surface, slot in agg.items():
+        surface_groups.setdefault(_norm_surface_key(surface), set()).add(surface)
+        for concept in slot["concepts"]:
+            ckey = _norm_concept_key(concept)
+            if ckey:
+                concept_groups.setdefault(ckey, set()).add(surface)
+
+    # 3) Aday kümeler:
+    #    - Yüzey-varyantı kümeleri: ≥2 farklı yüzey → HEP aday (yazım varyantı
+    #      güvenilir; iki farklı ad aynı yüzey-anahtarına çarpışmaz).
+    #    - Kavram kümeleri: yalnız KÜÇÜK (2..MAX) olanlar aday. Büyük kavram
+    #      kümesi JENERİK bir kavramdır ("özellik adı", "bölüm başlığı") ve
+    #      onlarca AYRI terimi yanlış toplar → indeksi şişirir, atılır. Gerçek
+    #      eşanlam kümesi (PTT↔BK) küçüktür.
+    candidate_clusters: set[frozenset[str]] = set()
+    for surfaces in surface_groups.values():
+        if len(surfaces) >= 2:
+            candidate_clusters.add(frozenset(surfaces))
+    for surfaces in concept_groups.values():
+        if 2 <= len(surfaces) <= _CONCEPT_CLUSTER_MAX:
+            candidate_clusters.add(frozenset(surfaces))
+
+    # 3b) SALT büyük/küçük harf farkı olan kümeleri ELE. Bunlar başlık/tablo
+    #     (Başlık Düzeni) ile düzyazı (küçük harf) arasındaki DOĞAL farktır ya da
+    #     cümle-başı büyütmesidir — tutarsızlık DEĞİLDİR ("standart pil" ↔
+    #     "Standart Pil", "Tarama modu" ↔ "Tarama Modu"). Bu, en sık sahte-pozitif
+    #     kaynağıydı. Birim sembolü büyük/küçük harfi (kHz ↔ Khz) zaten YEREL
+    #     geçişte IMLA-BIRIM ile yakalanır; burada tekrar üretmeye gerek yok.
+    #     Tırnak/boşluk farkı taşıyan kümeler (casefold sonrası HÂLÂ farklı)
+    #     korunur — gerçek yazım/tırnak varyantı odur.
+    candidate_clusters = {
+        c for c in candidate_clusters if len({s.casefold() for s in c}) > 1
+    }
+    if not candidate_clusters:
+        return ""
+
+    # 4) Deterministik render: kümeler ilk (sıralı) yüzeyine göre, içleri sıralı.
+    ordered = sorted(candidate_clusters, key=lambda c: sorted(c))
+    blocks: list[str] = []
+    for i, cluster in enumerate(ordered, start=1):
+        lines = [f"Küme {i} (aynı şey olabilir mi?):"]
+        for surface in sorted(cluster):
+            slot = agg[surface]
+            # İndeksi kısa tut: yüzey başına TEK (en kısa) kavram karşılığı yeter;
+            # reduce'un asıl kararı yüzeyler + geçiş sayısı üzerindendir.
+            concept = min(slot["concepts"], key=len) if slot["concepts"] else "?"
+            lines.append(f"  - «{surface}» ({slot['count']} kez) — {concept}")
+        blocks.append("\n".join(lines))
+    return "\n".join(blocks)
 
 
 def _dedup_sort_observations(observations: list[Observation]) -> list[Observation]:
@@ -567,4 +831,5 @@ def build_default_analyzer(
         cache=cache,
         speller=speller,
         max_workers=settings.max_workers,
+        consistency_map_reduce_chars=settings.consistency_map_reduce_chars,
     )

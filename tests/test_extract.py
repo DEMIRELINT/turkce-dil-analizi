@@ -131,6 +131,23 @@ def test_inline_image_markers_become_placeholder(tmp_path):
     assert text == f"Metin {IMAGE_PLACEHOLDER} ortasında işaretçi."
 
 
+def test_anchor_tags_and_urls_become_link_placeholder():
+    # Word köprüleri "<a href=...>görünen</a>" olarak gömülür; çıplak URL de
+    # kalır. Bunlar dil değildir → Hunspell "href/http/www/com" gibi sahte hata
+    # üretmesin diye köprü etiketi soyulur, URL [bağlantı]'ya iner.
+    from dilanaliz.extract import _clean_paragraph, LINK_PLACEHOLDER
+    # Görünen metni URL olan köprü → tamamen [bağlantı].
+    out = _clean_paragraph(
+        'Ziyaret edin: <a href="http://www.motorola.com/XTNi">http://www.motorola.com/XTNi</a> adresini.'
+    )
+    assert out == f"Ziyaret edin: {LINK_PLACEHOLDER} adresini."
+    assert "http" not in out and "href" not in out
+    # Çıplak URL de iner; normal metin dokunulmaz kalır.
+    out2 = _clean_paragraph("Ayrıntı için www.motorola.com/radios/business adresine bakın.")
+    assert out2 == f"Ayrıntı için {LINK_PLACEHOLDER} adresine bakın."
+    assert _clean_paragraph("Köprüsüz normal cümle.") == "Köprüsüz normal cümle."
+
+
 def test_leading_inline_image_marker_becomes_placeholder(tmp_path):
     # İşaretçi metne YAPIŞIK ve zincirli gelebilir; yine `[görsel]` olur,
     # ardındaki gerçek metin (bitişik olsa da) korunur.

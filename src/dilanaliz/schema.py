@@ -103,6 +103,41 @@ class LLMSpellingDecision(BaseModel):
     )
 
 
+class TermEntry(BaseModel):
+    """Tutarlılık için parçadan çıkarılan tek terim (map adımı çıktısı).
+
+    Yalnız SABİT ad/terim/kısaltma/birim/arayüz-etiketi niteliğindeki ifadeler
+    çıkarılır; serbest/betimleyici ifadeler DEĞİL (bkz. terim≠serbest ayrımı).
+    Offset yoktur — reduce adımının ürettiği bulgular sonradan `locate.py` ile
+    konumlanır (LLM offset üretmez sözleşmesi korunur).
+    """
+
+    surface: str = Field(
+        description="Terimin metinde GEÇTİĞİ BİREBİR yüzey biçimi (harfi harfine)"
+    )
+    concept: str = Field(
+        description=(
+            "Terimin bağlamdan anlaşılan KISA kavram karşılığı (ne olduğu). "
+            "Farklı yüzey biçimleri aynı kavrama işaret ediyorsa reduce adımı "
+            "bunu kullanarak çakışmayı yakalar. Örn. 'BK' → 'posta idaresi'."
+        )
+    )
+
+
+class LLMTermExtraction(BaseModel):
+    """Terim çıkarımı (map) geçişinin `with_structured_output` kök şeması.
+
+    Tutarlılık map-reduce'unun map adımında her parça için ayrı çağrılır; küçük
+    ve sınırlı bir çıktıdır (parçadaki terimler). Reduce adımı bu indeksi görür,
+    ham metnin tamamını değil — böylece tek dev çağrının zaman aşımı tavanı kalkar.
+    """
+
+    terms: list[TermEntry] = Field(
+        default_factory=list,
+        description="Bu parçada geçen sabit terim/kısaltma/birim/etiketler",
+    )
+
+
 class LLMAnalysis(BaseModel):
     """LLM'in `with_structured_output` ile bağlandığı kök şema."""
 

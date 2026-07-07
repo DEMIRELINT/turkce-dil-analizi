@@ -101,7 +101,17 @@ C) `observations` — DOĞRULANMAMIŞ GÖZLEM kanalı. Bir yerden şüpheleniyor
 
 KURALLAR (uyman zorunlu):
 - Genel tek-kelime yazımını ve eksik Türkçe karakteri SEN arama; o iş "ŞÜPHELİ
-  KELİMELER" listesi üzerindendir. Kelimeyi büyük harfe çevirmeyi önerme.
+  KELİMELER" listesi üzerindendir.
+- **Sıradan bir kelimenin/terimin YALNIZ harf büyüklüğünü (büyük↔küçük) değiştiren
+  bulgu ÜRETME** — ne büyütme ne küçültme yönünde ("Kaynak telsiz" → "kaynak
+  telsiz", "Yuvada" → "yuvada", "Telsiz Modeline" → "telsiz modeline" gibi
+  öneriler YASAK). Bir ürün/parça sınıfı adının cümle içinde büyük ya da küçük
+  harfle yazılması bu geçişin denetlediği bir imla/dil bilgisi hatası DEĞİLDİR —
+  bu, olsa olsa belge-geneli TERİM TUTARLILIĞI sorusudur ve o başka bir geçişin
+  (tutarlılık) işidir; sen tek cümleyi görürsün, belgenin baskın biçimini
+  bilemezsin. İSTİSNA: eksik Türkçe karakterden kaynaklanan büyük harf hatası
+  ("SEÇENEKLERI" → "SEÇENEKLERİ" gibi İ/I karışıklığı) bu yasağın DIŞINDADIR —
+  o "ŞÜPHELİ KELİMELER" listesi üzerinden `spelling` ile işlenir.
   İSTİSNA: DİL KURALLARI'nda açıkça "bağlamsal karıştırılabilir kelime çifti"
   olarak tanımlanmış kelimeler bu kısıtlamanın DIŞINDADIR (bkz. madde 5) —
   bunlar ŞÜPHELİ KELİMELER listesinde olmasa bile kontrol edilir.
@@ -221,6 +231,97 @@ NASIL karar verirsin:
 """
 
 
+# --- Tutarlılık map-reduce (uzun belge) -------------------------------------
+# Uzun belgede tutarlılık tek dev çağrıya sığmaz (zaman aşımı). İki adım:
+#  1) MAP  (parça başına)  : parçadan yalnız sabit terim/kısaltma/birim/etiketleri
+#     çıkar (küçük çıktı). Yargı YOK — yalnız envanter.
+#  2) REDUCE (tek çağrı)   : parçalardan birleşen terim İNDEKSİ üzerinde çakışma
+#     yargısı. Ham metnin tamamı gönderilmez → tavan kalkar.
+# Bütünsel görüş korunur: indeks belgenin TAMAMINI kapsar (kör nokta gelmez).
+
+TERM_EXTRACT_SYSTEM_PROMPT = f"""\
+Sen, bir Türkçe teknik belgenin BİR PARÇASINDAN tutarlılık denetimi için TERİM
+ENVANTERİ çıkaran bir aracısın. Bu adımda HİÇBİR yargı/bulgu üretmezsin; yalnız
+parçada geçen SABİT ADLANDIRMALARI listelersin.
+
+Amaç DAR: belge boyunca AYNI yazılması gereken adlandırmaları topla. Bunlar,
+farklı yerlerde farklı yazılırsa tutarsızlık olan şeylerdir.
+
+ÇIKAR (yalnız bunlar):
+- Kısaltmalar (örn. "PTT", "RX", "MUC", "TDMA") ve varsa açılımları.
+- Arayüz etiketleri: özel adlandırılmış mod/düğme/menü adları (örn.
+  'Programlama Modu', "Bakım Modu") — tırnak karakterleri DÂHİL, birebir.
+- Birim SEMBOLLERİ — ama SAYISAL DEĞERİYLE DEĞİL, YALNIZ sembol olarak. "12.5
+  KHz" görürsen `surface`'a "12.5 KHz" DEĞİL yalnız "KHz" yaz; "3 dB" → "dB".
+- Belgeye özgü, özel isimlendirilmiş sabit ad/terimler (ürün/protokol/mod adı).
+
+ÇIKARMA (KESİNLİKLE — bunları listeleme):
+- SAYILAR ve SAYISAL DEĞERLER: "0", "1", "10", "00115", "0 - 9", "1.", tek başına
+  rakamlar; ölçüm değerleri "1,5 metre", "0,5 Watt", "10° C", "%5", "%90",
+  "100%-70%"; tarih, saat, telefon, sıra/madde numaraları. Bunlar TERİM DEĞİL,
+  VERİDİR — tutarlılık bunları denetlemez.
+- Serbest/betimleyici ifadeler ("düzenli aralıklarla", "havada asılı kalan"),
+  sıradan sözcükler, fiiller, tam cümleler veya cümle parçaları.
+- Tablo hücresi değerleri, ölçüm çizelgesi girdileri.
+- Emin değilsen ÇIKARMA. Az ama gerçek terim, çok ama gürültülü listeden iyidir.
+
+Her terim için: `surface` = terimin BİREBİR yüzey biçimi (birim sembolünde
+değersiz — yukarıya bak); `concept` = bağlamdan anlaşılan KISA kavram karşılığı
+("BK" için "posta idaresi" gibi). `concept`, farklı yüzeylerin aynı kavrama
+işaret edip etmediğini sonraki adımın anlaması içindir; kısa ve nesnel yaz.
+Parçada sabit adlandırma yoksa boş liste döndür.
+{_SHARED_RULES}
+"""
+
+
+CONSISTENCY_REDUCE_SYSTEM_PROMPT = f"""\
+Sen, bir Türkçe teknik belgenin terim ADAY KÜMELERİ üzerinde çalışan tutarlılık
+denetçisisin. Sana belgenin BÜTÜNÜNDEN toplanmış, normalize edildiğinde ÖRTÜŞEN
+ya da AYNI KAVRAMA bağlanan yüzey biçimlerinden oluşan KÜMELER verilir (her küme
+bir tutarsızlık ADAYIdır; her satır: yüzey biçim + geçiş sayısı + kavram). Ham
+metni görmezsin; kararını bu kümeler üzerinden verirsin. YALNIZ belge-geneli
+TUTARSIZLIK üretirsin (`type`: tutarlilik).
+
+HER KÜME için karar ver: kümedeki yüzeyler GERÇEKTEN aynı sabit terim/kısaltma/
+birim/arayüz-etiketi mi?
+- EVET ise: baskın (en çok geçen / en tutarlı) biçimi seç; SAPAN biçim(ler) için
+  bulgu üret. `excerpt` = sapan yüzey biçim (kümedeki BİREBİR surface), `suggestion`
+  = baskın biçim. Örn. küme {{"KHz", "Khz"}} → `excerpt`="Khz", `suggestion`="KHz";
+  {{"PTT","BK"}} aynı kurumsa → `excerpt`="BK", `suggestion`="PTT".
+- HAYIR ise (yanlış eşleşme; farklı şeyler yanlışlıkla aynı kümeye düşmüş, ya da
+  doğal dil çeşitliliği): o kümeyi ATLA, bulgu ÜRETME.
+
+KURALLAR:
+- **TERİM ile SERBEST İFADE ayrımı:** Yalnız SABİT ad/terim/kısaltma/birim/arayüz-
+  etiketi çakışmalarını işaretle. Aynı fikri anlatan serbest/betimleyici ifadeler
+  tutarsızlık SAYILMAZ (kümeye sızmış olsalar bile dokunma).
+- **SALT büyük/küçük harf farkını ASLA işaretleme.** Bir kelime/kelime grubu
+  başlıkta/tabloda "Başlık Düzeni"yle (örn. "Standart Pil", "Tarama Modu"),
+  düzyazıda küçük harfle ("standart pil", "tarama modu") geçmesi Türkçenin
+  DOĞAL kullanımıdır — tutarsızlık DEĞİLDİR. Kümedeki yüzeyler yalnızca harf
+  büyüklüğüyle ayrılıyorsa (aynı harfler, aynı sıra) o kümeyi ATLA. Birim
+  sembolü büyük/küçük harfi (kHz/Khz) başka bir geçişin işidir, burada değil.
+- **Tırnaklı BÖLÜM/BAŞLIK ATFINI işaretleme.** Bir bölüm/başlık/liste adının
+  metinde atıf/kaynak-gösterme olarak tırnak içinde geçmesi ("bkz. "Li-ion Pil
+  Hakkında" sayfa 12", "SB2 ile "Tarama Modu"nu başlatın", "sayfa 44'e bkz.
+  "Tarama Listesi"") ile aynı adın belgenin başka bir yerinde (kendi başlığında,
+  farklı bir cümlede) tırnaksız geçmesi NORMAL bir kaynak-gösterme biçimidir,
+  tutarsızlık DEĞİLDİR — tırnak ekle/çıkar önerme. **Ayırt edici test:** yüzey
+  "bkz." ifadesiyle birlikte geçiyorsa YA DA bir bölüm/liste/özellik ADINA atıf
+  gibi okunuyorsa (arayüz üzerinde tıklanan/basılan bir MOD/DÜĞME değil, bir
+  DOKÜMAN BAŞLIĞI ise) bu madde işlemez, dokunma. Tırnak farkını YALNIZ aynı
+  tür GERÇEK ARAYÜZ ETİKETLERİ (kullanıcının cihazda gördüğü/bastığı mod/düğme/
+  menü adı, örn. 'Programlama Modu') birbiriyle çelişen tırnak stiliyle
+  yazılmışsa işaretle — belge/bölüm başlığı adları bu kapsamda DEĞİLDİR.
+- Aynı kavramın kastedildiğinden emin değilsen üretme (yanlış pozitif tehlikeli).
+- Yazım, noktalama, dil bilgisi, ton ARAMA — onlar başka geçişlerin işi.
+- `excerpt` kümedeki bir `surface` ile BİREBİR aynı olmalı (metinde birebir
+  geçtiği için sonradan konumlanabilsin); uydurma/yeniden yazma/guillemet ekleme.
+- `spelling` ve `observations` çıktısını boş bırak.
+{_SHARED_RULES}
+"""
+
+
 def _delimited(text: str) -> str:
     return f"{TEXT_OPEN}\n{text}\n{TEXT_CLOSE}"
 
@@ -274,4 +375,32 @@ def build_consistency_message(text: str) -> str:
         "Aşağıdaki BÜTÜN belgede terim/birim/kısaltma TUTARSIZLIKLARINI bul "
         "(`findings`, type=tutarlilik). Baskın biçimi öner.\n\n"
         f"{_delimited(text)}"
+    )
+
+
+def build_term_extract_message(text: str) -> str:
+    """Map adımı mesajı: parçadan sabit terim envanteri çıkar (yargı yok)."""
+    return (
+        "## GÖREV\n"
+        "Aşağıdaki BELGE PARÇASINDAN yalnız sabit terim/kısaltma/birim/arayüz "
+        "etiketlerini çıkar (`terms`). Yargı/bulgu üretme; yalnız envanter.\n\n"
+        f"{_delimited(text)}"
+    )
+
+
+def build_consistency_reduce_message(index_block: str) -> str:
+    """Reduce adımı mesajı: aday kümeler üzerinde çakışma yargısı.
+
+    `index_block` deterministik olarak kurulmuş ADAY KÜMELER bloğudur (ham metin
+    DEĞİL); bu yüzden `_delimited` yerine düz gömülür — sınırlayıcı yalnız
+    kullanıcı metnini "veri" işaretlemek içindir, burada zaten türetilmiş veridir.
+    """
+    return (
+        "## TUTARSIZLIK ADAY KÜMELERİ (belgenin tamamından toplandı)\n"
+        f"{index_block}\n\n"
+        "## GÖREV\n"
+        "Yukarıdaki her küme için karar ver: yüzeyler gerçekten aynı sabit terim/"
+        "kısaltma/birim/etiket mi? Öyleyse sapan biçim(ler) için bulgu üret "
+        "(`findings`, type=tutarlilik), baskın biçimi öner. Yanlış eşleşen kümeyi "
+        "atla.\n"
     )

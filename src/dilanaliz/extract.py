@@ -66,6 +66,17 @@ _IMAGE_MARKER_INLINE = re.compile(r"(?:-{2,}media/[\w.]+(?:-[\w.]+)*)+-{2,}")
 # tamamen silinir — LLM'e hiç gitmez (bkz. _clean_paragraph).
 IMAGE_PLACEHOLDER = "[görsel]"
 
+# Kaynak Word köprüleri docx2python tarafından metne "<a href="...">görünen</a>"
+# olarak gömülür; ayrıca çıplak URL'ler de metinde kalır. Bunlar DİL değildir —
+# Hunspell "href", "http", "www", "com", "motorola" gibi parçaları tek tek sahte
+# yazım hatası sanar (60 sayfalık belgede telif/URL bölümü ~15 sahte bulgu
+# üretti). Köprü etiketi soyulur (görünen metin korunur), sonra kalan URL'ler
+# nötr [bağlantı] yer tutucusuna indirilir ("bağlantı" geçerli Türkçe kelimedir,
+# Hunspell'i tetiklemez; cümle "[bağlantı] adresini ziyaret edin" diye okunur).
+_ANCHOR_TAG = re.compile(r"<a\b[^>]*>(.*?)</a>", re.IGNORECASE | re.DOTALL)
+_URL = re.compile(r"https?://\S+|www\.\S+", re.IGNORECASE)
+LINK_PLACEHOLDER = "[bağlantı]"
+
 # Blok türü: analiz katmanının denetim kapsamını belirler.
 BlockKind = Literal["paragraf", "baslik", "tablo_hucresi", "icindekiler"]
 
@@ -141,6 +152,10 @@ def _clean_paragraph(text: str) -> str:
     text = text.strip()
     if not text or _IMAGE_MARKER.match(text):
         return ""
+    # Köprü etiketini soy (görünen metni koru), sonra çıplak URL'leri yer
+    # tutucuya indir — HTML/URL parçaları dil denetimine sahte hata sızdırmasın.
+    text = _ANCHOR_TAG.sub(r"\1", text)
+    text = _URL.sub(LINK_PLACEHOLDER, text)
     text = _IMAGE_MARKER_INLINE.sub(f" {IMAGE_PLACEHOLDER} ", text)
     # İşaretçi işlenince kalan art arda boşlukları tekle (satır sonlarına dokunma).
     text = re.sub(r"[ \t]{2,}", " ", text).strip()
