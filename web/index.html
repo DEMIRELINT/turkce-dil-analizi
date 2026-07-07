@@ -336,6 +336,7 @@
     <div class="result-toolbar" id="resultToolbar">
       <button id="downloadBtn" class="ghost-btn" title="Sonuçları ajan-dostu Markdown dosyası olarak indir">⬇ Raporu indir (.md)</button>
       <button id="copyBtn" class="ghost-btn" title="Raporu panoya kopyala (ajana yapıştırmak için)">📋 Kopyala</button>
+      <button id="copyResultBtn" class="ghost-btn" title="Yalnız analiz sonucunu panoya kopyala (kaynak metin olmadan)">📋 Sonucu kopyala</button>
     </div>
     <div class="summary" id="summary"></div>
     <div class="result-split">
@@ -697,7 +698,7 @@ function findingLine(source, start) {
   return line;
 }
 
-function buildReport(payload) {
+function buildReport(payload, { includeSource = true } = {}) {
   const source = payload.source || "";
   const findings = (payload.result && payload.result.findings) || [];
 
@@ -750,7 +751,7 @@ function buildReport(payload) {
     });
   }
 
-  out += "## Kaynak Metin\n\n```\n" + source + "\n```\n";
+  if (includeSource) out += "## Kaynak Metin\n\n```\n" + source + "\n```\n";
   return out;
 }
 
@@ -771,23 +772,30 @@ function downloadReport() {
   URL.revokeObjectURL(url);
 }
 
-async function copyReport() {
-  if (!lastPayload) return;
-  const md = buildReport(lastPayload);
+async function copyText(text, btn) {
   try {
-    await navigator.clipboard.writeText(md);       // 127.0.0.1 güvenli bağlam → çalışır
+    await navigator.clipboard.writeText(text);     // 127.0.0.1 güvenli bağlam → çalışır
   } catch (e) {                                     // eski tarayıcı / izin yoksa yedek
     const ta = document.createElement("textarea");
-    ta.value = md; ta.style.position = "fixed"; ta.style.opacity = "0";
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
     document.body.appendChild(ta); ta.focus(); ta.select();
     try { document.execCommand("copy"); } catch (_) {}
     ta.remove();
   }
-  flashBtn($("copyBtn"), "✓ Kopyalandı");
+  flashBtn(btn, "✓ Kopyalandı");
+}
+function copyReport() {                             // tam rapor (kaynak metin dâhil)
+  if (!lastPayload) return;
+  copyText(buildReport(lastPayload), $("copyBtn"));
+}
+function copyResult() {                             // yalnız sonuç (kaynak metin yok)
+  if (!lastPayload) return;
+  copyText(buildReport(lastPayload, { includeSource: false }), $("copyResultBtn"));
 }
 
 $("downloadBtn").addEventListener("click", downloadReport);
 $("copyBtn").addEventListener("click", copyReport);
+$("copyResultBtn").addEventListener("click", copyResult);
 
 // --- Log (geçmiş analizler) ----------------------------------------------
 let activeLogId = null;
