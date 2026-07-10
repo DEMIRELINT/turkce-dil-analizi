@@ -101,16 +101,22 @@ def test_casefold_variants_each_get_their_own_correction():
 class _BrokenModel:
     """`invoke` her çağrıda patlayan sahte model — hata sarmalamayı test eder."""
 
-    def with_structured_output(self, schema):  # noqa: ARG002
+    def __init__(self, exc: Exception | None = None) -> None:
+        self._exc = exc or TimeoutError("bağlantı zaman aşımına uğradı")
+        self.calls = 0
+
+    def with_structured_output(self, schema, **kwargs):  # noqa: ARG002
         return self
 
     def invoke(self, messages):  # noqa: ARG002
-        raise TimeoutError("bağlantı zaman aşımına uğradı")
+        self.calls += 1
+        raise self._exc
 
 
 def test_invoke_cached_wraps_transient_errors_in_llm_call_error():
+    model = _BrokenModel()
     analyzer = Analyzer(
-        chat_model=_BrokenModel(),
+        chat_model=model,
         rules_provider=_FakeRules(),
         model_id="test-model",
         cache=None,
@@ -120,6 +126,77 @@ def test_invoke_cached_wraps_transient_errors_in_llm_call_error():
         analyzer._invoke_cached("SYSTEM", "USER")
     assert "bağlantı zaman aşımına uğradı" in str(exc_info.value)
     assert "GOOGLE_GENAI_TRANSPORT" in str(exc_info.value)
+    assert exc_info.value.permanent is False
+    assert model.calls == 3  # geçici hata: 3 kez denendi
+
+
+def test_invoke_cached_permanent_model_error_fails_fast():
+    # Kapatılmış model (Google 404 "no longer available"): yeniden deneme YOK,
+    # permanent bayrağı + MODEL_ID'yi işaret eden net mesaj.
+    model = _BrokenModel(
+        RuntimeError("404 POST ...: This model models/x is no longer available.")
+    )
+    analyzer = Analyzer(
+        chat_model=model,
+        rules_provider=_FakeRules(),
+        model_id="test-model",
+        cache=None,
+        speller=None,
+    )
+    with pytest.raises(LLMCallError) as exc_info:
+        analyzer._invoke_cached("SYSTEM", "USER")
+    assert exc_info.value.permanent is True
+    assert "MODEL_ID=test-model" in str(exc_info.value)
+    assert model.calls == 1  # kalıcı hata: tek çağrı, retry israfı yok
+
+
+class _NoneModel:
+    """`invoke`'u None döndüren sahte model — yapılandırılmış çıktı üretilememesi.
+
+    `with_structured_output` parse edilemeyen yanıtta istisna yerine None
+    döndürebilir; `_call_structured` bunu yeniden denemeli, ısrar ederse okunur
+    LLMCallError'a çevirmeli (sessiz AttributeError sızıntısı olmadan).
+    """
+
+    def __init__(self, none_count: int = 10**9) -> None:
+        self._none_count = none_count
+        self.calls = 0
+
+    def with_structured_output(self, schema, **kwargs):  # noqa: ARG002
+        return self
+
+    def invoke(self, messages):  # noqa: ARG002
+        self.calls += 1
+        if self.calls <= self._none_count:
+            return None
+        return _EMPTY
+
+
+def test_invoke_cached_turns_persistent_none_into_llm_call_error():
+    analyzer = Analyzer(
+        chat_model=_NoneModel(),
+        rules_provider=_FakeRules(),
+        model_id="test-model",
+        cache=None,
+        speller=None,
+    )
+    with pytest.raises(LLMCallError) as exc_info:
+        analyzer._invoke_cached("SYSTEM", "USER")
+    assert "yapılandırılmış yanıt üretemedi" in str(exc_info.value)
+
+
+def test_invoke_cached_retries_transient_none_and_succeeds():
+    model = _NoneModel(none_count=2)  # ilk 2 çağrı None, 3.sü geçerli
+    analyzer = Analyzer(
+        chat_model=model,
+        rules_provider=_FakeRules(),
+        model_id="test-model",
+        cache=None,
+        speller=None,
+    )
+    raw = analyzer._invoke_cached("SYSTEM", "USER")
+    assert raw == _EMPTY
+    assert model.calls == 3
 
 
 def test_user_message_lists_candidates():
@@ -179,7 +256,7 @@ class _FakeModel:
     def __init__(self, by_pass: dict) -> None:
         self._by_pass = by_pass
 
-    def with_structured_output(self, schema):
+    def with_structured_output(self, schema, **kwargs):  # noqa: ARG002
         return _PassFakeStructured(self._by_pass, schema)
 
 

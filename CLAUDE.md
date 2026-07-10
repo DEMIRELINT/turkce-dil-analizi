@@ -146,6 +146,14 @@ python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
   `dicts/tr_TR.dic` var mı? Yoksa Hunspell katmanı sessizce kapanır.
 - **`GEMINI_API_KEY` / kimlik hatası:** `.env` dolu mu, `.venv` aktif mi?
 - **Bağlantı donuyor/timeout (kurumsal ağ):** `GOOGLE_GENAI_TRANSPORT=rest` dene.
+- **"Model kullanımdan kaldırılmış" / 404 "no longer available":** `.env`'deki
+  `MODEL_ID` şu an erişilemiyor. Bu KESİN kapanış olmayabilir — 2026-07-09'da
+  `gemini-2.5-flash` birkaç saatliğine bu hatayı verdi, ertesi gün kendi
+  kendine düzeldi (ilan edilen resmi kapanışı 16 Ekim 2026); dokümandaki/
+  Google'ın kendi listesindeki tarih GERÇEK durumu yansıtmayabilir, canlı hata
+  mesajı esas alınır. Yine de projede varsayılan `gemini-3.5-flash`'tır ve
+  "lite" sınıfı KULLANILMAZ (kalıcı karar — 96 örneklik altın sette ölçülü
+  kalite kaybı var, bkz. README §11 model kıyası).
 
 ---
 
@@ -154,7 +162,7 @@ python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
 | `GEMINI_API_KEY` | *(zorunlu)* | Gemini API anahtarı. Repoda YOK, her makinede elle girilir. |
-| `MODEL_ID` | `gemini-2.5-flash-lite` | Kullanılacak Gemini modeli. Daha güçlü sonuç için `-flash`/`-pro`. |
+| `MODEL_ID` | `gemini-3.5-flash` | Kullanılacak Gemini modeli. "lite" sınıfı kullanılmaz (kalıcı karar — bkz. README §11 model kıyası). gemini-2.5-flash 16 Ekim 2026'da kapanacak. |
 | `TEMPERATURE` | `0` | Tutarlılık için 0. (Not: 0 dahi tam deterministik değildir — bkz. Bilinen Sınırlar.) |
 | `CONCURRENCY` | `6` | Eşzamanlı işlenecek parça sayısı. `1` → tamamen sıralı (eski) davranış. |
 | `DICT_PATH` | `dicts/tr_TR` | Hunspell sözlük taban yolu (uzantısız). |
@@ -272,15 +280,19 @@ koru:
   ürettirme — bağlamdan habersiz sözlük önerisi kopuk parçalara uydurma üretir.
 - **Air-gap uyumu** — bağımlılıklar pinli; telemetri kapalı; gizli dış çağrı
   ekleme. `docx2python`, Hunspell ve web paneli (stdlib) dahil her şey yereldir.
-- **LLM çağrısı: zaman aşımı + anlaşılır hata** — `providers/gemini.py`
-  istemciye `LLM_TIMEOUT_SEC` (varsayılan 60sn) geçer; geçici ağ hataları
-  kütüphanenin kendi retry'ı (`max_retries=6`, backoff'lu) ile otomatik
-  denenir. Retry'lar tükenince/timeout'ta `analyzer._invoke_cached` hatayı
-  yakalayıp `LLMCallError` olarak (kısa Türkçe açıklamayla) yeniden fırlatır;
-  CLI (`cli.py`) bunu yakalayıp tek satır mesajla çıkar, web paneli
-  (`server.py`'deki genel `except Exception`) mesajı olduğu gibi SSE'ye basar.
-  Bir parçanın çağrısı kalıcı başarısız olursa TÜM analiz durur (bilinçli —
-  bkz. Bilinen Sınırlar); bu davranışı sessiz-atlamaya çevirme.
+- **LLM çağrısı: zaman aşımı + SINIFLANDIRILMIŞ hata** — `providers/gemini.py`
+  istemciye `LLM_TIMEOUT_SEC` (varsayılan 60sn) + `max_retries=2` geçer
+  (kütüphane retry'ı kalıcı 404'ü de körlemesine dener, o yüzden düşük).
+  Asıl savunma `analyzer._call_structured`'dadır ve hataları SINIFLANDIRIR:
+  (a) KALICI (kapatılmış/yok model — `_is_permanent_model_error`) → yeniden
+  deneme YOK, `LLMCallError(permanent=True)` net "MODEL_ID güncelle" mesajıyla;
+  (b) GEÇİCİ (timeout/ağ) → 3 deneme, sonra "bağlantı" mesajlı `LLMCallError`;
+  (c) model yapılandırılmış çıktı üretemezse (`None` yanıt — json_mode ile
+  nadir) → geçici gibi yeniden denenir. CLI (`cli.py`) hatayı tek satır mesajla
+  gösterir, web paneli (`server.py`) SSE'ye basar. Bir parçanın çağrısı kalıcı
+  başarısız olursa TÜM analiz durur (bilinçli — bkz. Bilinen Sınırlar); bu
+  davranışı sessiz-atlamaya çevirme. (`eval/run_eval.py` örnek-bazında farklıdır:
+  geçici hatada örneği atlar + KISMİ SONUÇ damgası basar; kalıcıda o da durur.)
 
 ---
 
@@ -324,6 +336,9 @@ kaynağı sanma, gözden geçirmeden silme:
   Elle düzenleme; şüpheli sonuçta topluca sil (`rm -rf .cache/`).
 - **`eval/last_predictions.json`** — `run_eval.py`'nin ürettiği son tahmin
   dökümü; elle yazma, ölçüm çıktısıdır.
+- **`eval/runs/`** — koşu arşivleri (model + zaman damgalı, `partial` üstverili);
+  kısmi koşuların tam koşu dökümünü ezmesini önler. Üretilmiş çıktıdır,
+  commit'lenmez (`.gitignore`).
 - **`dicts/tr_TR.{aff,dic}`** — dış sözlük (LibreOffice); elle düzeltme, vendor'la.
 - **`.env`** — sırlar; commit'lenmez, içeriği yanıtlara/loglara yazılmaz.
 - **`history/`** — web panelinin analiz geçmişi kayıtları (üretilmiş).

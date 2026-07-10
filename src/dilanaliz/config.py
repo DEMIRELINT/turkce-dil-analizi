@@ -60,8 +60,8 @@ class Settings:
     # çıktı birebir aynı kalır (temperature=0 + önbellek deterministik).
     # CONCURRENCY=1 → tamamen sıralı (eski) davranış: eval/hata ayıklama/karşılaştırma.
     max_workers: int
-    # Tek bir LLM çağrısı için üst zaman aşımı (saniye). Kütüphane varsayılan
-    # retry'ları (max_retries=6, backoff'lu) buna kadar dener; None → sınırsız
+    # Tek bir LLM çağrısı için üst zaman aşımı (saniye). Kütüphane retry'ları
+    # (max_retries=2, backoff'lu) buna kadar dener; None → sınırsız
     # (istemci varsayılanı) — kurumsal ağda bağlantı yarıda tıkanırsa çağrı
     # asılı kalmasın diye None DEĞİL, makul bir varsayılan (60s) kullanılır.
     llm_timeout_sec: float | None
@@ -97,7 +97,12 @@ class Settings:
         consistency_map_reduce_chars = max(1, _env_int("CONSISTENCY_MAP_REDUCE_CHARS", 16000))
         return cls(
             gemini_api_key=api_key,
-            model_id=os.getenv("MODEL_ID", "gemini-2.5-flash-lite").strip(),
+            # Varsayılan: gemini-3.5-flash — kararlı (GA). "lite" sınıfı
+            # BİLİNÇLİ OLARAK kullanılmaz: 96 örneklik altın sette ölçülü kalite
+            # farkı var (ÇEKİRDEK precision 0.96 vs lite'ın 0.81; temiz metinde
+            # yanlış alarm 1 vs 9) — kullanıcı kararı 2026-07-10, kalıcı.
+            # (gemini-2.5-flash 16 Ekim 2026'da kapanacak; yeniden yazma.)
+            model_id=os.getenv("MODEL_ID", "gemini-3.5-flash").strip(),
             temperature=float(os.getenv("TEMPERATURE", "0")),
             langsmith_tracing=_env_bool("LANGSMITH_TRACING", False),
             rules_path=rules_path,

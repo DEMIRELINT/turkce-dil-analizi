@@ -137,7 +137,7 @@ thread-safe'tir (kilitli). **Tutarlılık geçişi parçalanamaz** — parçalan
 
 | Katman | Teknoloji | Niçin |
 |---|---|---|
-| LLM | **Gemini** (`gemini-2.5-flash-lite`) | Bağlam/yargı gerektiren düzeltme, dil bilgisi ve ton için. `flash-lite` geliştirme/eval'de en bol ücretsiz kotayı verir; nihai kalite için `-flash`/`-pro`'ya yükseltilebilir. |
+| LLM | **Gemini** (`gemini-3.5-flash`) | Bağlam/yargı gerektiren düzeltme, dil bilgisi ve ton için. "lite" sınıfı BİLİNÇLİ kullanılmaz — 96 örneklik altın sette ölçülü kalite kaybı var (§11). (gemini-2.5-flash 16 Ekim 2026'da kapanacak.) |
 | İmla motoru | **spylls** (saf-Python Hunspell) | Yazım hatasını deterministik + sıfır halüsinasyonla bulur. Saf-Python olması JVM/dış ikili gerektirmez → **air-gap** uyumlu. |
 | Sözlük | `dicts/tr_TR.{aff,dic}` (LibreOffice) | Türkçe morfolojik sözlük; repoda/yerel ağda bulundurulur. |
 | Belge çıkarma | **docx2python** | `.docx`'ten tablo/metin kutusu/üst-altbilgi/dipnot dahil eksiksiz metin; saf Python, ağ gerektirmez. |
@@ -216,7 +216,7 @@ docx yükleyip veya metin yapıştırıp canlı ilerlemeyle analiz eder (bkz. §
       "end": 14
     }
   ],
-  "model_id": "gemini-2.5-flash-lite",
+  "model_id": "gemini-3.5-flash",
   "text_len": 47
 }
 ```
@@ -254,7 +254,7 @@ docx yükleyip veya metin yapıştırıp canlı ilerlemeyle analiz eder (bkz. §
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
 | `GEMINI_API_KEY` | *(zorunlu)* | Gemini API anahtarı. Repoda yok; her makinede elle girilir. |
-| `MODEL_ID` | `gemini-2.5-flash-lite` | Gemini modeli. Daha güçlü sonuç için `-flash`/`-pro`. |
+| `MODEL_ID` | `gemini-3.5-flash` | Gemini modeli. "lite" sınıfı kullanma (§11'de ölçülü kalite kaybı); 2.5-flash 16 Ekim 2026'da kapanacak. |
 | `TEMPERATURE` | `0` | Tutarlılık için 0 (yine de tam deterministik değildir — §14). |
 | `CONCURRENCY` | `6` | Eşzamanlı işlenecek parça sayısı. `1` → tamamen sıralı. |
 | `DICT_PATH` | `dicts/tr_TR` | Hunspell sözlük taban yolu (uzantısız). |
@@ -336,31 +336,41 @@ Her bulgu mümkünse bir `rule_id` taşır:
 ## 11. Ölçüm & Sonuçlar (Eval) ⭐
 
 Prompt/kural değişiklikleri **sezgiyle değil, ölçülerek** değerlendirilir.
-[eval/golden.jsonl](eval/golden.jsonl) elle etiketli altın settir (30 örnek;
+[eval/golden.jsonl](eval/golden.jsonl) elle etiketli altın settir (96 örnek;
 pozitif bulgular + temiz-metin negatif örnekler; bazıları uzun-belge yolunu
 ölçmek için `mode: document`).
 
 [eval/run_eval.py](eval/run_eval.py) eksen-bazlı **precision/recall** + temiz
 metinde yanlış-pozitif sayısı üretir. Eşleştirme yumuşaktır: tahmin, aynı eksende
 ve alıntısı beklenenle örtüşen (biri diğerini içeren, büyük/küçük harf duyarsız)
-bir beklenene denk gelirse Doğru Pozitif sayılır.
+bir beklenene denk gelirse Doğru Pozitif sayılır. Her koşu `eval/runs/`'a
+model+zaman damgalı bir arşiv kopyası da yazar (kısmi bir koşu, önceki tam
+koşunun dökümünü ezmesin diye).
 
-**Son ölçüm — 1 Temmuz 2026** (`last_predictions.json`, 30 örnek):
+**Model kıyası — 10 Temmuz 2026** (aynı 96 örnek, üç model): Gemini 2.5-flash
+nesli beklenmedik biçimde geçici olarak erişilemez hale gelince (bkz. §14),
+fırsattan yararlanıp `gemini-2.5-flash`, `gemini-3.1-flash-lite` ve
+`gemini-3.5-flash`'ı aynı sette karşılaştırdık:
 
-| Eksen | Precision | Recall | TP | FP | FN |
-|---|---|---|---|---|---|
-| imla | 1.00 | 0.85 | 11 | 0 | 2 |
-| dil_bilgisi | 1.00 | 1.00 | 6 | 0 | 0 |
-| ton | 0.56 | 1.00 | 5 | 4 | 0 |
-| tutarlilik | 1.00 | 1.00 | 1 | 0 | 0 |
-| **GENEL** | **0.85** | **0.92** | 23 | 4 | 2 |
+| Eksen | 2.5-flash | 3.1-flash-lite | **3.5-flash (seçilen)** |
+|---|---|---|---|
+| imla (P/R) | 0.97 / 1.00 | 0.85 / 0.97 | 0.97 / 1.00 |
+| dil_bilgisi (P/R) | 0.87 / 1.00 | 0.79 / 0.85 | **1.00 / 1.00** |
+| tutarlilik (P/R) | 0.83 / 1.00 | 0.71 / 1.00 | 0.83 / 1.00 |
+| **ÇEKİRDEK** (P/R) | 0.92 / 1.00 | 0.81 / 0.94 | **0.96 / 1.00** |
+| ton — ayrı (P/R) | 0.57 / 0.80 | 0.50 / 1.00 | **1.00 / 0.80** |
+| **Temiz metinde yanlış alarm** | 3 çekirdek + 1 ton | 6 çekirdek + 3 ton | **1 çekirdek + 0 ton** |
 
-**Temiz metinlerde yanlış-pozitif: 0.**
+**Karar: `gemini-3.5-flash`, "lite" sınıfı hiçbir zaman kullanılmaz.** "lite"
+maliyet avantajına rağmen açıkça daha zayıf (temiz metinde 9 yanlış alarma
+karşı 1); kalite kritik bir eksen (§ "Yanlış-pozitif kritiktir") için bu takas
+kabul edilmez. `gemini-2.5-flash` ise 16 Ekim 2026'da kapanacağından yeni
+kurulumda tercih edilmez.
 
-Okuma: imla/dil bilgisi/tutarlılık precision'ı tam; **ton** ekseni recall'u tam
-ama precision düşük (modelin savunulabilir ama etiketlenmemiş ton bulguları FP
-yazıyor) — kalibrasyon açık nokta. İmla recall'undaki 2 FN, sözlük-geçerli
-bağlamsal hataların bilinçli boşluğudur (§14).
+ÇEKİRDEK skoru yalnız **imla + dil bilgisi + tutarlılık**'tan hesaplanır; ton
+öznel/gürültülü bir eksen olduğundan (özellikle kılavuz/talimat metninde emir
+kipi normaldir) ayrı raporlanır, çekirdek precision'ı maskelemesin diye
+toplama katılmaz (bkz. `eval/run_eval.py` → `CORE_AXES`).
 
 ```bash
 EVAL_DELAY_SEC=0 python eval/run_eval.py        # yeniden ölç (API gerekli)

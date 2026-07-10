@@ -27,13 +27,20 @@ import json
 import os
 import time
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 
-from dilanaliz.analyzer import build_default_analyzer
+from dilanaliz.analyzer import LLMCallError, build_default_analyzer
+from dilanaliz.config import Settings
 from dilanaliz.schema import AnalysisResult
 
 GOLDEN = Path(__file__).with_name("golden.jsonl")
 DUMP = Path(__file__).with_name("last_predictions.json")
+# Model-adlı arşiv kopyaları: her koşu ayrı dosyaya da yazılır ki kısmi bir
+# koşu, önceki tam koşunun örnek-bazlı dökümünü EZMESİN (yaşandı: 96 örneklik
+# tam döküm 17'lik kısmi koşuyla silindi). last_predictions.json uyumluluk
+# için "son koşu" olarak kalır.
+RUNS_DIR = Path(__file__).with_name("runs")
 AXES = ["imla", "dil_bilgisi", "ton", "tutarlilik"]
 # "GENEL" (çekirdek) skoru YALNIZ bu eksenlerden hesaplanır. Ton bilinçli olarak
 # DIŞARIDA: öznel + gürültülü bir eksendir ve özellikle kılavuz/talimat
@@ -82,6 +89,32 @@ def _match(expected: list[dict], result: AnalysisResult):
     return tp, fp, fn
 
 
+def _analyze_with_retry(analyzer, ex: dict, attempts: int = 3):
+    """Bir örneği geçici hatalarda yeniden dener; (sonuç, hata) döndürür.
+
+    - KALICI hata (`LLMCallError.permanent` — örn. kapatılmış model) yeniden
+      DENENMEZ, yukarı fırlar: model kapalıysa tüm örnekler zaten başarısız
+      olur, anında durmak doğrudur.
+    - GEÇİCİ hata (zaman aşımı, ağ) `attempts` kez denenir; tükenirse
+      `(None, son_hata)` döner — çağıran örneği ATLAR ve raporlar (koşu ölmez).
+    """
+    last: Exception | None = None
+    for _ in range(attempts):
+        try:
+            # "document" modu uzun belge yolunu (parçalama + kademeli geçiş)
+            # ölçer; diğerleri kısa metni tek parça olarak değerlendirir.
+            if ex.get("mode") == "document":
+                return analyzer.analyze_document(ex["text"]), None
+            return analyzer.analyze(ex["text"]), None
+        except LLMCallError as exc:
+            if exc.permanent:
+                raise
+            last = exc
+        except Exception as exc:  # noqa: BLE001 — kota (429) vb. de geçici sayılır
+            last = exc
+    return None, last
+
+
 def main() -> None:
     analyzer = build_default_analyzer()
 
@@ -105,22 +138,25 @@ def main() -> None:
         print(f"[EVAL_FILTER={filt!r}] {len(examples)} örnek seçildi (tam set {full_count}).")
 
     dump: list[dict] = []
+    failed: list[tuple[str, str]] = []
     processed = 0
     aborted = False
     for i, ex in enumerate(examples):
         if i > 0 and delay > 0:
             time.sleep(delay)
         try:
-            # "document" modu uzun belge yolunu (parçalama + kademeli geçiş)
-            # ölçer; diğerleri kısa metni tek parça olarak değerlendirir.
-            if ex.get("mode") == "document":
-                result = analyzer.analyze_document(ex["text"])
-            else:
-                result = analyzer.analyze(ex["text"])
-        except Exception as exc:  # kota (429) vb. — eldekini kaybetme
-            print(f"! {ex['id']}: çağrı başarısız ({type(exc).__name__}). Durduruluyor.")
+            result, err = _analyze_with_retry(analyzer, ex)
+        except LLMCallError as exc:  # kalıcı (model kapalı) — devam anlamsız
+            print(f"! {ex['id']}: KALICI hata — koşu durduruldu.\n  {exc}")
             aborted = True
             break
+        if result is None:
+            # Geçici hata denemelere rağmen sürdü: örneği ATLA, koşuyu öldürme.
+            # Atlanan örnek metriklere KATILMAZ (sessiz FN yazılmaz); sonda
+            # KISMİ SONUÇ damgasıyla listelenir.
+            failed.append((ex["id"], f"{type(err).__name__}: {err}"))
+            print(f"! {ex['id']}: geçici hata 3 denemede geçmedi — atlandı.")
+            continue
 
         tp, fp, fn = _match(ex["expected"], result)
         for ax in AXES:
@@ -156,9 +192,39 @@ def main() -> None:
 
     # Hata olsa bile eldeki tahminleri kalibrasyon için diske yaz.
     DUMP.write_text(json.dumps(dump, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Arşiv kopyası (model + zaman damgalı, üstveri sarmalı): kısmi koşuların
+    # tam koşu dökümlerini ezmesini önler. last_predictions.json eski araçlar
+    # için değişmeden kalır.
+    model_id = Settings.from_env().model_id
+    partial = aborted or bool(failed) or bool(filt)
+    RUNS_DIR.mkdir(exist_ok=True)
+    archive = RUNS_DIR / f"{model_id}-{datetime.now():%Y%m%d-%H%M%S}.json"
+    archive.write_text(
+        json.dumps(
+            {
+                "model_id": model_id,
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+                "partial": partial,
+                "processed": processed,
+                "total": len(examples),
+                "failed": [{"id": fid, "error": msg} for fid, msg in failed],
+                "predictions": dump,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"\nDöküm: {DUMP.name} + arşiv {archive.relative_to(RUNS_DIR.parent)}")
     if aborted:
-        print(f"\n[Kısmi çalışma] {processed}/{len(examples)} örnek işlendi. "
-              f"Sonuçlar {DUMP.name}'a yazıldı; kalanlar önbellekten devam edecek.")
+        print(f"[Kısmi çalışma] {processed}/{len(examples)} örnek işlendi. "
+              f"Kalanlar önbellekten devam edecek.")
+    if failed:
+        print(f"\n[KISMİ SONUÇ] {len(failed)} örnek geçici hatayla atlandı "
+              f"(metriklere katılmadı):")
+        for fid, msg in failed:
+            print(f"  - {fid}: {msg[:140]}")
 
     def _line(label: str, tp: int, fp: int, fn: int) -> None:
         prec = tp / (tp + fp) if (tp + fp) else 0.0

@@ -22,7 +22,7 @@ class _FakeStructured:
 
 
 class _FakeModel:
-    def with_structured_output(self, schema):  # noqa: ARG002
+    def with_structured_output(self, schema, **kwargs):  # noqa: ARG002
         return _FakeStructured()
 
 

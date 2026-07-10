@@ -70,7 +70,25 @@ class LLMCallError(RuntimeError):
 
     Orijinal istisnayı sarmalar; kullanıcıya CLI/web sınırında anlaşılır bir
     mesaj göstermek içindir (ham stack trace yerine).
+
+    `permanent=True` → hata çağrı tekrarıyla düzelmez (örn. kapatılmış model);
+    çağıran katman (eval örnek-retry'ı gibi) yeniden denememelidir.
     """
+
+    def __init__(self, message: str, *, permanent: bool = False) -> None:
+        super().__init__(message)
+        self.permanent = permanent
+
+
+def _is_permanent_model_error(exc: Exception) -> bool:
+    """Model kimliği kaynaklı kalıcı hata mı? (yeniden denemek anlamsız)
+
+    Google, kullanımdan kaldırılmış model için "is no longer available",
+    hiç var olmayan model için "is not found" içeren 404 döndürür. Bunlar
+    çağrı tekrarıyla düzelmez; anında net mesajla durulmalıdır.
+    """
+    text = str(exc).lower()
+    return "no longer available" in text or "is not found" in text
 
 
 class Analyzer:
@@ -98,8 +116,14 @@ class Analyzer:
         # Yapılandırılmış çıktı: parse hatasını kaldırır. Analiz geçişleri
         # (yerel/ton/tutarlılık/reduce) LLMAnalysis; terim çıkarımı (map) ayrı
         # bir katı şema (LLMTermExtraction) döndürür.
-        self._structured = chat_model.with_structured_output(LLMAnalysis)
-        self._term_structured = chat_model.with_structured_output(LLMTermExtraction)
+        # method="json_mode": varsayılan fonksiyon-çağrısı yolu bazı modellerde
+        # (gemini-3.1-flash-lite) güvenilmez — model özellikle "bulgu yok"
+        # durumunda çağrı yerine düz metin ```json bloğu döndürüyor, parse None
+        # oluyor. json_mode modeli doğrudan JSON üretmeye zorlar (Gemini
+        # response_schema); None-yanıt sorununu kökten çözer.
+        self._structured = chat_model.with_structured_output(LLMAnalysis, method="json_mode")
+        self._term_structured = chat_model.with_structured_output(
+            LLMTermExtraction, method="json_mode")
 
     def analyze(self, text: str) -> AnalysisResult:
         """Kısa metni TEK parça olarak üç geçişle inceler (chunk'lamadan)."""
@@ -468,17 +492,47 @@ class Analyzer:
         Zaman aşımı/retry tükenmesi `LLMCallError`'a dönüşür; CLI/web sınırı bunu
         tek satır mesajla gösterir. `structured` hangi şemaya bağlıysa (LLMAnalysis
         veya LLMTermExtraction) onun örneğini döndürür.
+
+        Hatalar SINIFLANDIRILIR (bkz. plan: retry asimetrisi düzeltmesi):
+        - KALICI (kapatılmış/var olmayan model, `_is_permanent_model_error`) →
+          yeniden deneme YOK, `permanent=True` bayraklı net mesajla anında dur.
+        - GEÇİCİ (zaman aşımı, ağ hıçkırığı) → toplam 3 deneme; tükenirse
+          "bağlantı" mesajı. (Kütüphanenin kendi retry'ı da 4xx'i körlemesine
+          denediğinden `max_retries=2`'ye indirildi — asıl savunma burası.)
+        - Model yapılandırılmış çıktıyı üretemezse `with_structured_output`
+          istisna yerine `None` döndürebilir (parse edilemeyen yanıt). Bu da
+          geçici sayılıp yeniden denenir; ısrar ederse okunur hata — sözleşme
+          gereği sessiz-eksik sonuç üretilmez.
         """
-        try:
-            return structured.invoke(
-                [SystemMessage(content=system_prompt), HumanMessage(content=user_message)]
-            )
-        except Exception as exc:  # noqa: BLE001 — kullanıcıya okunur hata göster
+        last_exc: Exception | None = None
+        for _ in range(3):
+            try:
+                raw = structured.invoke(
+                    [SystemMessage(content=system_prompt), HumanMessage(content=user_message)]
+                )
+            except Exception as exc:  # noqa: BLE001 — kullanıcıya okunur hata göster
+                if _is_permanent_model_error(exc):
+                    raise LLMCallError(
+                        f"Model kullanımdan kaldırılmış veya mevcut değil görünüyor "
+                        f"(MODEL_ID={self._model_id}): {exc}. Güncel bir model seçin "
+                        "(README → Ortam Değişkenleri).",
+                        permanent=True,
+                    ) from exc
+                last_exc = exc
+                continue
+            if raw is not None:
+                return raw
+        if last_exc is not None:
             raise LLMCallError(
-                f"Gemini API'ye ulaşılamadı (zaman aşımı veya bağlantı hatası): {exc}. "
+                f"Gemini API'ye ulaşılamadı (zaman aşımı veya bağlantı hatası): {last_exc}. "
                 "Bağlantıyı kontrol edin; kurumsal ağdaysanız "
                 "GOOGLE_GENAI_TRANSPORT=rest deneyin."
-            ) from exc
+            ) from last_exc
+        raise LLMCallError(
+            "Model yapılandırılmış yanıt üretemedi (yanıt boş/parse edilemedi, "
+            "3 deneme). Genelde geçicidir — tekrar deneyin; sürerse MODEL_ID'yi "
+            "değiştirmeyi deneyin."
+        )
 
     def _invoke_cached(self, system_prompt: str, user_message: str) -> LLMAnalysis:
         key = make_key(self._model_id or "", system_prompt, user_message)
