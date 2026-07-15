@@ -25,6 +25,8 @@ dicts/
 # Yerel deneme belgeleri (büyük ikili; kaynak belgeler repoya girmez — CLAUDE.md)
 *.docx
 *.pdf
+*.mp4
+*.pptx
 
 # OS / editör
 .DS_Store
