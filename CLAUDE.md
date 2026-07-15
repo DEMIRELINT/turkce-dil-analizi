@@ -1,8 +1,9 @@
 # CLAUDE.md
 
 Bu dosya, bu depoda çalışan Claude Code (ve diğer yapay zekâ ajanları) için
-rehberdir. Projenin mimarisini, çalışma kurallarını ve dikkat edilmesi gereken
-noktaları özetler.
+rehberdir. Buradaki maddeler **demir kurallardır** (ne yapılmalı/yapılmamalı);
+her kuralın gerekçesi, iç işleyişi ve tarihçesi `docs/` altındaki bağlantılı
+dosyalardadır — **ilgili koda dokunmadan önce bağlantıyı oku.**
 
 ---
 
@@ -19,15 +20,16 @@ her değişiklikten sonra:
    uyumluluk (varsa kırılan şeyler).
 
 Bu rapor; commit mesajında, PR açıklamasında ve kullanıcıya verilen yanıtta
-açıkça belirtilmelidir. **Küçük düzeltmeler (typo, format) için gerekmez; ama
-büyük güncellemelerde raporlama atlanmamalıdır. Yapılan güncellemeler sonrasında kullanıcıya yapılacak açıklama, teknik terimlerle boğulmamalı ve net anlaşılır olmalıdır.**
+açıkça belirtilmelidir. Küçük düzeltmeler (typo, format) için gerekmez.
+**Kullanıcıya yapılacak açıklama teknik terimlerle boğulmamalı, net ve
+anlaşılır olmalıdır.**
 
-**CLAUDE.md güncel tutulmalıdır.** Yapılan bir güncelleme, bu dosyada yazılı bir
-bilgiyi (mimari, dizin yapısı, komutlar, ortam değişkenleri, kural kimlikleri,
-bilinen sınırlar vb.) etkiliyor ya da burada belgelenmesi gereken yeni bir kural/
-komut/seam getiriyorsa, **değişiklikle birlikte CLAUDE.md de güncellenmelidir** —
-kod ile rehberin ayrışması (drift) önlenir. Değişiklik CLAUDE.md'yi
-ilgilendirmiyorsa (yalnız yerel bir hata düzeltmesi gibi) güncelleme gerekmez.
+**CLAUDE.md ve `docs/` güncel tutulmalıdır.** Bir güncelleme buradaki ya da
+`docs/mimari-seamler.md` / `docs/bilinen-sinirlar.md` /
+`docs/sorun-giderme.md`'deki bir bilgiyi etkiliyorsa, **değişiklikle birlikte
+ilgili dosya da güncellenmelidir** — kod ile rehberin ayrışması (drift)
+önlenir. Yalnız yerel bir hata düzeltmesi gibi rehberi ilgilendirmeyen
+değişikliklerde güncelleme gerekmez.
 
 ---
 
@@ -41,28 +43,16 @@ sorun için *gerekçe + düzeltme önerisi* üreten hibrit bir sistem. Sistem
 Çekirdek felsefe: **deterministik olarak çözülebilen işi araca, yargı/bağlam
 gerektiren işi yapay zekâya** bırakmak.
 
-- **Tespit (deterministik):** Hunspell (`spylls`, saf-Python) + tr_TR sözlük —
-  yazım hatalarını sıfır halüsinasyonla, kesin offset ile bulur. **Yalnız
-  tespit eder, öneri ÜRETMEZ** — öneri her zaman bağlamı gören LLM'den gelir;
-  LLM karar vermezse bulgu "(öneri yok ...)" yer tutucusuyla kalır.
-- **Düzeltme + yargı (LLM):** Gemini — bağlama göre düzeltme önerir, dil bilgisi
-  ve tonu analiz eder, özel adları eler.
+- **Tespit (deterministik):** Hunspell (`spylls`) + tr_TR sözlük — yazım
+  hatasını kesin offset ile bulur; öneri ÜRETMEZ (öneri LLM'den gelir).
+- **Düzeltme + yargı (LLM):** Gemini — bağlama göre öneri, dil bilgisi/ton
+  analizi, özel ad eleme.
 
-Analiz **tek çağrı değil, kademeli geçişlerle** yürür (bkz. `analyzer.py`):
-**yerel** (cümle: imla/noktalama/dil bilgisi), **ton** (paragraf) ve **bütün
-belgede tutarlılık** geçişi. Uzun belge önce deterministik olarak parçalanır
-(`chunk.py`); parça-içi offsetler kaynağa geri taşınır (rebasing). Girdi düz
-metin **veya** `.docx` olabilir (`extract.py`); bir **web paneli** (`web/`)
-docx yükleme + canlı ilerleme sunar.
-
-`.docx` çıkarımı **etiketli bloklar** üretir: her blok türüyle işaretlenir
-(`paragraf` / `baslik` / `tablo_hucresi` / `icindekiler`;
-`extract_docx_blocks` → `BlockSpan`). Analiz bu haritayla yapısal gürültüyü
-deterministik süzer: tablo hücrelerine ve İçindekiler (TOC) satırlarına
-imla/dil bilgisi/ton bulgusu üretilmez (yalnız tablo/TOC'tan oluşan parçalar
-LLM'e hiç gönderilmez), başlıklarda tekrar/noktalama bulgusu elenir,
-tablodaki ondalık-nokta kullanımı tek tek değil **belge-geneli TEK özet
-bulguyla** raporlanır. Düz metin girdisinde (spans yok) süzme yoktur.
+Analiz kademeli geçişlerle yürür (`analyzer.py`): **yerel** (imla/noktalama/
+dil bilgisi), **ton** (paragraf), **belge-geneli tutarlılık**. Uzun belge
+deterministik parçalanır (`chunk.py`), offsetler kaynağa geri taşınır. Girdi
+düz metin veya `.docx` (`extract.py` → etiketli bloklar; tablo/TOC yapısal
+süzmeye girer); web paneli (`web/`) docx yükleme + canlı ilerleme sunar.
 
 Detaylı anlatım için [README.md](README.md) dosyasına bakın.
 
@@ -75,29 +65,33 @@ cli.py                      # Elle deneme girişi (CLI; metin stdin/arg veya .do
 pyproject.toml              # Bağımlılıklar (pinli, air-gap uyumlu)
 .env.example                # Örnek ortam değişkenleri (kopyala → .env)
 dicts/tr_TR.{aff,dic}       # Hunspell Türkçe sözlüğü (air-gap: repoda bulundurulur)
+docs/
+  mimari-seamler.md         # Seam'lerin tam anlatımı (gerekçe + iç işleyiş)
+  bilinen-sinirlar.md       # Bilinen sınırların tam anlatımı
+  sorun-giderme.md          # Hata alınca bakılacak liste
 src/dilanaliz/
-  analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, span-farkında süzme, tutarlılık map-reduce/terim-indeksi, build_default_analyzer)
-  spell.py                  # Hunspell deterministik imla TESPİTİ (öneri üretmez; Türkçe İ/I-farkında lookup; 4 harf altı denetlenmez)
-  extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi/icindekiler; satır-içi görsel → [görsel] yer tutucu, tam-satır görsel silinir, ardışık tekrar tekilleştirme)
+  analyzer.py               # Ana orkestrasyon (kademeli geçişler, paralel parça, span-farkında süzme, tutarlılık map-reduce, build_default_analyzer)
+  spell.py                  # Hunspell deterministik imla TESPİTİ (öneri üretmez; İ/I-farkında; 4 harf altı denetlenmez)
+  extract.py                # .docx → etiketli bloklar (paragraf/baslik/tablo_hucresi/icindekiler; görsel yer tutucu, tekrar tekilleştirme)
   chunk.py                  # Uzun metni deterministik paragraf parçalarına böler (taşan paragraf cümleye iner)
   progress.py               # Geçiş ilerleme olayları (CLI stderr / web SSE)
-  prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı; tutarlılık map-reduce için terim-çıkarım + reduce promptları)
+  prompt.py                 # LLM davranışı (geçiş başına system prompt; kurallar ayrı; map-reduce promptları)
   providers/                # LLM sağlayıcı soyutlaması (Gemini → vLLM değişebilir)
   rules/                    # RulesProvider + rules.md (kurallar koddan ayrı, kimlikli)
-  schema.py                 # Pydantic v2 bulgu/çıktı şemaları (imla/dil_bilgisi/ton/tutarlilik) + Observation (gözlem kanalı) + TermEntry/LLMTermExtraction (tutarlılık map adımı)
+  schema.py                 # Pydantic v2 bulgu/çıktı şemaları + Observation + TermEntry/LLMTermExtraction
   locate.py                 # Alıntıyı kaynakta konumlama (offset — LLM offset üretmez)
   postprocess.py            # Birleştirme + tekilleştirme + noop/bozuk öneri eleme
   cache.py                  # Disk önbelleği (.cache/llm_cache.json; thread-safe)
   config.py                 # Ortam değişkenleri / yapılandırma
 web/
   server.py                 # Yerel panel sunucusu (stdlib http.server + SSE; docx yükle)
-  index.html                # Panel arayüzü (canlı parça ızgarası, iki sütun, gruplama; rapor indir/kopyala — ajan-dostu Markdown)
+  index.html                # Panel arayüzü (canlı parça ızgarası, gruplama; rapor indir/kopyala)
 tests/                      # pytest birim testleri (API gerektirmez; sahte model kalıbı)
 eval/
   golden.jsonl              # Elle etiketli altın set (pozitif + temiz-metin negatif örnekler)
   run_eval.py               # Eksen-bazlı precision/recall ölçümü (API gerektirir)
   compare_parallel.py       # Sıralı vs paralel: hız + çıktı eşdeğerliği (API gerektirir)
-  *_test.txt                # Manuel deneme metinleri (kesme, gruplama, geniş kapsamlı)
+  *_test.txt                # Manuel deneme metinleri
 ```
 
 ---
@@ -138,22 +132,8 @@ pytest -k chunk                             # ada göre süz
 python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 ```
 
-**Sorun giderme (hata alınca buraya bak — her seferinde önden çalıştırma):**
-
-- **Beklenmedik "eksik/bayat sonuç":** önce `rm -rf .cache/` ve tekrar dene
-  (bkz. Bilinen Sınırlar → bayat önbellek).
-- **Sözlük/`HunspellChecker` hatası veya imla bulgusu hiç çıkmıyor:**
-  `dicts/tr_TR.dic` var mı? Yoksa Hunspell katmanı sessizce kapanır.
-- **`GEMINI_API_KEY` / kimlik hatası:** `.env` dolu mu, `.venv` aktif mi?
-- **Bağlantı donuyor/timeout (kurumsal ağ):** `GOOGLE_GENAI_TRANSPORT=rest` dene.
-- **"Model kullanımdan kaldırılmış" / 404 "no longer available":** `.env`'deki
-  `MODEL_ID` şu an erişilemiyor. Bu KESİN kapanış olmayabilir — 2026-07-09'da
-  `gemini-2.5-flash` birkaç saatliğine bu hatayı verdi, ertesi gün kendi
-  kendine düzeldi (ilan edilen resmi kapanışı 16 Ekim 2026); dokümandaki/
-  Google'ın kendi listesindeki tarih GERÇEK durumu yansıtmayabilir, canlı hata
-  mesajı esas alınır. Yine de projede varsayılan `gemini-3.5-flash`'tır ve
-  "lite" sınıfı KULLANILMAZ (kalıcı karar — 96 örneklik altın sette ölçülü
-  kalite kaybı var, bkz. README §11 model kıyası).
+**Sorun giderme:** hata alınca önce [docs/sorun-giderme.md](docs/sorun-giderme.md).
+İlk refleks — beklenmedik "eksik/bayat sonuç"ta: `rm -rf .cache/` ve tekrar dene.
 
 ---
 
@@ -162,183 +142,95 @@ python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
 | `GEMINI_API_KEY` | *(zorunlu)* | Gemini API anahtarı. Repoda YOK, her makinede elle girilir. |
-| `MODEL_ID` | `gemini-3.5-flash` | Kullanılacak Gemini modeli. "lite" sınıfı kullanılmaz (kalıcı karar — bkz. README §11 model kıyası). gemini-2.5-flash 16 Ekim 2026'da kapanacak. |
-| `TEMPERATURE` | `0` | Tutarlılık için 0. (Not: 0 dahi tam deterministik değildir — bkz. Bilinen Sınırlar.) |
-| `CONCURRENCY` | `6` | Eşzamanlı işlenecek parça sayısı. `1` → tamamen sıralı (eski) davranış. |
+| `MODEL_ID` | `gemini-3.5-flash` | Gemini modeli. "lite" sınıfı KULLANILMAZ (kalıcı karar — bkz. README §11). gemini-2.5-flash 16 Ekim 2026'da kapanacak. |
+| `TEMPERATURE` | `0` | Tutarlılık için 0. (0 dahi tam deterministik değildir — bkz. Bilinen Sınırlar.) |
+| `CONCURRENCY` | `6` | Eşzamanlı parça sayısı. `1` → tamamen sıralı davranış. |
 | `DICT_PATH` | `dicts/tr_TR` | Hunspell sözlük taban yolu (uzantısız). |
-| `RULES_PATH` | *(boş)* | Harici kural dosyası; boşsa paketteki `rules/rules.md` kullanılır. |
+| `RULES_PATH` | *(boş)* | Harici kural dosyası; boşsa paketteki `rules/rules.md`. |
 | `LANGSMITH_TRACING` | `false` | Air-gap hijyeni: telemetri kapalı kalmalı. |
-| `GOOGLE_GENAI_TRANSPORT` | *(boş)* | Opsiyonel Gemini REST taşıma anahtarı (gRPC yerine REST). |
-| `LLM_TIMEOUT_SEC` | `60` | Tek LLM çağrısı için üst zaman aşımı (sn). Bağlantı yarıda tıkanırsa çağrı asılı kalmasın diye. `0`/boş → sınırsız (istemci varsayılanı). |
-| `CONSISTENCY_MAP_REDUCE_CHARS` | `16000` | Tutarlılık geçişi map-reduce eşiği (karakter). Belge bu boyutu **aşarsa** tutarlılık tek dev çağrı yerine map-reduce (parça başına terim çıkarımı + tek yargı çağrısı) ile çalışır → uzun belgede zaman aşımı tavanı kalkar. Eşik altında eski tek-çağrı yolu (altın-set bu yolda ölçülü). `0`/negatif → `1` (fiilen her belge map-reduce). |
-| `EVAL_DELAY_SEC` | `13` | Yalnız `eval/run_eval.py`'de çağrılar arası gecikme; ücretli katmanda `0`. |
-| `EVAL_FILTER` | *(boş)* | Yalnız `eval/run_eval.py`'de: virgülle ayrılmış id/id-ön-eki listesi (örn. `imla-yabanci,temiz`) — yalnız eşleşen örnekleri çalıştırır. Ücretli API'de küçük kural değişikliklerinde tam 53 örneği göndermemek için; tam koşu yalnız büyük kilometre taşlarında (Faz sonu, PR öncesi) önerilir. |
+| `GOOGLE_GENAI_TRANSPORT` | *(boş)* | Opsiyonel: gRPC yerine REST taşıma. |
+| `LLM_TIMEOUT_SEC` | `60` | Tek LLM çağrısı üst zaman aşımı (sn). `0`/boş → sınırsız. |
+| `CONSISTENCY_MAP_REDUCE_CHARS` | `16000` | Tutarlılık map-reduce eşiği (karakter). Belge aşarsa map-reduce; altında tek-çağrı yolu (altın-set bu yolda ölçülü). `0`/negatif → fiilen her belge map-reduce. |
+| `EVAL_DELAY_SEC` | `13` | Yalnız `run_eval.py`: çağrılar arası gecikme; ücretli katmanda `0`. |
+| `EVAL_FILTER` | *(boş)* | Yalnız `run_eval.py`: virgüllü id/ön-ek listesi — yalnız eşleşen örnekler koşar (ucuz kısmi ölçüm). Tam koşu yalnız büyük kilometre taşlarında. |
 
 ---
 
-## Mimari "Seam"leri (Değiştirmeden Önce Oku)
+## Mimari "Seam"leri (Demir Kurallar)
 
-Bu noktalar bilinçli olarak değiştirilebilir bırakıldı; dokunurken soyutlamayı
-koru:
+Tam anlatım + gerekçeler: [docs/mimari-seamler.md](docs/mimari-seamler.md).
+**Bir seam'e dokunmadan önce oradaki ilgili bölümü oku.** Özet kurallar:
 
-- **Davranış / Bilgi ayrımı** — `prompt.py` yalnız modelin *davranışını* tutar;
-  *kurallar* `RulesProvider` üzerinden ayrı gelir. Kural değişikliği `rules.md`
-  veya `.env`'deki `RULES_PATH` ile yapılır, **kod değişmeden**. Sağlayıcı
-  **geçiş-farkındadır**: `get_context(text, purpose)` — yerel geçiş yalnız
-  A+B (imla + dil bilgisi), ton geçişi yalnız C bölümünü alır; `rules.md`'nin
-  "Bilinen Sınırlar" bölümü geliştirici notudur, modele HİÇ gönderilmez.
-  Tanınan başlığı olmayan harici `RULES_PATH` dosyasında kesitleme devre dışı
-  kalır (tam metin gider — kural sessizce kaybolmaz). Yeni geçiş eklerken
-  purpose eşlemesini (`rules/static.py` → `_PURPOSE_KINDS`) güncelle.
-- **Sağlayıcı soyutlaması** — `providers/build_chat_model` bir LangChain
-  `BaseChatModel` döndürür. Gemini'yi yerel vLLM ile değiştirmek analyzer'ı
-  etkilememeli.
-- **Katı JSON çıktı** — `with_structured_output` parse hatasını engeller; çıktı
-  şeması `schema.py`'dedir, gevşetme.
-- **Gözlem kanalı (`observations`) findings'ten AYRIDIR** — model "kurala
-  bağlayamadığı ama şüphelendiği" yerleri `findings`'e DEĞİL `AnalysisResult.
-  observations`'a (`schema.Observation`: excerpt + note, offset/öneri YOK) yazar.
-  Ayrı bir LLM çağrısı DEĞİL; yalnız **yerel geçişin** çıktı şemasına eklenen bir
-  alan (ton/tutarlılık boş bırakır, tıpkı `spelling` gibi). Gözlem, findings
-  boru hattına (locate/`drop_unlocated`/`drop_cross_pass_duplicates`/`_sort_key`/
-  `_dedup`) HİÇ girmez → determinizm sözleşmesi (findings) değişmez; gözlemin
-  kendisi `_finalize`'da `_dedup_sort_observations` ile `(excerpt, note)`
-  anahtarıyla ayrıca tekilleştirilip sıralanır (paralel toplamadan bağımsız).
-  Ölçüme GİRMEZ: `run_eval._match` yalnız `result.findings` okur; gözlem
-  precision/recall'a katılmaz (bilinçli — doğrulanmamış kanal). Web/rapor gözlemi
-  "doğrulanmamış — editör değerlendirmesi gerekir" etiketiyle AYRI bölümde
-  gösterir, bulgularla asla karışmaz. Model bu kanalı ancak prompt'ta SOMUT
-  ÖRNEK varsa kullanır (örneksiz → sessiz; bkz. Görev 1 tezi). Uzun vadede yeni
-  kuralların keşif hattıdır (gözlem → editör onayı → rules.md kuralı).
-- **Konumlanamayan bulgu sessizce elenir** — `postprocess.drop_unlocated_findings`
-  (`_finalize` içinde çağrılır) `locate.py`'nin offset veremediği (kaynakta
-  BİREBİR/normalize bulunamayan) bulguları atar. Bunlar çoğunlukla LLM'in
-  `rules.md`'deki bir "Yanlış:" örneğini analiz edilen metnin DOĞRU yazılmış
-  hâliyle karıştırıp var olmayan bir alıntı üretmesinden kaynaklanır
-  (halüsinasyon). `locate.py`'nin kendisi None bırakmaya devam eder (yalnız
-  konumlama, politika değil); eleme kararı `_finalize`'dadır — yeni bir geçiş
-  eklerken bu sözleşmeyi koru.
-- **Bağlamca zaten karşılanmış öneri elenir** — `postprocess.
-  drop_context_satisfied_findings` (`_finalize` içinde, `drop_unlocated_
-  findings`'in hemen ardından çağrılır) alıntının kaynaktaki HEMEN
-  ARDINDAN gelen karakterleriyle önerinin fazladan kısmı birebir aynıysa
-  bulguyu atar (örn. cümle zaten "...sunuyoruz." diye bitmişken, model
-  alıntıyı noktadan önce kesip "sunuyoruz." öneriyor — nokta zaten
-  alıntının hemen ardında var, öneri hiçbir şey değiştirmiyor).
-  `is_noop_suggestion` bunu YAKALAYAMAZ çünkü yalnız excerpt/suggestion
-  metnini karşılaştırır, kaynak bağlamına bakmaz — bu yüzden ayrı bir
-  fonksiyon ve offset (konumlama sonrası) gerektirir.
-- **Kademeli geçiş + parçalama** — orkestrasyon (`analyzer.py`) her kontrolü kendi
-  bazında ayrı geçişte çalıştırır; parçalama (`chunk.py`) deterministik koddur.
-  Parça-içi offsetler kaynağa geri taşınır (rebasing) — yeni geçiş/baz eklerken
-  bu sözleşmeyi koru.
-- **Paralel ama deterministik** — parçalar `CONCURRENCY` kadar eşzamanlı işlenir
-  (ThreadPoolExecutor); ama çıktı işlenme sırasından BAĞIMSIZ olmalı. `_finalize`
-  bulguları tam-sıra anahtarıyla (`_sort_key`) önce sıralar, sonra tekilleştirir —
-  böylece `CONCURRENCY` ne olursa olsun sonuç birebir aynıdır. Yeni geçiş/bulgu
-  eklerken bu deterministiklik sözleşmesini koru; önbellek (`cache.py`) ve ilerleme
-  yayını thread-safe'tir (kilitli).
-- **Belge-geneli tutarlılık: küçük belgede tek çağrı, büyük belgede map-reduce**
-  — tutarlılık geçişi (terim/kısaltma çakışması) bütünsel görüş gerektirir;
-  ham metni naif parçalayıp her parçaya AYRI sorarsan "AI"↔"Artificial
-  Intelligence" gibi çapraz-parça çakışmaları göremezsin (kör nokta). Bu yüzden:
-  **küçük belge** (≤ `CONSISTENCY_MAP_REDUCE_CHARS`) tek çağrıda görülür
-  (`_consistency_pass` → `build_consistency_message` + `CONSISTENCY_SYSTEM_PROMPT`).
-  **Büyük belge** (uzun belgede tek dev çağrı Google'da zaman aşımına uğrar)
-  `_consistency_map_reduce` ile çalışır: (1) MAP — her parçadan yalnız sabit
-  terim/kısaltma/birim/etiket çıkarılır (paralel; ayrı şema `LLMTermExtraction`,
-  `TERM_EXTRACT_SYSTEM_PROMPT`); (2) ADAY KÜMELEME — `_build_term_index` gürültüyü
-  (`_is_indexable_term`: sayı/değer/ölçüm yüzeyleri) eler, sonra yüzeyleri
-  YALNIZ TUTARSIZLIK ADAYI kümelere indirger: ya yüzey-anahtarı (`_norm_surface_
-  key`: harf/tırnak/boşluk-duyarsız → yazım varyantı) ya kavram-anahtarı
-  (`_norm_concept_key` → eşanlam) altında ≥2 farklı yüzey. Jenerik kavram
-  kümeleri (`_CONCEPT_CLUSTER_MAX` üstü — "özellik adı", "bölüm başlığı") atılır.
-  SALT büyük/küçük harf farkıyla ayrılan kümeler de ELENİR (başlık "Başlık
-  Düzeni" ↔ düzyazı küçük harf DOĞAL farktır — en sık sahte-pozitif kaynağıydı;
-  birim harfi kHz↔Khz zaten yerel IMLA-BIRIM'de yakalanır, burada tekrar üretme).
-  TEK biçimde geçen terim hiç gönderilmez (tutarsız olamaz) → reduce girdisi
-  belge boyutundan BAĞIMSIZ küçük kalır; (3) REDUCE — LLM'e ham metin DEĞİL bu
-  aday kümeler gönderilir (`CONSISTENCY_REDUCE_SYSTEM_PROMPT`), her küme için
-  "gerçekten aynı mı?" yargısı `tutarlilik` bulguları üretir. Aday kümeleme
-  belgenin tamamından toplandığından bütünsel görüş korunur (kör nokta gelmez);
-  her adımın girdisi küçük olduğundan zaman aşımı tavanı kalkar. Offset yine
-  `enrich_with_offsets` ile (LLM offset üretmez); reduce `excerpt`'i kümedeki bir
-  `surface` ile birebir olmalıdır ki konumlanabilsin. İlerleme (`on_progress` →
-  web SSE) map k/N + reduce adımını canlı bildirir. **Naif "böl ve her parçaya
-  ayrı tutarlılık sor" hâlâ yasak** — reduce'un tek yargı adımı bütün adayları
-  bir arada görür, çözüm budur.
-- **Etiketli blok sözleşmesi** — `extract_docx_blocks` blok türü haritası
-  (`BlockSpan`) döndürür; offsetler birleşik metinle birebir hizalıdır
-  (`text[s.start:s.end]` bloğun kendisi). `analyzer.analyze_document(spans=...)`
-  bu haritayla yapısal süzme yapar; süzme `_finalize` sıralamasından ÖNCE ve
-  tamamen deterministiktir. Yeni blok türü/süzme kuralı eklerken bu hizalamayı
-  ve determinizmi koru. Tutarlılık bulguları tablo aralıklarında da KORUNUR
-  (birim çakışması tabloda geçerli) — bunu süzmeye dahil etme.
-- **Hunspell yalnız tespitçidir** — `spell.py` öneri üretmez (`suggest()`
-  çağrısı bilinçli kaldırıldı); öneri `_resolve_spelling`'de LLM'den gelir ve
-  alıntının harf düzenine giydirilir (`match_case`). Hunspell'e yeniden öneri
-  ürettirme — bağlamdan habersiz sözlük önerisi kopuk parçalara uydurma üretir.
-- **Air-gap uyumu** — bağımlılıklar pinli; telemetri kapalı; gizli dış çağrı
-  ekleme. `docx2python`, Hunspell ve web paneli (stdlib) dahil her şey yereldir.
-- **LLM çağrısı: zaman aşımı + SINIFLANDIRILMIŞ hata** — `providers/gemini.py`
-  istemciye `LLM_TIMEOUT_SEC` (varsayılan 60sn) + `max_retries=2` geçer
-  (kütüphane retry'ı kalıcı 404'ü de körlemesine dener, o yüzden düşük).
-  Asıl savunma `analyzer._call_structured`'dadır ve hataları SINIFLANDIRIR:
-  (a) KALICI (kapatılmış/yok model — `_is_permanent_model_error`) → yeniden
-  deneme YOK, `LLMCallError(permanent=True)` net "MODEL_ID güncelle" mesajıyla;
-  (b) GEÇİCİ (timeout/ağ) → 3 deneme, sonra "bağlantı" mesajlı `LLMCallError`;
-  (c) model yapılandırılmış çıktı üretemezse (`None` yanıt — json_mode ile
-  nadir) → geçici gibi yeniden denenir. CLI (`cli.py`) hatayı tek satır mesajla
-  gösterir, web paneli (`server.py`) SSE'ye basar. Bir parçanın çağrısı kalıcı
-  başarısız olursa TÜM analiz durur (bilinçli — bkz. Bilinen Sınırlar); bu
-  davranışı sessiz-atlamaya çevirme. (`eval/run_eval.py` örnek-bazında farklıdır:
-  geçici hatada örneği atlar + KISMİ SONUÇ damgası basar; kalıcıda o da durur.)
+- **Davranış / Bilgi ayrımı** — `prompt.py` yalnız davranış; kurallar
+  `RulesProvider`'dan (`rules.md` / `RULES_PATH`), kod değişmeden. Sağlayıcı
+  geçiş-farkındadır (purpose kesitleme); yeni geçiş eklerken
+  `rules/static.py → _PURPOSE_KINDS` güncelle.
+- **Sağlayıcı soyutlaması** — `providers/build_chat_model` LangChain
+  `BaseChatModel` döndürür; Gemini→vLLM değişimi analyzer'ı etkilememeli.
+- **Katı JSON çıktı** — şema `schema.py`'dedir, gevşetme.
+- **Gözlem kanalı (`observations`) findings'ten AYRIDIR** — findings boru
+  hattına HİÇ girmez, ölçüme girmez, arayüzde "doğrulanmamış" etiketiyle ayrı
+  bölümde gösterilir. Yalnız yerel geçişin şemasında bir alandır.
+- **Konumlanamayan bulgu elenir** — eleme kararı `_finalize`'dadır
+  (`drop_unlocated_findings`); `locate.py` yalnız konumlar, politika koymaz.
+  Yeni geçiş eklerken bu sözleşmeyi koru.
+- **Bağlamca zaten karşılanmış öneri elenir** —
+  `drop_context_satisfied_findings`, konumlama SONRASI çalışır (offset ister).
+- **Kademeli geçiş + parçalama** — her kontrol kendi bazında ayrı geçiş;
+  parça-içi offsetler kaynağa geri taşınır (rebasing) — sözleşmeyi koru.
+- **Paralel ama deterministik** — çıktı işlenme sırasından BAĞIMSIZ olmalı;
+  `_finalize` önce sıralar (`_sort_key`) sonra tekilleştirir. `CONCURRENCY`
+  ne olursa olsun sonuç birebir aynı kalmalı.
+- **Tutarlılık: küçük belgede tek çağrı, büyük belgede map-reduce** — naif
+  "böl ve her parçaya ayrı tutarlılık sor" YASAK (kör nokta); reduce'un tek
+  yargı adımı bütün adayları bir arada görür. Reduce `excerpt`'i kümedeki bir
+  `surface` ile birebir olmalı ki konumlanabilsin.
+- **Etiketli blok sözleşmesi** — `BlockSpan` offsetleri birleşik metinle
+  birebir hizalı; yapısal süzme `_finalize`'dan ÖNCE ve deterministik.
+  Tutarlılık bulguları tablo aralıklarında KORUNUR — süzmeye dahil etme.
+- **Hunspell yalnız tespitçidir** — `suggest()` bilinçli kaldırıldı; öneri
+  LLM'den gelir (`_resolve_spelling` + `match_case`). Geri ekleme.
+- **Air-gap uyumu** — bağımlılıklar pinli, telemetri kapalı, gizli dış çağrı
+  ekleme; her şey yereldir.
+- **LLM hatası SINIFLANDIRILIR** — kalıcı (model yok) → yeniden deneme YOK,
+  net "MODEL_ID güncelle" mesajı; geçici (timeout/ağ) → 3 deneme. Kalıcı
+  hatada TÜM analiz durur (bilinçli) — sessiz-atlamaya çevirme.
 
 ---
 
 ## Test ve Doğrulama Süreci
 
-- **Birim testler (`pytest`, API gerektirmez):** Her modülün kendi testi var
-  (`tests/test_*.py`). LLM çağrıları **sahte model kalıbıyla** (`_FakeModel`,
-  geçiş-farkında `_PassFakeStructured`) taklit edilir — ağ/anahtar gerekmez.
-  Yeni kod eklerken bu kalıbı izle.
+- **Birim testler (`pytest`, API gerektirmez):** LLM çağrıları sahte model
+  kalıbıyla (`_FakeModel`, geçiş-farkında `_PassFakeStructured`) taklit
+  edilir. Yeni kod eklerken bu kalıbı izle.
 - **Ölçüm (`eval/run_eval.py`, API gerektirir):** `golden.jsonl` üzerinde
-  eksen-bazlı precision/recall + temiz-metin yanlış-pozitif sayısı. Prompt veya
-  kural değişikliği **buradan geçmeli** (öncesi/sonrası karşılaştır).
-- **Paralellik doğrulama (`eval/compare_parallel.py`):** sıralı vs paralel hız +
-  çıktı birebir eşdeğerliği (paylaşımlı önbellekle).
+  eksen-bazlı precision/recall + temiz-metin yanlış-pozitif sayısı. Prompt
+  veya kural değişikliği **buradan geçmeli** (öncesi/sonrası karşılaştır).
+- **Paralellik doğrulama (`eval/compare_parallel.py`):** sıralı vs paralel
+  hız + çıktı birebir eşdeğerliği.
 - **Manuel:** `web/server.py` veya `cli.py` ile gerçek API üzerinde deneme.
-- **Yeni özellik eklerken beklenen iş:** (1) ilgili birim test; (2) prompt/kural
-  değiştiysen `golden.jsonl`'e örnek + `run_eval.py` ölçümü; (3) davranış/çıktı
-  değiştiyse Büyük Güncelleme Raporu.
 
 ### İş Bitti mi? (Definition of Done — koşullu)
 
-İşi tamamlamadan aşağıdakileri **duruma göre** çalıştır. Hepsini her seferinde
-körlemesine çalıştırma; özellikle API'li adımlar zaman ve para harcar.
+Hepsini körlemesine çalıştırma; API'li adımlar zaman ve para harcar.
 
-- **Her zaman:** `pytest` (API gerektirmez, ucuz — kod değiştiyse çalıştır).
-- **Prompt/kural değiştiyse:** `eval/run_eval.py` (öncesi/sonrası precision-recall
-  karşılaştır) + `golden.jsonl`'e örnek ekle. *Yalnız* bu durumda — aksi hâlde
-  gereksiz API maliyeti.
+- **Her zaman:** `pytest` (kod değiştiyse — ucuz).
+- **Prompt/kural değiştiyse:** `run_eval.py` (öncesi/sonrası) +
+  `golden.jsonl`'e örnek. *Yalnız* bu durumda.
 - **Deterministiklik/paralellik sözleşmesine dokundunsa:** `compare_parallel.py`.
 - **Davranış/çıktı/mimari değiştiyse:** Büyük Güncelleme Raporu + gerekiyorsa
-  CLAUDE.md güncellemesi (bkz. Öncelikli Kural).
+  CLAUDE.md/`docs/` güncellemesi (bkz. Öncelikli Kural).
 
 ---
 
 ## Üretilmiş / Elle Dokunulmayan Dosyalar
 
-Bunlar araç tarafından üretilir veya hassastır; **elle düzenleme**, canlı sonuç
-kaynağı sanma, gözden geçirmeden silme:
+**Elle düzenleme**, canlı sonuç kaynağı sanma, gözden geçirmeden silme:
 
-- **`.cache/`** — LLM yanıt önbelleği; canlı sonuç değildir (bayat olabilir).
-  Elle düzenleme; şüpheli sonuçta topluca sil (`rm -rf .cache/`).
-- **`eval/last_predictions.json`** — `run_eval.py`'nin ürettiği son tahmin
-  dökümü; elle yazma, ölçüm çıktısıdır.
-- **`eval/runs/`** — koşu arşivleri (model + zaman damgalı, `partial` üstverili);
-  kısmi koşuların tam koşu dökümünü ezmesini önler. Üretilmiş çıktıdır,
-  commit'lenmez (`.gitignore`).
+- **`.cache/`** — LLM yanıt önbelleği; bayat olabilir. Şüpheli sonuçta
+  topluca sil (`rm -rf .cache/`).
+- **`eval/last_predictions.json`** — `run_eval.py` çıktısı; elle yazma.
+- **`eval/runs/`** — koşu arşivleri; üretilmiş çıktıdır, commit'lenmez.
 - **`dicts/tr_TR.{aff,dic}`** — dış sözlük (LibreOffice); elle düzeltme, vendor'la.
 - **`.env`** — sırlar; commit'lenmez, içeriği yanıtlara/loglara yazılmaz.
 - **`history/`** — web panelinin analiz geçmişi kayıtları (üretilmiş).
@@ -349,23 +241,17 @@ kaynağı sanma, gözden geçirmeden silme:
 
 - **`main` tek doğruluk kaynağıdır — main'e yalnız TEST EDİLMİŞ kod iner.**
   Test makine seviyesindedir (`web/server.py`, `cli.py`, gerçek API); her
-  değişiklik merge'den önce fiziksel bir makinede çalıştırılıp denenmelidir.
-  makine ≠ dal.
-
-- **Ev (macOS, yerel):** `~/Desktop/a-proje` altında `.venv` + dolu `.env`.
-  Burada **doğrudan `main`'de** çalışılır: `git pull` → değişiklik → yerelde test
-  → `git push`. Dal/PR seremonisi yok (tek kullanıcı, çakışma riski düşük).
-
+  değişiklik merge'den önce fiziksel bir makinede denenmelidir. makine ≠ dal.
+- **Ev (macOS, yerel):** `~/Desktop/a-proje`, `.venv` + dolu `.env`.
+  **Doğrudan `main`'de** çalışılır: `git pull` → değişiklik → yerel test →
+  `git push`. Dal/PR seremonisi yok.
 - **Kurum — iki katman:**
-  - *Claude Code Web (bulut):* değişikliği yazar ve `claude/...` **dalına** push
-    eder; fiziksel makineye/`main`'e yazamaz. Kod bu aşamada TEST EDİLMEMİŞTİR.
-  - *Kurum bilgisayarı (fiziksel):* webserver testi burada yapılır → Web'in dalı
-    buraya çekilir ve çalıştırılır. Bu, günde **birçok kez**, her küçük
-    değişiklikte olur.
-  - **Sürtünmeyi azalt:** Web **tek bir feature dalında** kalsın (yeni oturumda
-    yeni dal AÇMA, aynı dala devam et). Böylece fiziksel makine dal değiştirmez,
-    yalnız `git pull --ff-only` yapar.
-
+  - *Claude Code Web (bulut):* `claude/...` **dalına** push eder;
+    fiziksel makineye/`main`'e yazamaz. Kod bu aşamada TEST EDİLMEMİŞTİR.
+  - *Kurum bilgisayarı (fiziksel):* Web'in dalı çekilir, webserver testi
+    burada yapılır — günde birçok kez.
+  - **Sürtünmeyi azalt:** Web tek bir feature dalında kalsın (yeni oturumda
+    yeni dal AÇMA); fiziksel makine yalnız `git pull --ff-only` yapar.
 - **Kurum test döngüsü (fiziksel makinede):**
   ```bash
   git fetch origin
@@ -374,129 +260,74 @@ kaynağı sanma, gözden geçirmeden silme:
   python web/server.py                  # (veya python cli.py "...") test et
   ```
   Aktif dalı bul: `git branch -r --sort=-committerdate | grep claude/ | head -1`.
-
-- **Test geçince:** dalı `main`'e indir (PR merge ya da fiziksel makinede
-  `git checkout main && git merge --ff-only <dal> && git push`). main artık
-  test edilmiştir. **Test kalırsa:** Web'de AYNI dalda düzelt, makinede tekrar
-  `git pull` → tekrar test (main kirlenmez).
-
+- **Test geçince:** dalı `main`'e indir (PR merge ya da `git checkout main &&
+  git merge --ff-only <dal> && git push`). **Test kalırsa:** Web'de AYNI dalda
+  düzelt, makinede tekrar `git pull` → tekrar test (main kirlenmez).
 - **Ajan `main`'e onaysız push/merge yapmaz** — push/merge kullanıcı onayıyladır.
-- **Commit mesajları Türkçe** ve büyük değişikliklerde "Ne / Neden / Etki"
-  formatını içerir.
-- **Commit'lenmeyecekler:** `.cache/` ve `.env` (`.gitignore`'da); büyük ikili
+- **Commit mesajları Türkçe**; büyük değişikliklerde "Ne / Neden / Etki" formatı.
+- **Commit'lenmeyecekler:** `.cache/`, `.env` (`.gitignore`'da); büyük ikili
   dosyalar (ör. `.pdf`, kaynak belgeler) repoya girmez.
-- Kullanıcı yeni bir chat başlangıcında çalıştığı ortamı (iş veya ev) belirtmezse kullanıcıya öncelikle nerede çalıştığını sor.
+- Kullanıcı yeni bir chat başlangıcında çalıştığı ortamı (iş veya ev)
+  belirtmezse, öncelikle nerede çalıştığını sor.
 
 ---
 
 ## Çalışma Kuralları / Kodlama Standartları
 
-- **Türkçe yaz.** Kod yorumları, commit mesajları ve dokümantasyon Türkçe
-  olmalı (mevcut tarz korunsun).
+- **Türkçe yaz.** Kod yorumları, commit mesajları ve dokümantasyon Türkçe.
 - **Ölçerek karar ver.** Prompt/kural değişiklikleri altın set (`eval/`)
   üzerinde precision/recall ile değerlendirilir; sezgiyle değil.
-- **Yanlış-pozitif kritiktir.** Kurumsal denetçide temiz metinde hata uydurmak
-  en büyük kusurdur; bunu artıran değişikliklerden kaçın.
+- **Yanlış-pozitif kritiktir.** Temiz metinde hata uydurmak en büyük kusurdur;
+  bunu artıran değişikliklerden kaçın.
 - **Bağımlılık eklerken** pinli aralık kullan ve air-gap uyumunu gözet.
-- **Formatter/linter yapılandırılmamıştır** — mevcut stil elle korunur (4 boşluk
-  girinti, tip ipuçları, `from __future__ import annotations`, öz yorum).
-- **Büyük güncellemelerde** yukarıdaki "Büyük Güncellemeleri Raporla" kuralını
-  uygula.
+- **Formatter/linter yok** — mevcut stil elle korunur (4 boşluk girinti, tip
+  ipuçları, `from __future__ import annotations`, öz yorum).
+- **Büyük güncellemelerde** "Büyük Güncellemeleri Raporla" kuralını uygula.
 
 ---
 
 ## Yapılmaması Gerekenler (Anti-pattern'ler)
 
 - **`schema.py`'yi gevşetme** — katı yapılandırılmış çıktı sözleşmesini bozma.
-- **LLM'e offset ürettirme** — offset (`start`/`end`) yalnız `locate.py` ile
-  kaynak metinden hesaplanır; LLM'e bırakmak uydurma konumlar üretir.
+- **LLM'e offset ürettirme** — offset yalnız `locate.py` ile kaynak metinden
+  hesaplanır; LLM'e bırakmak uydurma konumlar üretir.
 - **Kuralı ölçmeden değiştirme** — `eval/` üzerinde öncesi/sonrası bakmadan
   prompt/kural değiştirme.
-- **Tutarlılık yargısını naif parçalama** — belgeyi böl ve her parçaya AYRI
-  "tutarlılık bul" sorma; kör noktayı geri getirir (çapraz-parça çakışmalar
-  kaybolur). Uzun belge çözümü map-reduce'tur: terim çıkarımı parçalanır ama
-  YARGI adımı belge-geneli TEK indeksi bir arada görür (bkz. Mimari Seam).
+- **Tutarlılık yargısını naif parçalama** — her parçaya AYRI "tutarlılık bul"
+  sorma; kör nokta döner. Çözüm map-reduce'tur (bkz. docs/mimari-seamler.md).
 - **Gözlemi (`observations`) findings hattına sokma / bulgu gibi gösterme /
-  puanlamaya katma** — gözlem ayrı, doğrulanmamış, düşük-güvenli kanaldır
-  (bkz. Mimari Seam). Ona offset/eleme uygulama, precision/recall'a sayma,
-  arayüzde bulgularla karıştırma.
+  puanlamaya katma** — ayrı, doğrulanmamış, düşük-güvenli kanaldır.
 - **Çıktı sırasını bozan değişiklik** — `_finalize` determinizmini bozarsan
   paralel/sıralı sonuçlar ayrışır.
-- **Gizli dış çağrı / telemetri** ekleme — air-gap uyumunu kırar.
-- **`.cache/`'i canlı sonuç kaynağı sanma** — bayat/eksik bir yanıt önbelleğe
-  düşerse silinene dek döner (bkz. Bilinen Sınırlar).
+- **Gizli dış çağrı / telemetri ekleme** — air-gap uyumunu kırar.
+- **`.cache/`'i canlı sonuç kaynağı sanma** — bayat yanıt silinene dek döner.
 
 ---
 
-## Bilinen Sınırlar
+## Bilinen Sınırlar (Özet — bug sanma)
 
-Bunlar bilinçli olarak çözülmemiş, ölçülmüş boşluklardır — model bunları tekrar
-"bug" sanıp gereksiz uğraşmasın. (Kural boşlukları ayrıca `rules/rules.md` →
-"Bilinen Sınırlar" bölümünde.)
+Bilinçli olarak çözülmemiş, ölçülmüş boşluklar; tam gerekçeler:
+[docs/bilinen-sinirlar.md](docs/bilinen-sinirlar.md). (Kural boşlukları ayrıca
+`rules/rules.md` → "Bilinen Sınırlar".)
 
-- **Model determinizmi yoktur.** Gemini `temperature=0`'da bile aynı isteme
-  çağrı-çağrı farklı yanıt verebilir; aynı metin iki koşuda biraz farklı
-  bulgu üretebilir. Bu paralellikten DEĞİL, modelin doğasındandır.
-- **Bayat önbellek.** Bir kez üretilen (belki eksik) yanıt `.cache/`'e kalıcı
-  yazılır; kod/kural değişse de aynı metin için eski yanıt döner. Beklenmedik
-  "eksik sonuç"ta ilk kontrol: `rm -rf .cache/` ve tekrar dene.
-- **Sözlük-geçerli bağlamsal yazım hatası.** Hunspell morfolojik olarak
-  kurulabilen ama bağlamda yanlış kelimeleri yakalayamaz (ör. "güncelleme"
-  yerine "günceleme"). Prompt'u genişletmek yanlış-pozitif riskini artırır;
-  bilinçli olarak dokunulmadı (`golden.jsonl`'de ölçülü FN örneği var).
-- **Çapraz-geçiş çelişkisi (daraltıldı).** Geçişler birbirini görmez; aynı
-  ifade iki geçişten iki bulgu alabilir. Örtüşen konum + (AYNI alıntı YA DA
-  AYNI atomik düzeltme — `_atomic_correction`: tek kelime farkı üzerinden
-  "aynı hatayı mı düzeltiyor" testi) taşıyan tip-kopyaları artık
-  `postprocess.drop_cross_pass_duplicates` ile teke iner (imla > dil_bilgisi
-  > ton önceliği; tutarlılık muaf). Atomik düzeltme çıkarılamayan (çok
-  kelimeli/serbest yeniden yazım) örtüşen bulgular hâlâ İKİSİ DE korunur —
-  bilinçli kalan sınır budur.
-- **Uzun belge tutarlılık ölçeği.** Küçük belgede tutarlılık tek çağrıyla
-  çalışır; belge `CONSISTENCY_MAP_REDUCE_CHARS`'ı aşınca map-reduce'a geçer
-  (terim-indeksi + aday kümeleme + tek yargı — tek dev çağrının zaman aşımı
-  çözüldü). Kalan sınırlar: (a) map bir kavramı parçalarda FARKLI `concept`'le
-  etiketlerse eşanlam kümesi (PTT↔BK) kaçabilir; (b) gerçek bir eşanlam kümesi
-  `_CONCEPT_CLUSTER_MAX`'tan (3) çok varyant taşırsa jenerik sanılıp atılır
-  (nadir); (c) reduce ham metnin geniş bağlamı olmadan karar verir, ince
-  bağlamsal çakışmaları kaçırabilir; (d) salt büyük/küçük harf farkıyla ayrılan
-  kümeler bilinçli elendiğinden gerçek bir ürün-adı harf tutarsızlığı (örn.
-  "iVOX" ↔ "IVOX") tutarlılık geçişinde YAKALANMAZ — bu, "standart pil" ↔
-  "Standart Pil" gibi başlık/düzyazı sahte-pozitiflerini kesmek için verilen
-  bilinçli takastır. Yine de eski "dev çağrı zaman aşımı → hiç
-  sonuç yok" durumundan kesin daha iyidir. Eşik ve küme sınırı sezgiseldir;
-  `run_eval` + gerçek belgeyle ayarlanabilir.
-- **OCR/çıkarma gürültüsü.** Girdi OCR ürünüyse İ/I karışması, kelime-içi
-  boşluk/nokta gibi bozulmalar sahte bulgu üretir ("çöp girer, çöp çıkar").
-  Temiz dijital `.docx` tercih edilir. PDF'ten çevrilmiş `.docx`'lerde çıkarma
-  katmanı görsel işaretçilerini (tam-satır görsel silinir; cümle içindeki
-  satır-içi görsel `[görsel]` yer tutucusuna dönüşür — LLM bunu yok sayar,
-  cümleyi görsel yerindeymiş gibi değerlendirir) ve ardışık tekrar başlıkları
-  süzer; ama metin kutusu kırpıntıları (yarım cümleler) metinde kalabilir ve
-  "cümle eksik" bulguları üretebilir — bu belge kalitesinin ürünüdür.
-- **4 harften kısa kelimeler imla denetimine girmez.** Kopuk ek parçaları
-  ("nde", "nda") sahte bulgu üretmesin diye bilinçli eşik; 1-3 harfli gerçek
-  kelime hatası bu katmanda yakalanmaz (bkz. `rules.md` → Bilinen Sınırlar).
-- **Tablo verisi dil denetimi dışıdır.** Etiketli bloklarda `tablo_hucresi`
-  türü imla/dil bilgisi/ton geçişlerinden muaftır; tablodaki ondalık-nokta
-  kullanımı tek TEK değil belge-geneli tek özet bulguyla raporlanır (N ≥ 3).
-  Tablo hücresindeki bir yazım hatası bu yüzden raporlanmayabilir (bilinçli
-  takas — tablo verisi düzyazı değildir). Gerçek belge ölçümü (60 sayfalık
-  kılavuz): sorun giderme tablolarında ~400 kelimelik gerçek düzyazı da bu
-  muafiyete girer — bilinçli olarak kabul edildi (2026-07-04); ileride
-  ölçümle (eval) yeniden değerlendirilebilir.
-- **İçindekiler (TOC) satırları dil denetimi dışıdır.** `icindekiler` türü
-  (blok deseni: `"Başlık<sekme><sayfa no>"`) tablo hücresiyle aynı muameleyi
-  görür: imla/dil bilgisi/ton geçişlerinden muaf, tutarlılık geçişinde dahil.
-  Gerekçe: TOC, Word'ün ürettiği metindir (başlığın kendisi gövdede zaten
-  denetlenir) ve uzun girdiler satır sonunda kopuk parçalara bölünerek sahte
-  "cümle eksik" bulgusu üretir.
-- **Bir parçanın LLM çağrısı kalıcı başarısız olursa TÜM analiz durur.**
-  `LLM_TIMEOUT_SEC` + kütüphane retry'ı geçici hataları çözer ve hata mesajı
-  artık anlaşılır (`LLMCallError`); ama paralel/sıralı hiçbir yol tek bir
-  parçayı "atla, diğerlerine devam et" şeklinde esnetmez — bilinçli tercih
-  (sessiz eksik sonuç, yanlış-pozitif kadar tehlikeli olan yanlış-negatif/
-  eksik rapor riski taşır). Kalıcı hata → kullanıcı net mesajla tekrar dener.
+- **Model determinizmi yoktur** — `temperature=0`'da bile koşular arası küçük
+  farklar normaldir; paralellik hatası değildir.
+- **Bayat önbellek** — `.cache/` eski yanıtı döndürür; ilk kontrol
+  `rm -rf .cache/`.
+- **Sözlük-geçerli bağlamsal yazım hatası yakalanmaz** (ör. "günceleme") —
+  bilinçli; prompt genişletme yanlış-pozitif riskini artırır.
+- **Çapraz-geçiş çelişkisi daraltıldı** — atomik düzeltme çıkarılamayan
+  örtüşen bulgular hâlâ İKİSİ DE korunur; bilinçli kalan sınır.
+- **Uzun belge tutarlılık ölçeği** — map-reduce'un bilinen kaçakları vardır
+  (eşanlam etiket farkı, >3 varyantlı küme, salt harf-farkı ürün adları);
+  hepsi bilinçli takastır.
+- **OCR/çıkarma gürültüsü** — "çöp girer, çöp çıkar"; temiz dijital `.docx`
+  tercih edilir. Metin kutusu kırpıntıları sahte "cümle eksik" üretebilir.
+- **4 harften kısa kelimeler imla denetimine girmez** — bilinçli eşik.
+- **Tablo hücresi ve İçindekiler (TOC) dil denetimi dışıdır** — imla/dil
+  bilgisi/ton muaf; tutarlılık geçişinde DAHİL. Bilinçli takas.
+- **Kalıcı LLM hatasında TÜM analiz durur** — tek parçayı sessizce atlama
+  yoktur; bilinçli tercih (eksik rapor riski).
 
 ---
 
