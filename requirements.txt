@@ -1,0 +1,13 @@
+# src/dilanaliz paketinin bağımlılıkları (pyproject.toml ile aynı, pinli
+# aralık). Projeyi çalıştırmak için bu dosyayı kurmak YETMEZ — paketin
+# kendisi de editable kurulmalı: `pip install -e ".[dev]"` (bkz. README).
+langchain-core>=0.3.0,<0.4.0
+langchain-google-genai>=2.0.0,<3.0.0
+pydantic>=2.7,<3.0
+python-dotenv>=1.0,<2.0
+spylls>=0.1.7,<0.2.0
+docx2python>=2.0,<4.0
+
+# Yalnız geliştirme/test için (opsiyonel):
+pytest>=8.0,<9.0
+python-docx>=1.1,<2.0

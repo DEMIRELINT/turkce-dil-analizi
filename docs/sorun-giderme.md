@@ -15,6 +15,6 @@ Hata alınca buraya bak — her seferinde önden çalıştırma.
   Google'ın kendi listesindeki tarih GERÇEK durumu yansıtmayabilir, canlı hata
   mesajı esas alınır. Yine de projede varsayılan `gemini-3.5-flash`'tır ve
   "lite" sınıfı KULLANILMAZ (kalıcı karar — 96 örneklik altın sette ölçülü
-  kalite kaybı var, bkz. README §11 model kıyası).
+  kalite kaybı var, bkz. `eval/runs/` model kıyası verileri).
 - **Ev Mac'inde web paneli bayat kod sunuyor:** eski bir `server.py` süreci
   arka planda kalmış olabilir; süreci öldür veya taze portta başlat.

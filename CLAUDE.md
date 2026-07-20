@@ -142,7 +142,7 @@ python cli.py "Bu cümlede ki hata var."     # hızlı duman testi (gerçek API)
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
 | `GEMINI_API_KEY` | *(zorunlu)* | Gemini API anahtarı. Repoda YOK, her makinede elle girilir. |
-| `MODEL_ID` | `gemini-3.5-flash` | Gemini modeli. "lite" sınıfı KULLANILMAZ (kalıcı karar — bkz. README §11). gemini-2.5-flash 16 Ekim 2026'da kapanacak. |
+| `MODEL_ID` | `gemini-3.5-flash` | Gemini modeli. "lite" sınıfı KULLANILMAZ (kalıcı karar — bkz. `eval/runs/` model kıyası). gemini-2.5-flash 16 Ekim 2026'da kapanacak. |
 | `TEMPERATURE` | `0` | Tutarlılık için 0. (0 dahi tam deterministik değildir — bkz. Bilinen Sınırlar.) |
 | `CONCURRENCY` | `6` | Eşzamanlı parça sayısı. `1` → tamamen sıralı davranış. |
 | `DICT_PATH` | `dicts/tr_TR` | Hunspell sözlük taban yolu (uzantısız). |

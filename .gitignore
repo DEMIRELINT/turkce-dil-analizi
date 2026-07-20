@@ -24,6 +24,7 @@ dicts/
 
 # Yerel deneme belgeleri (büyük ikili; kaynak belgeler repoya girmez — CLAUDE.md)
 *.docx
+*.docx.bak
 *.pdf
 *.mp4
 *.pptx
@@ -34,3 +35,6 @@ dicts/
 # Beklemede tutulan Tur-1 değişiklikleri (TDK oturumunda geri uygulanacak)
 .tur1-beklemede.patch
 eval/runs/
+
+# Teknik rapor bölüm taslakları (üretilen; ana çıktı teknik-rapor.docx)
+rapor-bolumler/
